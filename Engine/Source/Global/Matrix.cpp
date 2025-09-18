@@ -42,15 +42,15 @@ FMatrix::FMatrix(
 }
 
 FMatrix::FMatrix(const FVector& x, const FVector& y, const FVector& z)
-	:Data{	{x.X, x.Y, x.Z, 0.0f},
+	:Data{ {x.X, x.Y, x.Z, 0.0f},
 			{y.X, y.Y, y.Z, 0.0f},
 			{z.X, z.Y, z.Z, 0.0f},
-			{0.0f, 0.0f, 0.0f, 1.0f}}
-{	
+			{0.0f, 0.0f, 0.0f, 1.0f} }
+{
 }
 
 FMatrix::FMatrix(const FVector4& x, const FVector4& y, const FVector4& z)
-	:Data{	{x.X,x.Y,x.Z, x.W},
+	:Data{ {x.X,x.Y,x.Z, x.W},
 			{y.X,y.Y,y.Z,y.W},
 			{z.X,z.Y,z.Z,z.W},
 			{0.0f, 0.0f, 0.0f, 1.0f} }
@@ -93,7 +93,7 @@ FMatrix FMatrix::operator*(const FMatrix& InOtherMatrix)
 
 void FMatrix::operator*=(const FMatrix& InOtherMatrix)
 {
-	*this =  (*this)*InOtherMatrix;
+	*this = (*this) * InOtherMatrix;
 }
 
 /**
@@ -137,9 +137,9 @@ FMatrix FMatrix::ScaleMatrix(const FVector& InOtherVector)
 FMatrix FMatrix::ScaleMatrixInverse(const FVector& InOtherVector)
 {
 	FMatrix Result = FMatrix::Identity();
-	Result.Data[0][0] = 1/InOtherVector.X;
-	Result.Data[1][1] = 1/InOtherVector.Y;
-	Result.Data[2][2] = 1/InOtherVector.Z;
+	Result.Data[0][0] = 1 / InOtherVector.X;
+	Result.Data[1][1] = 1 / InOtherVector.Y;
+	Result.Data[2][2] = 1 / InOtherVector.Z;
 	Result.Data[3][3] = 1;
 
 	return Result;
@@ -163,7 +163,7 @@ FMatrix FMatrix::RotationMatrix(const FVector& InOtherVector)
 }
 
 FMatrix FMatrix::CreateFromYawPitchRoll(const float yaw, const float pitch, const float roll)
-{	
+{
 	//return RotationZ(yaw) * RotationY(pitch)* RotationX(roll);
 	return RotationX(pitch) * RotationY(yaw) * RotationZ(roll);
 }
@@ -173,9 +173,8 @@ FMatrix FMatrix::RotationMatrixInverse(const FVector& InOtherVector)
 	const float yaw = InOtherVector.Y;
 	const float pitch = InOtherVector.X;
 	const float roll = InOtherVector.Z;
-	//return RotationX(-yaw) * RotationY(-pitch) * RotationZ(-roll);
-	return RotationX(-pitch) * RotationY(-yaw) * RotationZ(-roll);
 
+	return RotationZ(-roll) * RotationY(-yaw) * RotationX(-pitch);
 }
 
 /**
@@ -281,7 +280,7 @@ FMatrix FMatrix::Transpose() const
 	FMatrix result = {};
 	for (int i = 0; i < 4; i++)
 	{
-		for (int j = 0;j < 4;j++)
+		for (int j = 0; j < 4; j++)
 		{
 			result.Data[i][j] = Data[j][i];
 		}
