@@ -85,6 +85,7 @@ public:
 	float GetRotateThickness()   const { return std::max(0.001f, RotateCollisionConfig.InnerRadius * RotateCollisionConfig.Scale); }
 	AActor* GetSelectedActor() const { return TargetActor; }
 	bool IsInRadius(float Radius);
+	bool HasActor() const { return TargetActor; };
 
 	/* *
 	* @brief 마우스 관련

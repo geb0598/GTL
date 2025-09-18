@@ -144,7 +144,11 @@ void UEditor::ProcessMouseInput(ULevel* InLevel)
 	{
 		if (InLevel->GetSelectedActor()) //기즈모가 출력되고있음. 레이캐스팅을 계속 해야함.
 		{
-			ObjectPicker.PickGizmo(WorldRay, Gizmo, CollisionPoint);
+			/** @note: 기즈모 업데이트가 Renderer에서 이루어져서, nullptr 예외 발생. */
+			if (Gizmo.HasActor())
+			{
+				ObjectPicker.PickGizmo(WorldRay, Gizmo, CollisionPoint);
+			}
 		}
 		else
 		{
