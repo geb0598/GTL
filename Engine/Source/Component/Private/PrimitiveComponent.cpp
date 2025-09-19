@@ -97,13 +97,32 @@ const FMatrix& USceneComponent::GetWorldTransformMatrixInverse() const
 
 const TArray<FVertex>* UPrimitiveComponent::GetVerticesData() const
 {
-	UAssetManager& ResourceManager = UAssetManager::GetInstance();
-	return ResourceManager.GetVertexData(Type);
+	return Vertices;
+}
+
+const TArray<uint32>* UPrimitiveComponent::GetIndicesData() const
+{
+	return Indices;
 }
 
 ID3D11Buffer* UPrimitiveComponent::GetVertexBuffer() const
 {
-	return Vertexbuffer;
+	return VertexBuffer;
+}
+
+ID3D11Buffer* UPrimitiveComponent::GetIndexBuffer() const
+{
+	return IndexBuffer;
+}
+
+const uint32 UPrimitiveComponent::GetNumVertices() const
+{
+	return NumVertices;
+}
+
+const uint32 UPrimitiveComponent::GetNumIndices() const
+{
+	return NumIndices;
 }
 
 void UPrimitiveComponent::SetTopology(D3D11_PRIMITIVE_TOPOLOGY InTopology)

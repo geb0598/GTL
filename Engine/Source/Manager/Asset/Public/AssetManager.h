@@ -23,6 +23,11 @@ public:
 	ID3D11Buffer* GetVertexbuffer(EPrimitiveType InType);
 	uint32 GetNumVertices(EPrimitiveType InType);
 
+	// Index 관련 함수들
+	TArray<uint32>* GetIndexData(EPrimitiveType InType);
+	ID3D11Buffer* GetIndexbuffer(EPrimitiveType InType);
+	uint32 GetNumIndices(EPrimitiveType InType);
+
 	// Shader 관련 함수들
 	ID3D11VertexShader* GetVertexShader(EShaderType Type);
 	ID3D11PixelShader* GetPixelShader(EShaderType Type);
@@ -43,9 +48,14 @@ public:
 
 private:
 	// Vertex Resource
-	TMap<EPrimitiveType, ID3D11Buffer*> Vertexbuffers;
+	TMap<EPrimitiveType, ID3D11Buffer*> VertexBuffers;
 	TMap<EPrimitiveType, uint32> NumVertices;
 	TMap<EPrimitiveType, TArray<FVertex>*> VertexDatas;
+
+	// 인덱스 리소스
+	TMap<EPrimitiveType, ID3D11Buffer*> IndexBuffers;
+	TMap<EPrimitiveType, uint32> NumIndices;
+	TMap<EPrimitiveType, TArray<uint32>*> IndexDatas;
 
 	// Shaser Resources
 	TMap<EShaderType, ID3D11VertexShader*> VertexShaders;

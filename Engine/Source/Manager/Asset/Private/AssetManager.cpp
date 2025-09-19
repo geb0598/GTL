@@ -28,24 +28,29 @@ void UAssetManager::Initialize()
 	VertexDatas.emplace(EPrimitiveType::Ring, &VerticesRing);
 	VertexDatas.emplace(EPrimitiveType::Line, &VerticesLine);
 
+	IndexDatas.emplace(EPrimitiveType::Cube, &IndicesCube);
+	IndexBuffers.emplace(EPrimitiveType::Cube,
+		Renderer.CreateIndexBuffer(IndicesCube.data(), static_cast<int>(IndicesCube.size()) * sizeof(uint32)));
+	NumIndices.emplace(EPrimitiveType::Cube, static_cast<uint32>(IndicesCube.size()));
+
 	// TArray.GetData(), TArray.Num()*sizeof(FVertexSimple), TArray.GetTypeSize()
-	Vertexbuffers.emplace(EPrimitiveType::Cube, Renderer.CreateVertexBuffer(
+	VertexBuffers.emplace(EPrimitiveType::Cube, Renderer.CreateVertexBuffer(
 		                      VerticesCube.data(), static_cast<int>(VerticesCube.size()) * sizeof(FVertex)));
-	Vertexbuffers.emplace(EPrimitiveType::Sphere, Renderer.CreateVertexBuffer(
+	VertexBuffers.emplace(EPrimitiveType::Sphere, Renderer.CreateVertexBuffer(
 		                      VerticesSphere.data(), static_cast<int>(VerticesSphere.size() * sizeof(FVertex))));
-	Vertexbuffers.emplace(EPrimitiveType::Triangle, Renderer.CreateVertexBuffer(
+	VertexBuffers.emplace(EPrimitiveType::Triangle, Renderer.CreateVertexBuffer(
 		                      VerticesTriangle.data(), static_cast<int>(VerticesTriangle.size() * sizeof(FVertex))));
-	Vertexbuffers.emplace(EPrimitiveType::Square, Renderer.CreateVertexBuffer(
+	VertexBuffers.emplace(EPrimitiveType::Square, Renderer.CreateVertexBuffer(
 		                      VerticesSquare.data(), static_cast<int>(VerticesSquare.size() * sizeof(FVertex))));
-	Vertexbuffers.emplace(EPrimitiveType::Torus, Renderer.CreateVertexBuffer(
+	VertexBuffers.emplace(EPrimitiveType::Torus, Renderer.CreateVertexBuffer(
 		                      VerticesTorus.data(), static_cast<int>(VerticesTorus.size() * sizeof(FVertex))));
-	Vertexbuffers.emplace(EPrimitiveType::Arrow, Renderer.CreateVertexBuffer(
+	VertexBuffers.emplace(EPrimitiveType::Arrow, Renderer.CreateVertexBuffer(
 		                      VerticesArrow.data(), static_cast<int>(VerticesArrow.size() * sizeof(FVertex))));
-	Vertexbuffers.emplace(EPrimitiveType::CubeArrow, Renderer.CreateVertexBuffer(
+	VertexBuffers.emplace(EPrimitiveType::CubeArrow, Renderer.CreateVertexBuffer(
 		                      VerticesCubeArrow.data(), static_cast<int>(VerticesCubeArrow.size() * sizeof(FVertex))));
-	Vertexbuffers.emplace(EPrimitiveType::Ring, Renderer.CreateVertexBuffer(
+	VertexBuffers.emplace(EPrimitiveType::Ring, Renderer.CreateVertexBuffer(
 		                      VerticesRing.data(), static_cast<int>(VerticesRing.size() * sizeof(FVertex))));
-	Vertexbuffers.emplace(EPrimitiveType::Line, Renderer.CreateVertexBuffer(
+	VertexBuffers.emplace(EPrimitiveType::Line, Renderer.CreateVertexBuffer(
 		                      VerticesLine.data(), static_cast<int>(VerticesLine.size() * sizeof(FVertex))));
 
 	NumVertices.emplace(EPrimitiveType::Cube, static_cast<uint32>(VerticesCube.size()));
@@ -103,13 +108,18 @@ void UAssetManager::Initialize()
 void UAssetManager::Release()
 {
 	// TMap.Value()
-	for (auto& Pair : Vertexbuffers)
+	for (auto& Pair : VertexBuffers)
 	{
 		URenderer::GetInstance().ReleaseVertexBuffer(Pair.second);
 	}
+	for (auto& Pair : IndexBuffers)
+	{
+		URenderer::GetInstance().ReleaseIndexBuffer(Pair.second);
+	}
 
 	// TMap.Empty()
-	Vertexbuffers.clear();
+	VertexBuffers.clear();
+	IndexBuffers.clear();
 
 	// Texture Resource 해제
 	ReleaseAllTextures();
@@ -122,12 +132,27 @@ TArray<FVertex>* UAssetManager::GetVertexData(EPrimitiveType InType)
 
 ID3D11Buffer* UAssetManager::GetVertexbuffer(EPrimitiveType InType)
 {
-	return Vertexbuffers[InType];
+	return VertexBuffers[InType];
 }
 
 uint32 UAssetManager::GetNumVertices(EPrimitiveType InType)
 {
 	return NumVertices[InType];
+}
+
+TArray<uint32>* UAssetManager::GetIndexData(EPrimitiveType InType)
+{
+	return IndexDatas[InType];
+}
+
+ID3D11Buffer* UAssetManager::GetIndexbuffer(EPrimitiveType InType)
+{
+	return IndexBuffers[InType];
+}
+
+uint32 UAssetManager::GetNumIndices(EPrimitiveType InType)
+{
+	return NumIndices[InType];
 }
 
 ID3D11VertexShader* UAssetManager::GetVertexShader(EShaderType Type)

@@ -11,7 +11,7 @@ UTriangleComponent::UTriangleComponent()
 	UAssetManager& ResourceManager = UAssetManager::GetInstance();
 	Type = EPrimitiveType::Triangle;
 	Vertices = ResourceManager.GetVertexData(Type);
-	Vertexbuffer = ResourceManager.GetVertexbuffer(Type);
+	VertexBuffer = ResourceManager.GetVertexbuffer(Type);
 	NumVertices = ResourceManager.GetNumVertices(Type);
 	RenderState.CullMode = ECullMode::None;
 	RenderState.FillMode = EFillMode::Solid;
