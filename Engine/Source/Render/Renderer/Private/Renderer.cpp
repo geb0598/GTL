@@ -818,6 +818,7 @@ ID3D11RasterizerState* URenderer::GetRasterizerState(const FRenderState& InRende
 	D3D11_RASTERIZER_DESC RasterizerDesc = {};
 	RasterizerDesc.FillMode = FillMode;
 	RasterizerDesc.CullMode = CullMode;
+	RasterizerDesc.FrontCounterClockwise = TRUE;
 	RasterizerDesc.DepthClipEnable = TRUE; // ✅ 근/원거리 평면 클리핑 활성화 (핵심)
 
 	HRESULT ResultHandle = GetDevice()->CreateRasterizerState(&RasterizerDesc, &RasterizerState);
