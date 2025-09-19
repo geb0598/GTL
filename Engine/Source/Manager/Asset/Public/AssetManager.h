@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ObjImporter.h"
+
 struct FAABB;
 
 /**

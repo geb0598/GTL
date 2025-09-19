@@ -22,11 +22,18 @@ struct FViewProjConstants
 	FMatrix Projection;
 };
 
-
 struct FVertex
 {
 	FVector Position;
 	FVector4 Color;
+};
+
+struct FNormalVertex
+{
+	FVector Position;
+	FVector Normal;
+	FVector4 Color;
+	FVector2 TexCoord;
 };
 
 struct FRay
