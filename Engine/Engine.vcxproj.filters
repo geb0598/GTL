@@ -261,6 +261,12 @@
     <ClCompile Include="Source\Utility\Private\UELogParser.cpp">
       <Filter>Source\Utility\Private</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Render\Renderer\Private\Viewport.cpp">
+      <Filter>Source\Render\Renderer\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Render\Renderer\Private\ViewportClient.cpp">
+      <Filter>Source\Render\Renderer\Private</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -573,6 +579,12 @@
     </ClInclude>
     <ClInclude Include="Source\Utility\Public\UELogParser.h">
       <Filter>Source\Utility\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Render\Renderer\Public\Viewport.h">
+      <Filter>Source\Render\Renderer\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Render\Renderer\Public\ViewportClient.h">
+      <Filter>Source\Render\Renderer\Public</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

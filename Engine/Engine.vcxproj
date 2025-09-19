@@ -73,11 +73,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)Build\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)Build\$(Configuration)\Intermediate\</IntDir>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir);</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir);$(ProjectDir);</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)Build\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)Build\$(Configuration)\Intermediate\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir);</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -230,6 +233,8 @@
     <ClInclude Include="Source\Render\Renderer\Public\DeviceResources.h" />
     <ClInclude Include="Source\Render\Renderer\Public\Pipeline.h" />
     <ClInclude Include="Source\Render\Renderer\Public\Renderer.h" />
+    <ClInclude Include="Source\Render\Renderer\Public\Viewport.h" />
+    <ClInclude Include="Source\Render\Renderer\Public\ViewportClient.h" />
     <ClInclude Include="Source\Render\UI\Factory\Public\UIWindowFactory.h" />
     <ClInclude Include="Source\Render\UI\ImGui\Public\ImGuiHelper.h" />
     <ClInclude Include="Source\Render\UI\Widget\Public\ActorDetailWidget.h" />
@@ -323,6 +328,8 @@
     <ClCompile Include="Source\Render\Renderer\Private\Pipeline.cpp" />
     <ClCompile Include="Source\Render\Renderer\Private\Renderer.cpp" />
     <ClCompile Include="Source\Render\FontRenderer\Private\FontRenderer.cpp" />
+    <ClCompile Include="Source\Render\Renderer\Private\Viewport.cpp" />
+    <ClCompile Include="Source\Render\Renderer\Private\ViewportClient.cpp" />
     <ClCompile Include="Source\Render\UI\Factory\Private\UIWindowFactory.cpp" />
     <ClCompile Include="Source\Render\UI\ImGui\Private\ImGuiHelper.cpp" />
     <ClCompile Include="Source\Render\UI\Widget\Private\ActorDetailWidget.cpp" />

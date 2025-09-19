@@ -9,6 +9,7 @@
 #include "Component/Public/PrimitiveComponent.h"
 #include "Render/FontRenderer/Public/FontRenderer.h"
 #include "Render/Renderer/Public/Pipeline.h"
+#include "Render/Renderer/Public/ViewportClient.h"
 
 IMPLEMENT_SINGLETON_CLASS_BASE(URenderer)
 
@@ -20,6 +21,7 @@ void URenderer::Init(HWND InWindowHandle)
 {
 	DeviceResources = new UDeviceResources(InWindowHandle);
 	Pipeline = new UPipeline(GetDeviceContext());
+	ViewportClient = new FViewportClient();
 
 	// 래스터라이저 상태 생성
 	CreateRasterizerState();
@@ -42,6 +44,8 @@ void URenderer::Release()
 	ReleaseDefaultShader();
 	ReleaseDepthStencilState();
 	ReleaseRasterizerState();
+
+	SafeDelete(ViewportClient);
 
 	// FontRenderer 해제
 	SafeDelete(FontRenderer);
@@ -184,22 +188,21 @@ void URenderer::ReleaseDepthStencilState()
 	}
 }
 
+// Renderer.cpp
 void URenderer::Update()
 {
 	RenderBegin();
 
-	// TODO(KHJ): 여기 묶어낼 수 없을까?
-	RenderLevel();
-	ULevelManager::GetInstance().GetEditor()->RenderEditor();
+	//const auto vp = DeviceResources->GetViewportInfo();
+	//ViewportClient->Resize(static_cast<int>(vp.Width), static_cast<int>(vp.Height));
+	ViewportClient->Render(*this, GetDeviceContext(), DeviceResources->GetDepthStencilView());
 
-	// 폰트 렌더링
-	//RenderFont();
-
-	// ImGui 자체 Render 처리가 진행되어야 하므로 따로 처리
+	// 최상위 에디터/GUI는 프레임에 1회만
 	UUIManager::GetInstance().Render();
 
-	RenderEnd();
+	RenderEnd(); // Present 1회
 }
+
 
 /**
  * @brief Render Prepare Step
@@ -210,8 +213,6 @@ void URenderer::RenderBegin() const
 	GetDeviceContext()->ClearRenderTargetView(RenderTargetView, ClearColor);
 	auto* DepthStencilView = DeviceResources->GetDepthStencilView();
 	GetDeviceContext()->ClearDepthStencilView(DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
-
-	GetDeviceContext()->RSSetViewports(1, &DeviceResources->GetViewportInfo());
 
 	ID3D11RenderTargetView* rtvs[] = {RenderTargetView}; // 배열 생성
 
@@ -296,6 +297,8 @@ void URenderer::RenderLevel()
 		//const FMatrix viewProjM = viewProjConstData.View * viewProjConstData.Projection;
 		FontRenderer->RenderText(UUIDString.c_str(), RT, viewProjConstData);
 	}
+
+	ULevelManager::GetInstance().GetEditor()->RenderEditor();
 }
 
 /**

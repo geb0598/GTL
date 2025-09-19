@@ -11,6 +11,7 @@ class AActor;
 class AGizmo;
 class UEditor;
 class UFontRenderer;
+class FViewportClient;
 
 /**
  * @brief Rendering Pipeline 전반을 처리하는 클래스
@@ -124,6 +125,8 @@ private:
 	ID3D11InputLayout* DefaultInputLayout = nullptr;
 	uint32 Stride = 0;
 
+	FViewportClient* ViewportClient = nullptr;
+
 	struct FRasterKey
 	{
 		D3D11_FILL_MODE FillMode = {};
@@ -157,10 +160,4 @@ private:
 	ID3D11RasterizerState* GetRasterizerState(const FRenderState& InRenderState);
 
 	bool bIsResizing = false;
-
-	///////////////////////////////////////////
-	// 카메라 VP Matrix 값 전달 받는 용도
-	// (차후 리팩터링이 필요합니다)
-	FViewProjConstants ViewProjConstants;
-	///////////////////////////////////////////
 };
