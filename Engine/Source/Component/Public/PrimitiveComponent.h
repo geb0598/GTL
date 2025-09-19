@@ -11,7 +11,7 @@ class UPrimitiveComponent : public USceneComponent
 public:
 	UPrimitiveComponent();
 
-	const TArray<FVertex>* GetVerticesData() const;
+	const TArray<FNormalVertex>* GetVerticesData() const;
 	const TArray<uint32>* GetIndicesData() const;
 	ID3D11Buffer* GetVertexBuffer() const;
 	ID3D11Buffer* GetIndexBuffer() const;
@@ -36,7 +36,7 @@ public:
 	EPrimitiveType GetPrimitiveType() const { return Type; }
 
 protected:
-	const TArray<FVertex>* Vertices = nullptr;
+	const TArray<FNormalVertex>* Vertices = nullptr;
 	const TArray<uint32>* Indices = nullptr;
 
 	ID3D11Buffer* VertexBuffer = nullptr;

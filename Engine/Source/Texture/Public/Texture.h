@@ -11,14 +11,17 @@ class UTexture :
 	DECLARE_CLASS(UTexture, UObject)
 
 public:
-	// Getter & Setter
-	uint32 GetWidth() const { return Width; }
-	uint32 GetHeight() const { return Height; }
-
 	// Special member function
 	UTexture();
 	UTexture(const FString& InFilePath, FName InName);
 	~UTexture() override;
+
+	// Getter & Setter
+	uint32 GetWidth() const { return Width; }
+	uint32 GetHeight() const { return Height; }
+
+	const FTextureRenderProxy* GetRenderProxy() const { return RenderProxy; }
+	void SetRenderProxy(FTextureRenderProxy* InProxy) { RenderProxy = InProxy; }
 
 private:
 	FName TextureFilePath;

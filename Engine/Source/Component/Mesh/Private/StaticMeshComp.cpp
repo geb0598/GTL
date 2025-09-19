@@ -12,7 +12,7 @@ UStaticMeshComp::UStaticMeshComp()
 	StaticMesh = FObjManager::LoadObjStaticMesh("");
 	Type = EPrimitiveType::StaticMesh;
 
-	//Vertices = &(StaticMesh.Get()->GetVertices());
+	Vertices = &(StaticMesh.Get()->GetVertices());
 	VertexBuffer = StaticMesh.Get()->GetVertexBuffer();
 	NumVertices = Vertices->size();
 

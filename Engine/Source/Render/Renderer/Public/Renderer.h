@@ -52,6 +52,7 @@ public:
 	void CreateRasterizerState();
 	void CreateDepthStencilState();
 	void CreateDefaultShader();
+	void CreateTextureShader();
 	void CreateConstantBuffer();
 
 	// Release
@@ -76,7 +77,7 @@ public:
 	void CreateVertexShaderAndInputLayout(const wstring& InFilePath,
 									  const TArray<D3D11_INPUT_ELEMENT_DESC>& InInputLayoutDescriptions,
 									  ID3D11VertexShader** OutVertexShader, ID3D11InputLayout** OutInputLayout);
-	ID3D11Buffer* CreateVertexBuffer(FVertex* InVertices, uint32 InByteWidth) const;
+	ID3D11Buffer* CreateVertexBuffer(FNormalVertex* InVertices, uint32 InByteWidth) const;
 	ID3D11Buffer* CreateVertexBuffer(FVector* InVertices, uint32 InByteWidth, bool bCpuAccess) const;
 	ID3D11Buffer* CreateIndexBuffer(const void* InIndices, uint32 InByteWidth) const;
 	void CreatePixelShader(const wstring& InFilePath, ID3D11PixelShader** InPixelShader) const;
@@ -123,6 +124,11 @@ private:
 	ID3D11VertexShader* DefaultVertexShader = nullptr;
 	ID3D11PixelShader* DefaultPixelShader = nullptr;
 	ID3D11InputLayout* DefaultInputLayout = nullptr;
+	
+	ID3D11VertexShader* TexturedVertexShader = nullptr;
+	ID3D11PixelShader* TexturedPixelShader = nullptr;
+	ID3D11InputLayout* TexturedInputLayout = nullptr;
+	
 	uint32 Stride = 0;
 
 	struct FRasterKey

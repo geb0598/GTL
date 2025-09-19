@@ -35,23 +35,23 @@ void UAssetManager::Initialize()
 
 	// TArray.GetData(), TArray.Num()*sizeof(FVertexSimple), TArray.GetTypeSize()
 	VertexBuffers.emplace(EPrimitiveType::Cube, Renderer.CreateVertexBuffer(
-		                      VerticesCube.data(), static_cast<int>(VerticesCube.size()) * sizeof(FVertex)));
+		VerticesCube.data(), static_cast<int>(VerticesCube.size()) * sizeof(FNormalVertex)));
 	VertexBuffers.emplace(EPrimitiveType::Sphere, Renderer.CreateVertexBuffer(
-		                      VerticesSphere.data(), static_cast<int>(VerticesSphere.size() * sizeof(FVertex))));
+		VerticesSphere.data(), static_cast<int>(VerticesSphere.size() * sizeof(FNormalVertex))));
 	VertexBuffers.emplace(EPrimitiveType::Triangle, Renderer.CreateVertexBuffer(
-		                      VerticesTriangle.data(), static_cast<int>(VerticesTriangle.size() * sizeof(FVertex))));
+		VerticesTriangle.data(), static_cast<int>(VerticesTriangle.size() * sizeof(FNormalVertex))));
 	VertexBuffers.emplace(EPrimitiveType::Square, Renderer.CreateVertexBuffer(
-		                      VerticesSquare.data(), static_cast<int>(VerticesSquare.size() * sizeof(FVertex))));
+		VerticesSquare.data(), static_cast<int>(VerticesSquare.size() * sizeof(FNormalVertex))));
 	VertexBuffers.emplace(EPrimitiveType::Torus, Renderer.CreateVertexBuffer(
-		                      VerticesTorus.data(), static_cast<int>(VerticesTorus.size() * sizeof(FVertex))));
+		VerticesTorus.data(), static_cast<int>(VerticesTorus.size() * sizeof(FNormalVertex))));
 	VertexBuffers.emplace(EPrimitiveType::Arrow, Renderer.CreateVertexBuffer(
-		                      VerticesArrow.data(), static_cast<int>(VerticesArrow.size() * sizeof(FVertex))));
+		VerticesArrow.data(), static_cast<int>(VerticesArrow.size() * sizeof(FNormalVertex))));
 	VertexBuffers.emplace(EPrimitiveType::CubeArrow, Renderer.CreateVertexBuffer(
-		                      VerticesCubeArrow.data(), static_cast<int>(VerticesCubeArrow.size() * sizeof(FVertex))));
+		VerticesCubeArrow.data(), static_cast<int>(VerticesCubeArrow.size() * sizeof(FNormalVertex))));
 	VertexBuffers.emplace(EPrimitiveType::Ring, Renderer.CreateVertexBuffer(
-		                      VerticesRing.data(), static_cast<int>(VerticesRing.size() * sizeof(FVertex))));
+		VerticesRing.data(), static_cast<int>(VerticesRing.size() * sizeof(FNormalVertex))));
 	VertexBuffers.emplace(EPrimitiveType::Line, Renderer.CreateVertexBuffer(
-		                      VerticesLine.data(), static_cast<int>(VerticesLine.size() * sizeof(FVertex))));
+		VerticesLine.data(), static_cast<int>(VerticesLine.size() * sizeof(FNormalVertex))));
 
 	NumVertices.emplace(EPrimitiveType::Cube, static_cast<uint32>(VerticesCube.size()));
 	NumVertices.emplace(EPrimitiveType::Sphere, static_cast<uint32>(VerticesSphere.size()));
@@ -125,7 +125,7 @@ void UAssetManager::Release()
 	ReleaseAllTextures();
 }
 
-TArray<FVertex>* UAssetManager::GetVertexData(EPrimitiveType InType)
+TArray<FNormalVertex>* UAssetManager::GetVertexData(EPrimitiveType InType)
 {
 	return VertexDatas[InType];
 }

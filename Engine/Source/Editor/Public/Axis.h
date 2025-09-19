@@ -12,5 +12,5 @@ public:
 
 private:
 	FEditorPrimitive Primitive;
-	TArray<FVertex> AxisVertices;
+	TArray<FNormalVertex> AxisVertices;
 };

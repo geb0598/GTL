@@ -65,14 +65,22 @@ ID3D11Buffer* UStaticMesh::GetIndexBuffer() const
 	return StaticMeshAsset ? StaticMeshAsset->IndexBuffer : nullptr;
 }
 
-const TArray<FMaterial>& UStaticMesh::GetMaterials() const
+UMaterial* UStaticMesh::GetMaterial(int32 MaterialIndex) const
 {
-	if (StaticMeshAsset)
+	return (MaterialIndex >= 0 && MaterialIndex < Materials.size()) ? Materials[MaterialIndex] : nullptr;
+}
+
+void UStaticMesh::SetMaterial(int32 MaterialIndex, UMaterial* Material)
+{
+	if (MaterialIndex >= 0 && MaterialIndex < Materials.size())
 	{
-		return StaticMeshAsset->Materials;
+		Materials[MaterialIndex] = Material;
 	}
-	static const TArray<FMaterial> EmptyMaterials;
-	return EmptyMaterials;
+}
+
+int32 UStaticMesh::GetNumMaterials() const
+{
+	return Materials.size();
 }
 
 const TArray<FMeshSection>& UStaticMesh::GetSections() const

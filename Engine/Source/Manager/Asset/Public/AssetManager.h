@@ -19,7 +19,7 @@ public:
 	void Release();
 
 	// Vertex 관련 함수들
-	TArray<FVertex>* GetVertexData(EPrimitiveType InType);
+	TArray<FNormalVertex>* GetVertexData(EPrimitiveType InType);
 	ID3D11Buffer* GetVertexbuffer(EPrimitiveType InType);
 	uint32 GetNumVertices(EPrimitiveType InType);
 
@@ -50,7 +50,7 @@ private:
 	// Vertex Resource
 	TMap<EPrimitiveType, ID3D11Buffer*> VertexBuffers;
 	TMap<EPrimitiveType, uint32> NumVertices;
-	TMap<EPrimitiveType, TArray<FVertex>*> VertexDatas;
+	TMap<EPrimitiveType, TArray<FNormalVertex>*> VertexDatas;
 
 	// 인덱스 리소스
 	TMap<EPrimitiveType, ID3D11Buffer*> IndexBuffers;

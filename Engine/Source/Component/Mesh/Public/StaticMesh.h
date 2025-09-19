@@ -28,6 +28,7 @@ public:
 	 * @brief AssetManager가 이 UStaticMesh 객체와 실제 데이터(FStaticMesh)를 연결합니다.
 	 * @param InStaticMeshAsset AssetManager가 소유하고 있는 FStaticMesh 데이터에 대한 포인터
 	 */
+	FStaticMesh* GetStaticMeshAsset() { return StaticMeshAsset; }
 	void SetStaticMeshAsset(FStaticMesh* InStaticMeshAsset);
 
 
@@ -44,7 +45,9 @@ public:
 	ID3D11Buffer* GetIndexBuffer() const;
 
 	// Material Data
-	const TArray<FMaterial>& GetMaterials() const;
+	UMaterial* GetMaterial(int32 MaterialIndex) const;
+	void SetMaterial(int32 MaterialIndex, UMaterial* Material);
+	int32 GetNumMaterials() const;
 	const TArray<FMeshSection>& GetSections() const;
 
 	// 유효성 검사
@@ -54,4 +57,5 @@ private:
 	// 실제 데이터 본체(FStaticMesh)에 대한 비소유(non-owning) 포인터.
 	// 이 데이터의 실제 소유권 및 생명주기는 AssetManager가 책임집니다.
 	TObjectPtr<FStaticMesh> StaticMeshAsset;
+	TArray<UMaterial*> Materials;
 };
