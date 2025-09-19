@@ -9,6 +9,11 @@
 #include "Component/Public/PrimitiveComponent.h"
 #include "Render/FontRenderer/Public/FontRenderer.h"
 #include "Render/Renderer/Public/Pipeline.h"
+#include "Component/Public/StaticMeshComponent.h"
+#include "Asset/Mesh/StaticMesh.h"
+#include "Texture/Public/Material.h"
+#include "Texture/Public/Texture.h"
+#include "Texture/Public/TextureRenderProxy.h"
 
 IMPLEMENT_SINGLETON_CLASS_BASE(URenderer)
 
@@ -25,6 +30,7 @@ void URenderer::Init(HWND InWindowHandle)
 	CreateRasterizerState();
 	CreateDepthStencilState();
 	CreateDefaultShader();
+	CreateTextureShader();
 	CreateConstantBuffer();
 
 	// FontRenderer 초기화
@@ -116,9 +122,41 @@ void URenderer::CreateDefaultShader()
 
 	Stride = sizeof(FVertex);
 
-	// TODO(KHJ): ShaderBlob 파일로 저장하고, 이후 이미 존재하는 경우 컴파일 없이 Blob을 로드할 수 있도록 할 것
 	VertexShaderCSO->Release();
 	PixelShaderCSO->Release();
+}
+
+void URenderer::CreateTextureShader()
+{
+	ID3DBlob* TexturedVSBlob;
+	ID3DBlob* TexturedPSBlob;
+
+	D3DCompileFromFile(L"Asset/Shader/TexturedShader.hlsl", nullptr, nullptr, "mainVS", "vs_5_0", 0, 0,
+					  &TexturedVSBlob, nullptr);
+
+	GetDevice()->CreateVertexShader(TexturedVSBlob->GetBufferPointer(),
+									TexturedVSBlob->GetBufferSize(), nullptr, &TexturedVertexShader);
+
+	D3DCompileFromFile(L"Asset/Shader/TexturedShader.hlsl", nullptr, nullptr, "mainPS", "ps_5_0", 0, 0,
+					  &TexturedPSBlob, nullptr);
+
+	GetDevice()->CreatePixelShader(TexturedPSBlob->GetBufferPointer(),
+								   TexturedPSBlob->GetBufferSize(), nullptr, &TexturedPixelShader);
+
+	D3D11_INPUT_ELEMENT_DESC TexturedLayout[] =
+	{
+		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 16, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 32, D3D11_INPUT_PER_VERTEX_DATA, 0},
+	};
+	GetDevice()->CreateInputLayout(TexturedLayout, ARRAYSIZE(TexturedLayout), TexturedVSBlob->GetBufferPointer(),
+		TexturedVSBlob->GetBufferSize(), &TexturedInputLayout);
+
+	// TODO(KHJ): ShaderBlob 파일로 저장하고, 이후 이미 존재하는 경우 컴파일 없이 Blob을 로드할 수 있도록 할 것
+	// TODO(KHJ): 실제 텍스처용 셰이더를 별도로 생성해야 함 (UV 좌표 포함)
+	
+	TexturedVSBlob->Release();
+	TexturedPSBlob->Release();
 }
 
 /**
@@ -257,38 +295,83 @@ void URenderer::RenderLevel()
 			}
 			ID3D11RasterizerState* LoadedRasterizerState = GetRasterizerState(RenderState);
 
-			// Update pipeline info
-			FPipelineInfo PipelineInfo = {
-				DefaultInputLayout,
-				DefaultVertexShader,
-				LoadedRasterizerState,
-				DefaultDepthStencilState,
-				DefaultPixelShader,
-				nullptr,
-			};
-			Pipeline->UpdatePipeline(PipelineInfo);
-
-			// Update pipeline buffers
-			Pipeline->SetConstantBuffer(0, true, ConstantBufferModels);
-			UpdateConstant(
-				PrimitiveComponent->GetRelativeLocation(),
-				PrimitiveComponent->GetRelativeRotation(),
-				PrimitiveComponent->GetRelativeScale3D());
-
-			Pipeline->SetConstantBuffer(2, true, ConstantBufferColor);
-			UpdateConstant(PrimitiveComponent->GetColor());
-
-			Pipeline->SetVertexBuffer(PrimitiveComponent->GetVertexBuffer(), Stride);
-			// 버텍스 + 인덱스 그리기
-			if (PrimitiveComponent->GetIndexBuffer() && PrimitiveComponent->GetIndicesData())
+			if (auto MeshComp = Cast<UStaticMeshComponent>(PrimitiveComponent))
 			{
-				Pipeline->SetIndexBuffer(PrimitiveComponent->GetIndexBuffer(), 0);
-				Pipeline->DrawIndexed(PrimitiveComponent->GetNumIndices(), 0, 0);
+				FStaticMesh* MeshAsset = MeshComp->GetStaticMesh()->GetStaticMeshAsset();
+				if (!MeshAsset)	continue;
+
+				Pipeline->SetConstantBuffer(0, true, ConstantBufferModels);
+				UpdateConstant(
+					MeshComp->GetRelativeLocation(),
+					MeshComp->GetRelativeRotation(),
+					MeshComp->GetRelativeScale3D()
+				);
+
+				Pipeline->SetVertexBuffer(MeshComp->GetVertexBuffer(), sizeof(FNormalVertex));
+				Pipeline->SetIndexBuffer(MeshComp->GetIndexBuffer(), 0);
+
+				for (const FMeshSection& Section : MeshAsset->Sections)
+				{
+					UMaterial* Material = MeshComp->GetStaticMesh()->GetMaterial(Section.MaterialSlot);
+					if (Material && Material->GetDiffuseTexture())
+					{
+						FPipelineInfo PipelineInfo = {
+							TexturedInputLayout,
+							TexturedVertexShader,
+							LoadedRasterizerState,
+							DefaultDepthStencilState,
+							TexturedPixelShader,
+							nullptr,
+						};
+						Pipeline->UpdatePipeline(PipelineInfo);
+						if (auto* Proxy = Material->GetDiffuseTexture()->GetRenderProxy())
+						{
+							Pipeline->SetTexture(0, false, Proxy->GetSRV());
+							Pipeline->SetSamplerState(0, false, Proxy->GetSampler());
+						}
+					}
+					else
+					{
+						// ...
+					}
+					Pipeline->DrawIndexed(Section.IndexCount, Section.StartIndex, 0);
+				}
 			}
-			// 버텍스 그리기
 			else
 			{
-				Pipeline->Draw(static_cast<uint32>(PrimitiveComponent->GetNumVertices()), 0);
+				// Update pipeline info
+				FPipelineInfo PipelineInfo = {
+					DefaultInputLayout,
+					DefaultVertexShader,
+					LoadedRasterizerState,
+					DefaultDepthStencilState, 
+					DefaultPixelShader,
+					nullptr,
+				};
+				Pipeline->UpdatePipeline(PipelineInfo);
+
+				// Update pipeline buffers
+				Pipeline->SetConstantBuffer(0, true, ConstantBufferModels);
+				UpdateConstant(
+					PrimitiveComponent->GetRelativeLocation(),
+					PrimitiveComponent->GetRelativeRotation(),
+					PrimitiveComponent->GetRelativeScale3D()
+				);
+				Pipeline->SetConstantBuffer(2, true, ConstantBufferColor);
+				UpdateConstant(PrimitiveComponent->GetColor());
+
+				Pipeline->SetVertexBuffer(PrimitiveComponent->GetVertexBuffer(), Stride);
+				// 버텍스 + 인덱스 그리기
+				if (PrimitiveComponent->GetIndexBuffer() && PrimitiveComponent->GetIndicesData())
+				{
+					Pipeline->SetIndexBuffer(PrimitiveComponent->GetIndexBuffer(), 0);
+					Pipeline->DrawIndexed(PrimitiveComponent->GetNumIndices(), 0, 0);
+				}
+				// 버텍스 그리기
+				else
+				{
+					Pipeline->Draw(static_cast<uint32>(PrimitiveComponent->GetNumVertices()), 0);
+				}
 			}
 		}
 	}

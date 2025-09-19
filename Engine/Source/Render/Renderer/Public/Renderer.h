@@ -52,6 +52,7 @@ public:
 	void CreateRasterizerState();
 	void CreateDepthStencilState();
 	void CreateDefaultShader();
+	void CreateTextureShader();
 	void CreateConstantBuffer();
 
 	// Release
@@ -123,6 +124,11 @@ private:
 	ID3D11VertexShader* DefaultVertexShader = nullptr;
 	ID3D11PixelShader* DefaultPixelShader = nullptr;
 	ID3D11InputLayout* DefaultInputLayout = nullptr;
+	
+	ID3D11VertexShader* TexturedVertexShader = nullptr;
+	ID3D11PixelShader* TexturedPixelShader = nullptr;
+	ID3D11InputLayout* TexturedInputLayout = nullptr;
+	
 	uint32 Stride = 0;
 
 	struct FRasterKey

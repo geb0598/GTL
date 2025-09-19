@@ -61,3 +61,25 @@ struct FTransform
 	{
 	}
 };
+
+struct FNormalVertex
+{
+	FVector Pos;
+	FVector Normal;
+	FVector4 Color;
+	FVector2 Tex;
+};
+
+struct FMeshSection {
+	uint32 StartIndex;
+	uint32 IndexCount;
+	uint32 MaterialSlot;
+};
+
+struct FStaticMesh
+{
+	std::string PathFileName;
+	TArray<FNormalVertex> Vertices;
+	TArray<uint32> Indices;
+	TArray<FMeshSection> Sections;
+};
