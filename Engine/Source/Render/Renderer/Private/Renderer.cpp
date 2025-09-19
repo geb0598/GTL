@@ -107,14 +107,16 @@ void URenderer::CreateDefaultShader()
 
 	D3D11_INPUT_ELEMENT_DESC DefaultLayout[] =
 	{
-		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(FNormalVertex, Position), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(FNormalVertex, Normal), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(FNormalVertex, Color), D3D11_INPUT_PER_VERTEX_DATA, 0	},
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(FNormalVertex, TexCoord), D3D11_INPUT_PER_VERTEX_DATA, 0	}
 	};
 
 	GetDevice()->CreateInputLayout(DefaultLayout, ARRAYSIZE(DefaultLayout), VertexShaderCSO->GetBufferPointer(),
 	                               VertexShaderCSO->GetBufferSize(), &DefaultInputLayout);
 
-	Stride = sizeof(FVertex);
+	Stride = sizeof(FNormalVertex);
 
 	// TODO(KHJ): ShaderBlob 파일로 저장하고, 이후 이미 존재하는 경우 컴파일 없이 Blob을 로드할 수 있도록 할 것
 	VertexShaderCSO->Release();
@@ -411,7 +413,7 @@ void URenderer::RenderEnd() const
  * @param InByteWidth 버퍼 크기 (바이트 단위)
  * @return 생성된 D3D11 정점 버퍼
  */
-ID3D11Buffer* URenderer::CreateVertexBuffer(FVertex* InVertices, uint32 InByteWidth) const
+ID3D11Buffer* URenderer::CreateVertexBuffer(FNormalVertex* InVertices, uint32 InByteWidth) const
 {
 	D3D11_BUFFER_DESC VertexBufferDescription = {};
 	VertexBufferDescription.ByteWidth = InByteWidth;
@@ -579,7 +581,7 @@ void URenderer::CreateVertexShaderAndInputLayout(const wstring& InFilePath,
 	                               VertexShaderBlob->GetBufferSize(), OutInputLayout);
 
 	// TODO(KHJ): 이 값이 여기에 있는 게 맞나? 검토 필요
-	Stride = sizeof(FVertex);
+	Stride = sizeof(FNormalVertex);
 
 	VertexShaderBlob->Release();
 }

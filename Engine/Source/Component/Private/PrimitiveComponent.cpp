@@ -95,7 +95,7 @@ const FMatrix& USceneComponent::GetWorldTransformMatrixInverse() const
 	return WorldTransformMatrixInverse;
 }
 
-const TArray<FVertex>* UPrimitiveComponent::GetVerticesData() const
+const TArray<FNormalVertex>* UPrimitiveComponent::GetVerticesData() const
 {
 	return Vertices;
 }

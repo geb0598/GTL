@@ -180,7 +180,7 @@ bool UObjectPicker::IsRayPrimitiveCollided(const FRay& ModelRay, UPrimitiveCompo
 	const uint32 NumVertices = Primitive->GetNumVertices();
 	const uint32 NumIndices = Primitive->GetNumIndices();
 
-	const TArray<FVertex>* Vertices = Primitive->GetVerticesData();
+	const TArray<FNormalVertex>* Vertices = Primitive->GetVerticesData();
 	const TArray<uint32>* Indices = Primitive->GetIndicesData();
 
 	float Distance = D3D11_FLOAT32_MAX; //Distance 초기화

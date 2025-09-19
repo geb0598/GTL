@@ -313,15 +313,6 @@
     <ClInclude Include="Source\Component\Mesh\Public\VertexDatas.h">
       <Filter>Source\Component\Mesh\Public</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Component\Mesh\Sample\Rectangle.h">
-      <Filter>Source\Component\Mesh\Sample</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Component\Mesh\Sample\Sphere.h">
-      <Filter>Source\Component\Mesh\Sample</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Component\Mesh\Sample\Triangle.h">
-      <Filter>Source\Component\Mesh\Sample</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Component\Public\ActorComponent.h">
       <Filter>Source\Component\Public</Filter>
     </ClInclude>
@@ -652,9 +643,6 @@
     </Filter>
     <Filter Include="Source\Component\Mesh\Private">
       <UniqueIdentifier>{43ee5ef6-a1bc-46d4-8f40-2f5b5bebe8d7}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Component\Mesh\Sample">
-      <UniqueIdentifier>{1da978a9-6997-49b1-b802-e3214a4f58b2}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Component\Public">
       <UniqueIdentifier>{d8ad0923-3182-4194-9b85-7f63b38da952}</UniqueIdentifier>
