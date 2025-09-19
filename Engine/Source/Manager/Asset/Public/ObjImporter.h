@@ -186,4 +186,101 @@ struct FObjImporter
 			/** Others... */
 		}
 	}
+
+private:
+	static bool ParseFaceBuffer(const FString& FaceBuffer, FObjInfo* ObjInfo)
+	{
+		/** Ignore data when ObjInfo is nullptr */
+		if (!ObjInfo)
+		{
+			return false;
+		}
+
+		TArray<FString> Indices;
+		size_t Position = 0;
+		size_t NextPosition = FaceBuffer.find('/');
+
+		while (NextPosition != FString::npos)
+		{
+			Indices.push_back(FaceBuffer.substr(Position, NextPosition - Position));
+			Position = NextPosition + 1;
+			NextPosition = FaceBuffer.find('/');
+		}
+		Indices.push_back(FaceBuffer.substr(Position));
+
+		if (Indices.empty())
+		{
+			UE_LOG_ERROR("면 형식이 잘못되었습니다");
+			return false;
+		}
+
+		if (Indices[0].empty())
+		{
+			UE_LOG_ERROR("정점 위치 형식이 잘못되었습니다");
+			return false;
+		}
+
+		try
+		{
+			ObjInfo->VertexIndices.push_back(std::stoull(Indices[0]) - 1);
+		}
+		catch ([[maybe_unused]] const std::invalid_argument& Exception)
+		{
+			UE_LOG_ERROR("정점 위치 인덱스 형식이 잘못되었습니다");
+		}
+
+		switch (Indices.size())
+		{
+		case 1:
+			/** @brief: Only position data (e.g., 'f 1 2 3') */
+			break;
+		case 2:
+			/** @brief: Position and texture coordinate data (e.g., 'f 1/1 2/1') */
+			if (Indices[1].empty())
+			{
+				UE_LOG_ERROR("정점 텍스쳐 좌표 인덱스 형식이 잘못되었습니다");
+				return false;
+			}
+
+			try
+			{
+				ObjInfo->TexCoordIndices.push_back(std::stoull(Indices[1]) - 1);
+			}
+			catch ([[maybe_unused]] const std::invalid_argument& Exception)
+			{
+				UE_LOG_ERROR("정점 텍스쳐 좌표 인덱스 형식이 잘못되었습니다");
+				return false;
+			}
+			break;
+		case 3:
+			/** @brief: Position, texture coordinate and vertex normal data (e.g., 'f 1/1/1 2/2/1' or 'f 1//1 2//1') */
+			if (Indices[1].empty()) /** Position and vertex normal */
+			{
+				if (Indices[2].empty())
+				{
+					UE_LOG_ERROR("정점 법선 인덱스 형식이 잘못되었습니다");
+					return false;
+				}
+
+				try
+				{
+					ObjInfo->NormalIndices.push_back(std::stoull(Indices[2]) - 1);
+				}
+				catch ([[maybe_unused]] const std::invalid_argument& Exception)
+				{
+					UE_LOG_ERROR("정점 법선 인덱스 형식이 잘못되었습니다");
+					return false;
+				}
+			}
+			else /** Position, texture coordinate, and vertex normal */
+			{
+				if (Indices[1].empty() || Indices[2].empty())
+				{
+					UE_LOG_ERROR("정점 텍스쳐 좌표 또는 법선 인덱스 형식이 잘못되었습니다")
+				}
+			}
+
+			break;
+		}
+	}
 };
