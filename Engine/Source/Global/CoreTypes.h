@@ -71,14 +71,6 @@ struct FTransform
 	}
 };
 
-struct FNormalVertex
-{
-	FVector Position;
-	FVector Normal;
-	FVector4 Color;
-	FVector2 TexCoord;
-};
-
 // 렌더링에 필요한 표면 정보를 담는 구조체입니다.
 // 실제로는 UMaterial과 같은 UObject 클래스로 만드는 것이 더 확장성 있습니다.
 struct FMaterial
