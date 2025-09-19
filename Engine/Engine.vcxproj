@@ -151,14 +151,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="ObjImporter.h" />
-    <ClInclude Include="ObjManager.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Source\Actor\Public\Actor.h" />
     <ClInclude Include="Source\Actor\Public\CubeActor.h" />
     <ClInclude Include="Source\Actor\Public\SphereActor.h" />
     <ClInclude Include="Source\Actor\Public\SquareActor.h" />
     <ClInclude Include="Source\Actor\Public\TriangleActor.h" />
+    <ClInclude Include="Source\Component\Mesh\Public\MeshComponent.h">
+      <DeploymentContent>false</DeploymentContent>
+    </ClInclude>
+    <ClInclude Include="Source\Component\Mesh\Public\StaticMesh.h" />
+    <ClInclude Include="Source\Component\Mesh\Public\StaticMeshComp.h">
+      <DeploymentContent>false</DeploymentContent>
+    </ClInclude>
     <ClInclude Include="Source\Component\Public\ActorComponent.h" />
     <ClInclude Include="Source\Component\Public\BillBoardComponent.h" />
     <ClInclude Include="Source\Component\Public\LineComponent.h" />
@@ -173,6 +178,12 @@
     <ClInclude Include="Source\Component\Mesh\Sample\Sphere.h" />
     <ClInclude Include="Source\Component\Mesh\Sample\Triangle.h" />
     <ClInclude Include="Source\Global\Quaternion.h" />
+    <ClInclude Include="Source\Manager\Asset\Public\ObjImporter.h">
+      <DeploymentContent>false</DeploymentContent>
+    </ClInclude>
+    <ClInclude Include="Source\Manager\Asset\Public\ObjManager.h">
+      <DeploymentContent>false</DeploymentContent>
+    </ClInclude>
     <ClInclude Include="Source\Physics\Public\AABB.h" />
     <ClInclude Include="Source\Physics\Public\BoundingSphere.h" />
     <ClInclude Include="Source\Physics\Public\BoundingVolume.h" />
@@ -259,7 +270,6 @@
     <ClInclude Include="Source\Utility\Public\UELogParser.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ObjManager.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
@@ -269,6 +279,15 @@
     <ClCompile Include="Source\Actor\Private\SphereActor.cpp" />
     <ClCompile Include="Source\Actor\Private\SquareActor.cpp" />
     <ClCompile Include="Source\Actor\Private\TriangleActor.cpp" />
+    <ClCompile Include="Source\Component\Mesh\Private\MeshComponent.cpp">
+      <DeploymentContent>false</DeploymentContent>
+    </ClCompile>
+    <ClCompile Include="Source\Component\Mesh\Private\StaticMesh.cpp">
+      <DeploymentContent>false</DeploymentContent>
+    </ClCompile>
+    <ClCompile Include="Source\Component\Mesh\Private\StaticMeshComp.cpp">
+      <DeploymentContent>false</DeploymentContent>
+    </ClCompile>
     <ClCompile Include="Source\Component\Private\ActorComponent.cpp" />
     <ClCompile Include="Source\Component\Private\BillBoardComponent.cpp" />
     <ClCompile Include="Source\Component\Private\LineComponent.cpp" />
@@ -281,6 +300,12 @@
     <ClCompile Include="Source\Component\Mesh\Private\VertexDatas.cpp" />
     <ClCompile Include="Source\Global\Quaternion.cpp" />
     <ClCompile Include="Source\Manager\Asset\Private\AssetManager.cpp" />
+    <ClCompile Include="Source\Manager\Asset\Private\ObjImporter.cpp">
+      <DeploymentContent>false</DeploymentContent>
+    </ClCompile>
+    <ClCompile Include="Source\Manager\Asset\Private\ObjManager.cpp">
+      <DeploymentContent>false</DeploymentContent>
+    </ClCompile>
     <ClCompile Include="Source\Physics\Private\AABB.cpp" />
     <ClCompile Include="Source\Physics\Private\BoundingSphere.cpp" />
     <ClCompile Include="Source\Core\Private\AppWindow.cpp" />
@@ -376,6 +401,9 @@
     <FxCompile Include="Asset\Shader\ShaderFont.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\StaticMeshShader.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

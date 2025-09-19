@@ -130,7 +130,7 @@ struct FObjImporter
 				{
 					std::istringstream FaceTokenizer(Buffer);
 					FString IndexBuffer;
-					
+
 					/** #1. Parse Index of Vertex Position */
 					if (!std::getline(FaceTokenizer, IndexBuffer, '/') || IndexBuffer.empty())
 					{
