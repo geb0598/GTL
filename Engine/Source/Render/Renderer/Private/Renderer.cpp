@@ -279,7 +279,17 @@ void URenderer::RenderLevel()
 			UpdateConstant(PrimitiveComponent->GetColor());
 
 			Pipeline->SetVertexBuffer(PrimitiveComponent->GetVertexBuffer(), Stride);
-			Pipeline->Draw(static_cast<uint32>(PrimitiveComponent->GetVerticesData()->size()), 0);
+			// 버텍스 + 인덱스 그리기
+			if (PrimitiveComponent->GetIndexBuffer() && PrimitiveComponent->GetIndicesData())
+			{
+				Pipeline->SetIndexBuffer(PrimitiveComponent->GetIndexBuffer(), 0);
+				Pipeline->DrawIndexed(PrimitiveComponent->GetNumIndices(), 0, 0);
+			}
+			// 버텍스 그리기
+			else
+			{
+				Pipeline->Draw(static_cast<uint32>(PrimitiveComponent->GetNumVertices()), 0);
+			}
 		}
 	}
 
@@ -513,6 +523,18 @@ void URenderer::ReleaseVertexBuffer(ID3D11Buffer* InVertexBuffer)
 	if (InVertexBuffer)
 	{
 		InVertexBuffer->Release();
+	}
+}
+
+/**
+ * @brief Index Buffer 해제 함수
+ * @param InIndexBuffer 해제할 인덱스 버퍼
+ */
+void URenderer::ReleaseIndexBuffer(ID3D11Buffer* InIndexBuffer)
+{
+	if (InIndexBuffer)
+	{
+		InIndexBuffer->Release();
 	}
 }
 
