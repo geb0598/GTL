@@ -89,6 +89,7 @@ public:
 	void UpdateConstant(const FVector4& InColor) const;
 
 	static void ReleaseVertexBuffer(ID3D11Buffer* InVertexBuffer);
+	static void ReleaseIndexBuffer(ID3D11Buffer* InIndexBuffer);
 
 	// Helper function
 	static D3D11_CULL_MODE ToD3D11(ECullMode InCull);
