@@ -24,11 +24,18 @@ struct FViewProjConstants
 	FMatrix Projection;
 };
 
-
 struct FVertex
 {
 	FVector Position;
 	FVector4 Color;
+};
+
+struct FNormalVertex
+{
+	FVector Position;
+	FVector Normal;
+	FVector4 Color;
+	FVector2 TexCoord;
 };
 
 struct FRay
@@ -125,23 +132,4 @@ struct FStaticMesh
 	// --- 3. 연결 정보 (Sections) ---
 	// 각 재질을 어떤 기하 구간에 칠할지에 대한 지시서
 	TArray<FMeshSection> Sections;
-};
-
-// Raw Data
-struct FObjInfo
-{
-	// Vertex List
-	// UV List
-	// Normal List
-	// Vertex Index List
-	// UV Index List
-	// Normal Index List
-	// Material List
-	// Texture List
-};
-
-struct FObjMaterialInfo
-{
-	// Diffuse Scalar
-	// Diffuse Texture
 };
