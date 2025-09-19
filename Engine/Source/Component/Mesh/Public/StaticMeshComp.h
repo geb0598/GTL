@@ -30,6 +30,9 @@ public:
 	//	}
 	//}
 
+public:
+	UStaticMesh* GetStaticMesh() { return StaticMesh; }
+
 private:
 	TObjectPtr<UStaticMesh> StaticMesh;
 };

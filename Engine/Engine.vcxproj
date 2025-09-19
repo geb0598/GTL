@@ -261,7 +261,9 @@
     <ClInclude Include="Source\Render\UI\Window\Public\OutlinerWindow.h" />
     <ClInclude Include="Source\Render\UI\Window\Public\DetailWindow.h" />
     <ClInclude Include="Source\Render\UI\Window\Public\UIWindow.h" />
+    <ClInclude Include="Source\Texture\Public\Material.h" />
     <ClInclude Include="Source\Texture\Public\Texture.h" />
+    <ClInclude Include="Source\Texture\Public\TextureRenderProxy.h" />
     <ClInclude Include="Source\Utility\Public\JsonSerializer.h" />
     <ClInclude Include="Source\Utility\Public\Metadata.h" />
     <ClInclude Include="Source\Utility\Public\UELogParser.h" />
@@ -400,6 +402,9 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="Asset\Shader\StaticMeshShader.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\TexturedShader.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </FxCompile>
   </ItemGroup>

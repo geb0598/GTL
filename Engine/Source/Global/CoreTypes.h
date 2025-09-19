@@ -3,6 +3,7 @@
 #include "Global/Matrix.h"
 #include "Global/Types.h"
 #include "Core/Public/Name.h"
+#include <Texture/Public/Material.h>
 
 //struct BatchLineContants
 //{
@@ -71,36 +72,11 @@ struct FTransform
 	}
 };
 
-// 렌더링에 필요한 표면 정보를 담는 구조체입니다.
-// 실제로는 UMaterial과 같은 UObject 클래스로 만드는 것이 더 확장성 있습니다.
-struct FMaterial
-{
-	//FName Name; // 재질 이름 (e.g., "SwordBlade_Metal")
-
-	// 사용할 텍스처에 대한 참조 포인터
-	//TObjectPtr<UTexture> BaseColorTexture;
-	//TObjectPtr<UTexture> NormalTexture;
-	//TObjectPtr<UTexture> SpecularTexture;
-	// ... 기타 PBR 텍스처들 (Roughness, Metallic 등)
-
-	// 텍스처가 없을 경우 사용할 기본 값들
-	FVector4 BaseColorFactor = { 1.f, 1.f, 1.f, 1.f };
-	float RoughnessFactor = 0.8f;
-	float MetallicFactor = 0.f;
-};
-
-// FStaticMesh 내에서 특정 재질을 사용하는 인덱스 구간을 정의합니다.
 struct FMeshSection
 {
-	// 이 섹션이 사용할 재질의 인덱스
-	// (아래 FStaticMesh의 Materials 배열에 대한 인덱스)
-	int32 MaterialIndex;
-
-	// 이 섹션이 시작되는 전체 인덱스 버퍼의 위치
-	uint32 FirstIndex;
-
-	// 이 섹션을 구성하는 삼각형의 개수
-	uint32 NumTriangles;
+	uint32 StartIndex;
+	uint32 IndexCount;
+	uint32 MaterialSlot;
 };
 
 // Cooked Data
@@ -119,7 +95,7 @@ struct FStaticMesh
 
 	// --- 2. 재질 정보 (Materials) ---
 	// 이 메시에 사용되는 모든 고유 재질의 목록 (페인트 팔레트)
-	TArray<FMaterial> Materials;
+	TArray<UMaterial> Materials;
 
 	// --- 3. 연결 정보 (Sections) ---
 	// 각 재질을 어떤 기하 구간에 칠할지에 대한 지시서
