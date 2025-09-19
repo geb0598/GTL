@@ -106,6 +106,7 @@ struct FObjImporter
 					continue;
 				}
 
+				/** @note: Ignore 3D Texture */
 				FVector2 TexCoord;
 				if (!(Tokenizer >> TexCoord.X >> TexCoord.Y))
 				{
