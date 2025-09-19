@@ -156,7 +156,7 @@
     <ClCompile Include="Source\Level\Private\Level.cpp">
       <Filter>Source\Level\Private</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Manager\Asset\Private\AssetManger.cpp">
+    <ClCompile Include="Source\Manager\Asset\Private\AssetManager.cpp">
       <Filter>Source\Manager\Asset\Private</Filter>
     </ClCompile>
     <ClCompile Include="Source\Manager\Config\Private\ConfigManager.cpp">
