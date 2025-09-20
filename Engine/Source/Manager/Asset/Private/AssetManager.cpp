@@ -127,6 +127,16 @@ void UAssetManager::Release()
 	ReleaseAllTextures();
 }
 
+ID3D11Buffer* UAssetManager::CreateVertexBuffer(TArray<FNormalVertex> InVertices)
+{
+	return URenderer::GetInstance().CreateVertexBuffer(InVertices.data(), static_cast<int>(InVertices.size()) * sizeof(FNormalVertex));
+}
+
+ID3D11Buffer* UAssetManager::CreateIndexBuffer(TArray<uint32> InIndices)
+{
+	return URenderer::GetInstance().CreateIndexBuffer(InIndices.data(), static_cast<int>(InIndices.size()) * sizeof(uint32));
+}
+
 TArray<FNormalVertex>* UAssetManager::GetVertexData(EPrimitiveType InType)
 {
 	return VertexDatas[InType];

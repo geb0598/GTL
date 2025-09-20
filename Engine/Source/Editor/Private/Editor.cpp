@@ -50,10 +50,10 @@ void UEditor::Update()
 	// 1. 마우스 위치를 기반으로 활성 뷰포트를 결정합니다.
 	ViewportClient->UpdateActiveViewport(UInputManager::GetInstance().GetMousePosition());
 
-	// 2. 활성 뷰포트의 카메라만 업데이트합니다.
+	// 2. 활성 뷰포트의 카메라의 제어만 업데이트합니다.
 	if (UCamera* ActiveCamera = ViewportClient->GetActiveCamera())
 	{
-		ActiveCamera->Update();
+		ActiveCamera->UpdateInput();
 	}
 	
 	if (AActor* SelectedActor = ULevelManager::GetInstance().GetCurrentLevel()->GetSelectedActor())
