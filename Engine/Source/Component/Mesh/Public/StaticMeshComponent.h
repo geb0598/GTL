@@ -35,4 +35,7 @@ public:
 
 private:
 	TObjectPtr<UStaticMesh> StaticMesh;
+
+	// MaterialList
+
 };

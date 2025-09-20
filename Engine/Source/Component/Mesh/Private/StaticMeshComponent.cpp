@@ -10,6 +10,7 @@ IMPLEMENT_CLASS(UStaticMeshComponent, UMeshComponent)
 UStaticMeshComponent::UStaticMeshComponent()
 {
 	StaticMesh = FObjManager::LoadObjStaticMesh("");
+	// Material = FObjManager::LoadObjMaterial("");
 	Type = EPrimitiveType::StaticMesh;
 
 	Vertices = &(StaticMesh.Get()->GetVertices());

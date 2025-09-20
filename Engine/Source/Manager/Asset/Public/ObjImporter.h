@@ -98,7 +98,8 @@ struct FObjImporter
 	/** @todo: Implement configuration to manage behaviors of LoadObj */
 	struct Configuration
 	{
-		// FString DefaultName;
+		// FString DefaultName
+		// Disable Object
 	};
 
 	/**

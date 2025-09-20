@@ -3,10 +3,38 @@
 #include "Core/Public/Object.h"       // UObject 기반 클래스 및 매크로
 #include "Core/Public/ObjectPtr.h" // TObjectPtr 사용
 #include "Global/CoreTypes.h"        // FString, TArray 등
-#include "Component/Mesh/Public/StaticMesh.h" // FStaticMesh 구조체 정의
 
 // 전방 선언: FStaticMesh의 전체 정의를 포함할 필요 없이 포인터만 사용
-struct FStaticMesh;
+struct FMeshSection
+{
+	uint32 StartIndex;
+	uint32 IndexCount;
+	uint32 MaterialSlot;
+};
+
+// Cooked Data
+struct FStaticMesh
+{
+	FString PathFileName;
+
+	TArray<FNormalVertex> Vertices;
+	TArray<uint32> Indices;
+
+	// GPU 메모리에 올라간 버퍼에 대한 포인터
+	//ID3D11Buffer* VertexBuffer = nullptr;
+	//ID3D11Buffer* IndexBuffer = nullptr;
+
+	// --- 2. 재질 정보 (Materials) ---
+	// 이 메시에 사용되는 모든 고유 재질의 목록 (페인트 팔레트)
+	//TArray<UMaterial> Materials;
+
+	TArray<FMaterial> MaterialInfo;
+
+	// --- 3. 연결 정보 (Sections) ---
+	// 각 재질을 어떤 기하 구간에 칠할지에 대한 지시서
+	TArray<FMeshSection> Sections;
+};
+
 
 /**
  * @brief FStaticMesh(Cooked Data)를 엔진 오브젝트 시스템에 통합하는 래퍼 클래스.
@@ -57,5 +85,9 @@ private:
 	// 실제 데이터 본체(FStaticMesh)에 대한 비소유(non-owning) 포인터.
 	// 이 데이터의 실제 소유권 및 생명주기는 AssetManager가 책임집니다.
 	TObjectPtr<FStaticMesh> StaticMeshAsset;
+
 	TArray<UMaterial*> Materials;
+
+	ID3D11Buffer* VertexBuffer;
+	ID3D11Buffer* IndexBuffer;
 };

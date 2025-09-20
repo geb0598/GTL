@@ -57,12 +57,12 @@ const TArray<uint32>& UStaticMesh::GetIndices() const
 
 ID3D11Buffer* UStaticMesh::GetVertexBuffer() const
 {
-	return StaticMeshAsset ? StaticMeshAsset->VertexBuffer : nullptr;
+	return StaticMeshAsset ? VertexBuffer : nullptr;
 }
 
 ID3D11Buffer* UStaticMesh::GetIndexBuffer() const
 {
-	return StaticMeshAsset ? StaticMeshAsset->IndexBuffer : nullptr;
+	return StaticMeshAsset ? IndexBuffer : nullptr;
 }
 
 UMaterial* UStaticMesh::GetMaterial(int32 MaterialIndex) const

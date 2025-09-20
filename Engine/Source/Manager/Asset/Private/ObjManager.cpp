@@ -22,7 +22,7 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FString& PathFileName)
 	FObjInfo ObjInfo = {};
 	if (!FObjImporter::LoadObj(PathFileName, &ObjInfo))
 	{
-		UE_LOG("파일 정보를 읽어오는데 실패했습니다: %s", PathFileName);
+		UE_LOG_ERROR("파일 정보를 읽어오는데 실패했습니다: %s", PathFileName.c_str());
 		return nullptr;
 	}
 
@@ -31,14 +31,14 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FString& PathFileName)
 
 	if (ObjInfo.ObjectInfoList.size() == 0)
 	{
-		UE_LOG("오브젝트 정보를 찾을 수 없습니다");
+		UE_LOG_ERROR("오브젝트 정보를 찾을 수 없습니다");
 		return nullptr;
 	}
 
 	/** @note: Use only first object in '.obj' file to create FStaticMesh. */
 	FObjectInfo& ObjectInfo = ObjInfo.ObjectInfoList[0];
 
-	TMap<VertexKey, size_t> VertexMap;
+	TMap<VertexKey, size_t, VertexKeyHash> VertexMap;
 	for (size_t i = 0; i < ObjectInfo.VertexIndexList.size(); ++i)
 	{
 		size_t VertexIndex = ObjectInfo.VertexIndexList[i];
