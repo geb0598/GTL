@@ -278,4 +278,23 @@ struct FVector4
 	{
 		return X * InOtherVector.X + Y * InOtherVector.Y + Z * InOtherVector.Z;
 	}
+
+	// Constant Vector (definition from UE5)
+	static FVector4 ZeroVector() { return { 0.0f, 0.0f, 0.0f, 1.f }; }
+	static FVector4 OneVector() { return { 1.0f, 1.0f, 1.0f, 1.f }; }
+	static FVector4 ForwardVector() { return { 1.0f, 0.0f, 0.0f, 1.f }; }
+	static FVector4 BackwardVector() { return { -1.0f, 0.0f, 0.0f, 1.f }; }
+	static FVector4 UpVector() { return { 0.0f, 0.0f, 1.0f, 1.f }; }
+	static FVector4 DownVector() { return { 0.0f, 0.0f, -1.0f, 1.f }; }
+	static FVector4 RightVector() { return { 0.0f, 1.0f, 0.0f, 1.f }; }
+	static FVector4 LeftVector() { return { 0.0f, -1.0f, 0.0f, 1.f }; }
+	static FVector4 XAxisVector() { return { 1.0f, 0.0f, 0.0f, 1.f }; }
+	static FVector4 YAxisVector() { return { 0.0f, 1.0f, 0.0f, 1.f }; }
+	static FVector4 ZAxisVector() { return { 0.0f, 0.0f, 1.0f, 1.f }; }
+
+	[[nodiscard]] static FVector4 Zero() { return ZeroVector(); }
+	[[nodiscard]] static FVector4 One() { return OneVector(); }
+	[[nodiscard]] static FVector4 UnitX() { return XAxisVector(); }
+	[[nodiscard]] static FVector4 UnitY() { return YAxisVector(); }
+	[[nodiscard]] static FVector4 UnitZ() { return ZAxisVector(); }
 };

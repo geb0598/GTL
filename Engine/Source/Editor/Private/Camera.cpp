@@ -7,8 +7,8 @@ void UCamera::UpdateInput()
 {
 	const UInputManager& Input = UInputManager::GetInstance();
 	const FMatrix RotationMatrix = FMatrix::RotationMatrix(FVector::GetDegreeToRadian(RelativeRotation));
-	const FVector4 Forward4 = FVector4(1, 0, 0, 1) * RotationMatrix;
-	const FVector4 WorldUp4 = FVector4(0, 0, 1, 1) * RotationMatrix;
+	const FVector4 Forward4 = FVector4::ForwardVector() * RotationMatrix;
+	const FVector4 WorldUp4 = FVector4::UpVector() * RotationMatrix;
 	const FVector WorldUp = { WorldUp4.X, WorldUp4.Y, WorldUp4.Z };
 
 	Forward = FVector(Forward4.X, Forward4.Y, Forward4.Z);
@@ -26,7 +26,7 @@ void UCamera::UpdateInput()
 		/**
 		 * @brief W, A, S, D 는 각각 카메라의 상, 하, 좌, 우 이동을 담당합니다.
 		 */
-		FVector Direction = { 0,0,0 };
+		FVector Direction = FVector::Zero();
 
 		if (Input.IsKeyDown(EKeyInput::A)) { Direction += -Right; }
 		if (Input.IsKeyDown(EKeyInput::D)) { Direction += Right; }
