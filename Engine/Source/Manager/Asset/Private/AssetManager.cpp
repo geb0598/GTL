@@ -194,11 +194,18 @@ ComPtr<ID3D11ShaderResourceView> UAssetManager::LoadTexture(const FString& InFil
 
 	// 새로운 텍스처 로드
 	ID3D11ShaderResourceView* TextureSRV = CreateTextureFromFile(InFilePath);
-	if (!TextureSRV)
+	if (TextureSRV)
 	{
-		UE_LOG_ERROR("AssetManager: LoadTexture 실패 - %s", InFilePath.c_str());
-		return nullptr;
+		TextureCache[InFilePath] = TextureSRV;
 	}
+
+	return TextureSRV;
+}
+
+UTexture* UAssetManager::CreateTexture(const FString& InFilePath, const FName& InName)
+{
+	auto SRV = LoadTexture(InFilePath);
+	if (!SRV)	return nullptr;
 
 	ID3D11SamplerState* Sampler = nullptr;
 	D3D11_SAMPLER_DESC SamplerDesc = {};
@@ -210,21 +217,18 @@ ComPtr<ID3D11ShaderResourceView> UAssetManager::LoadTexture(const FString& InFil
 	SamplerDesc.MinLOD = 0;
 	SamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
 
-	//URenderer::GetInstance()->CreateSamplerState();
-	/*if (FAILED(hr))l
+	HRESULT hr = URenderer::GetInstance().GetDevice()->CreateSamplerState(&SamplerDesc, &Sampler);
+	if (FAILED(hr))
 	{
-		UE_LOG_ERROR("FontRenderer: 샘플러 스테이트 생성 실패 (HRESULT: 0x%08lX)", hr);
-		return false;
+		UE_LOG_ERROR("CreateSamplerState failed (HRESULT: 0x%08lX)", hr);
+		return nullptr;
 	}
 
-	UE_LOG_SUCCESS("FontRenderer: 샘플러 스테이트 생성 완료");
-	return true;*/
+	auto* Proxy = new FTextureRenderProxy(SRV, Sampler);
+	auto* Texture = new UTexture(InFilePath, InName);
+	Texture->SetRenderProxy(Proxy);
 
-	auto* Proxy = new FTextureRenderProxy(TextureSRV, Sampler);
-
-	//TextureCache[InFilePath] = ;
-
-	return TextureSRV;
+	return Texture;
 }
 
 /**
