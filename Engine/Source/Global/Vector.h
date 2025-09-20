@@ -280,17 +280,17 @@ struct FVector4
 	}
 
 	// Constant Vector (definition from UE5)
-	static FVector4 ZeroVector() { return { 0.0f, 0.0f, 0.0f, 1.f }; }
-	static FVector4 OneVector() { return { 1.0f, 1.0f, 1.0f, 1.f }; }
-	static FVector4 ForwardVector() { return { 1.0f, 0.0f, 0.0f, 1.f }; }
-	static FVector4 BackwardVector() { return { -1.0f, 0.0f, 0.0f, 1.f }; }
-	static FVector4 UpVector() { return { 0.0f, 0.0f, 1.0f, 1.f }; }
-	static FVector4 DownVector() { return { 0.0f, 0.0f, -1.0f, 1.f }; }
-	static FVector4 RightVector() { return { 0.0f, 1.0f, 0.0f, 1.f }; }
-	static FVector4 LeftVector() { return { 0.0f, -1.0f, 0.0f, 1.f }; }
-	static FVector4 XAxisVector() { return { 1.0f, 0.0f, 0.0f, 1.f }; }
-	static FVector4 YAxisVector() { return { 0.0f, 1.0f, 0.0f, 1.f }; }
-	static FVector4 ZAxisVector() { return { 0.0f, 0.0f, 1.0f, 1.f }; }
+	static FVector4 ZeroVector() { return { 0.0f, 0.0f, 0.0f, 1.0f }; }
+	static FVector4 OneVector() { return { 1.0f, 1.0f, 1.0f, 1.0f }; }
+	static FVector4 ForwardVector() { return { 1.0f, 0.0f, 0.0f, 1.0f }; }
+	static FVector4 BackwardVector() { return { -1.0f, 0.0f, 0.0f, 1.0f }; }
+	static FVector4 UpVector() { return { 0.0f, 0.0f, 1.0f, 1.0f }; }
+	static FVector4 DownVector() { return { 0.0f, 0.0f, -1.0f, 1.0f }; }
+	static FVector4 RightVector() { return { 0.0f, 1.0f, 0.0f, 1.0f }; }
+	static FVector4 LeftVector() { return { 0.0f, -1.0f, 0.0f, 1.0f }; }
+	static FVector4 XAxisVector() { return { 1.0f, 0.0f, 0.0f, 1.0f }; }
+	static FVector4 YAxisVector() { return { 0.0f, 1.0f, 0.0f, 1.0f }; }
+	static FVector4 ZAxisVector() { return { 0.0f, 0.0f, 1.0f, 1.0f }; }
 
 	[[nodiscard]] static FVector4 Zero() { return ZeroVector(); }
 	[[nodiscard]] static FVector4 One() { return OneVector(); }
