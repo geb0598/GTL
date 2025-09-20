@@ -2,7 +2,7 @@
 #include "Editor/Public/ViewportClient.h"
 #include "Render/Renderer/Public/Renderer.h"
 
-void FViewportClient::UpdateLayout(const D3D11_VIEWPORT& InViewport)
+void FViewportClient::InitializeLayout(const D3D11_VIEWPORT& InViewport)
 {
 	if (Viewports.size() < 4) { Viewports.resize(4); }
 	const float BaseX = InViewport.TopLeftX;
@@ -16,24 +16,22 @@ void FViewportClient::UpdateLayout(const D3D11_VIEWPORT& InViewport)
 	Viewports[3].SetViewport({ BaseX + HalfW,    BaseY + HalfH,    HalfW, HalfH, 0.0f, 1.0f });
 }
 
-void FViewportClient::Render()
+void FViewportClient::UpdateActiveViewport(const FVector& InMousePosition)
 {
-	URenderer& Renderer = URenderer::GetInstance();
-	ID3D11DeviceContext* DeviceContext = Renderer.GetDeviceContext();
-	ID3D11DepthStencilView* DepthStencilView = Renderer.GetDeviceResources()->GetDepthStencilView();
-
-	// 각 뷰포트의 값을 갱신합니다.
-	UpdateLayout(Renderer.GetDeviceResources()->GetViewportInfo());
-
-	// 화면에 순차적으로 렌더합니다.
-	for (int Index = 0, Size = Viewports.size(); Index < Size; ++Index)
+	ActiveViewport = nullptr;
+	for (auto& Viewport : Viewports)
 	{
-		const FViewport& Viewport = Viewports[Index];
-		Viewport.Apply(DeviceContext);
+		Viewport.bIsActive = false;
+		const D3D11_VIEWPORT& ViewportInfo = Viewport.GetViewport();
 
-		// 옵션: DepthStencilView를 사용한다면 뷰포트 초기화를 합니다.
-		if (DepthStencilView) { Viewport.ClearDepth(DeviceContext, DepthStencilView); }
+		// 마우스가 현재 뷰포트의 사각 영역 내에 있는지 확인합니다.
+		if (InMousePosition.X >= ViewportInfo.TopLeftX && InMousePosition.X <= (ViewportInfo.TopLeftX + ViewportInfo.Width) &&
+			InMousePosition.Y >= ViewportInfo.TopLeftY && InMousePosition.Y <= (ViewportInfo.TopLeftY + ViewportInfo.Height))
+		{
+			Viewport.bIsActive = true;
+			ActiveViewport = &Viewport;
+		}
 
-		Renderer.RenderLevel();
+		// 다른 뷰포트들의 bIsActive 플래그를 false로 만들기 위해, 전부 순회함
 	}
 }

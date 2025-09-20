@@ -3,6 +3,7 @@
 #include "Manager/Level/Public/LevelManager.h"
 #include "Editor/Public/Editor.h"
 #include "Actor/Public/Actor.h"
+
 /**
  * @brief Level에서 각 Actor마다 가지고 있는 UUID를 출력해주기 위한 빌보드 클래스
  * Actor has a UBillBoardComponent
@@ -19,12 +20,11 @@ UBillBoardComponent::~UBillBoardComponent()
 	POwnerActor = nullptr;
 }
 
-void UBillBoardComponent::UpdateRotationMatrix()
+void UBillBoardComponent::UpdateRotationMatrix(const FVector& InCameraLocation)
 {
-	const FVector& CameraLocation = ULevelManager::GetInstance().GetEditor()->GetCameraLocation();
 	const FVector& OwnerActorLocation = POwnerActor->GetActorLocation();
 
-	FVector ToCamera = CameraLocation - OwnerActorLocation;
+	FVector ToCamera = InCameraLocation - OwnerActorLocation;
 	ToCamera.Normalize();
 
 	const FVector4 worldUp4 = FVector4(0, 0, 1, 1);

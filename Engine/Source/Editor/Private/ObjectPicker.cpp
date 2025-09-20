@@ -9,15 +9,6 @@
 #include "Level/Public/Level.h"
 #include "Global/Quaternion.h"
 
-UObjectPicker::UObjectPicker(UCamera& InCamera)
-	:Camera( InCamera)
-{}
-
-void UObjectPicker::SetCamera(UCamera& Camera)
-{
-	this->Camera = Camera;
-}
-
 FRay UObjectPicker::GetModelRay(const FRay& Ray, UPrimitiveComponent* Primitive)
 {
 	FMatrix ModelInverse = Primitive->GetWorldTransformMatrixInverse();
@@ -29,7 +20,7 @@ FRay UObjectPicker::GetModelRay(const FRay& Ray, UPrimitiveComponent* Primitive)
 	return ModelRay;
 }
 
-UPrimitiveComponent* UObjectPicker::PickPrimitive(const FRay& WorldRay, TArray<UPrimitiveComponent*> Candidate, float* Distance)
+UPrimitiveComponent* UObjectPicker::PickPrimitive(UCamera* InActiveCamera, const FRay& WorldRay, TArray<UPrimitiveComponent*> Candidate, float* Distance)
 {
 	UPrimitiveComponent* ShortestPrimitive = nullptr;
 	float ShortestDistance = D3D11_FLOAT32_MAX;
@@ -43,7 +34,7 @@ UPrimitiveComponent* UObjectPicker::PickPrimitive(const FRay& WorldRay, TArray<U
 		}
 		FMatrix ModelMat = Primitive->GetWorldTransformMatrix();
 		FRay ModelRay = GetModelRay(WorldRay, Primitive);
-		if (IsRayPrimitiveCollided(ModelRay, Primitive, ModelMat, &PrimitiveDistance))
+		if (IsRayPrimitiveCollided(InActiveCamera, ModelRay, Primitive, ModelMat, &PrimitiveDistance))
 			//Ray와 Primitive가 충돌했다면 거리 테스트 후 가까운 Actor Picking
 		{
 			if (PrimitiveDistance < ShortestDistance)
@@ -58,7 +49,7 @@ UPrimitiveComponent* UObjectPicker::PickPrimitive(const FRay& WorldRay, TArray<U
 	return ShortestPrimitive;
 }
 
-void UObjectPicker::PickGizmo( const FRay& WorldRay, UGizmo& Gizmo, FVector& CollisionPoint)
+void UObjectPicker::PickGizmo(UCamera* InActiveCamera, const FRay& WorldRay, UGizmo& Gizmo, FVector& CollisionPoint)
 {
 	//Forward, Right, Up순으로 테스트할거임.
 	//원기둥 위의 한 점 P, 축 위의 임의의 점 A에(기즈모 포지션) 대해, AP벡터와 축 벡터 V와 피타고라스 정리를 적용해서 점 P의 축부터의 거리 r을 구할 수 있음.
@@ -175,7 +166,7 @@ void UObjectPicker::PickGizmo( const FRay& WorldRay, UGizmo& Gizmo, FVector& Col
 }
 
 //개별 primitive와 ray 충돌 검사
-bool UObjectPicker::IsRayPrimitiveCollided(const FRay& ModelRay, UPrimitiveComponent* Primitive, const FMatrix& ModelMatrix, float* ShortestDistance)
+bool UObjectPicker::IsRayPrimitiveCollided(UCamera* InActiveCamera, const FRay& ModelRay, UPrimitiveComponent* Primitive, const FMatrix& ModelMatrix, float* ShortestDistance)
 
 {
 	//FRay ModelRay = GetModelRay(Ray, Primitive);
@@ -190,7 +181,7 @@ bool UObjectPicker::IsRayPrimitiveCollided(const FRay& ModelRay, UPrimitiveCompo
 		const FVector& Vertex2 = (*Vertices)[a + 1].Position;
 		const FVector& Vertex3 = (*Vertices)[a + 2].Position;
 
-		if (IsRayTriangleCollided(ModelRay, Vertex1, Vertex2, Vertex3, ModelMatrix, &Distance)) //Ray와 삼각형이 충돌하면 거리 비교 후 최단거리 갱신
+		if (IsRayTriangleCollided(InActiveCamera, ModelRay, Vertex1, Vertex2, Vertex3, ModelMatrix, &Distance)) //Ray와 삼각형이 충돌하면 거리 비교 후 최단거리 갱신
 
 		{
 			bIsHit = true;
@@ -204,12 +195,12 @@ bool UObjectPicker::IsRayPrimitiveCollided(const FRay& ModelRay, UPrimitiveCompo
 	return bIsHit;
 }
 
-bool UObjectPicker::IsRayTriangleCollided(const FRay& Ray, const FVector& Vertex1, const FVector& Vertex2, const FVector& Vertex3,
+bool UObjectPicker::IsRayTriangleCollided(UCamera* InActiveCamera, const FRay& Ray, const FVector& Vertex1, const FVector& Vertex2, const FVector& Vertex3,
                            const FMatrix& ModelMatrix, float* Distance)
 {
-	FVector CameraForward = Camera.GetForward(); //카메라 정보 필요
-	float NearZ = Camera.GetNearZ();
-	float FarZ = Camera.GetFarZ();
+	FVector CameraForward = InActiveCamera->GetForward(); //카메라 정보 필요
+	float NearZ = InActiveCamera->GetNearZ();
+	float FarZ = InActiveCamera->GetFarZ();
 	FMatrix ModelTransform; //Primitive로부터 얻어내야함.(카메라가 처리하는게 나을듯)
 
 
@@ -249,7 +240,6 @@ bool UObjectPicker::IsRayTriangleCollided(const FRay& Ray, const FVector& Vertex
 		return false;
 	}
 
-
 	float T = E2.Dot(CrossE1Result) / Determinant;
 
 	FVector HitPoint = RayOrigin + RayDirection * T; //모델 좌표계에서의 충돌점
@@ -267,7 +257,6 @@ bool UObjectPicker::IsRayTriangleCollided(const FRay& Ray, const FVector& Vertex
 	}
 	return false;
 }
-
 
 bool UObjectPicker::IsRayCollideWithPlane(const FRay& WorldRay, FVector PlanePoint, FVector Normal, FVector& PointOnPlane)
 {

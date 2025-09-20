@@ -3,7 +3,7 @@
 
 void FViewport::Apply(ID3D11DeviceContext* InContext) const
 {
-	InContext->RSSetViewports(1, &Viewport);
+	InContext->RSSetViewports(1, &ViewportInfo);
 }
 
 void FViewport::ClearDepth(ID3D11DeviceContext* InContext, ID3D11DepthStencilView* InStencilView) const
