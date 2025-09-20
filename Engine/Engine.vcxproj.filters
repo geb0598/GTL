@@ -267,6 +267,9 @@
     <ClCompile Include="Source\Editor\Private\ViewportClient.cpp">
       <Filter>Source\Editor\Private</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\Private\SplitterWindow.cpp">
+      <Filter>Source\Editor\Private</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -584,6 +587,9 @@
       <Filter>Source\Editor\Public</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\Public\ViewportClient.h">
+      <Filter>Source\Editor\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Public\SplitterWindow.h">
       <Filter>Source\Editor\Public</Filter>
     </ClInclude>
   </ItemGroup>

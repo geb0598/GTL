@@ -5,10 +5,11 @@
 #include "Editor/public/Axis.h"
 #include "Editor/Public/ObjectPicker.h"
 #include "Editor/Public/BatchLines.h"
+#include "Editor/Public/SplitterWindow.h"
 
+class UPrimitiveComponent;
 class UCamera;
 class ULevel;
-class UPrimitiveComponent;
 struct FRay;
 
 enum class EViewModeIndex : uint32
@@ -22,7 +23,7 @@ class UEditor : public UObject
 {
 public:
 	UEditor();
-	~UEditor() = default;
+	~UEditor();
 
 	void Update();
 	void RenderEditor();
@@ -31,6 +32,9 @@ public:
 	EViewModeIndex GetViewMode() const { return CurrentViewMode; }
 
 private:
+	void InitializeLayout();
+	void UpdateLayout();
+
 	void ProcessMouseInput(ULevel* InLevel);
 	TArray<UPrimitiveComponent*> FindCandidatePrimitives(ULevel* InLevel);
 
@@ -45,6 +49,12 @@ private:
 	UGizmo Gizmo;
 	UAxis Axis;
 	UBatchLines BatchLines;
+
+	SSplitterV RootSplitter;
+	SSplitterH LeftSplitter;
+	SSplitterH RightSplitter;
+	SWindow ViewportWindows[4]; // 최종 뷰포트 영역의 정보, 쉽게 참조하도록 선언했습니다.
+	SSplitter* DraggedSplitter = nullptr; // 드래그 상태를 추적하는 포인터
 
 	EViewModeIndex CurrentViewMode = EViewModeIndex::VMI_Lit;
 };
