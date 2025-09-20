@@ -1,21 +1,17 @@
 #include "pch.h"
 #include "Editor/Public/Editor.h"
 #include "Editor/Public/Camera.h"
-#include "Editor/Public/Gizmo.h"
-#include "Editor/Public/Grid.h"
-#include "Editor/Public/Axis.h"
-#include "Editor/Public/ObjectPicker.h"
+#include "Editor/Public/ViewportClient.h"
 #include "Render/Renderer/Public/Renderer.h"
+#include "Render/UI/Widget/Public/CameraControlWidget.h"
+#include "Render/UI/Widget/Public/FPSWidget.h"
+#include "Render/UI/Widget/Public/SceneHierarchyWidget.h"
 #include "Manager/Level/Public/LevelManager.h"
 #include "Manager/UI/Public/UIManager.h"
 #include "Manager/Input/Public/InputManager.h"
 #include "Component/Public/PrimitiveComponent.h"
 #include "Level/Public/Level.h"
-#include "Render/UI/Widget/Public/CameraControlWidget.h"
-#include "Render/UI/Widget/Public/FPSWidget.h"
-#include "Render/UI/Widget/Public/SceneHierarchyWidget.h"
 #include "Global/Quaternion.h"
-#include "Editor/Public/ViewportClient.h"
 
 UEditor::UEditor()
 {
@@ -30,7 +26,14 @@ UEditor::UEditor()
 	auto* FPSWidget =
 		reinterpret_cast<UFPSWidget*>(UIManager.FindWidget("FPS Widget"));
 	FPSWidget->SetBatchLine(&BatchLines);
-};
+
+	InitializeLayout();
+}
+
+UEditor::~UEditor()
+{
+	SafeDelete(DraggedSplitter);
+}
 
 void UEditor::Update()
 {
@@ -76,6 +79,8 @@ void UEditor::Update()
 	BatchLines.UpdateVertexBuffer();
 
 	ProcessMouseInput(ULevelManager::GetInstance().GetCurrentLevel());
+
+	UpdateLayout();
 }
 
 void UEditor::RenderEditor()
@@ -90,6 +95,132 @@ void UEditor::RenderEditor()
 		AActor* SelectedActor = ULevelManager::GetInstance().GetCurrentLevel()->GetSelectedActor();
 		Gizmo.RenderGizmo(SelectedActor, ActiveCamera->GetLocation());
 	}
+}
+
+void UEditor::InitializeLayout()
+{
+	// 1. 루트 스플리터의 자식으로 2개의 수평 스플리터를 '주소'로 연결합니다.
+	RootSplitter.SetChildren(&LeftSplitter, &RightSplitter);
+
+	// 2. 각 수평 스플리터의 자식으로 뷰포트 윈도우들을 '주소'로 연결합니다.
+	LeftSplitter.SetChildren(&ViewportWindows[0], &ViewportWindows[1]);
+	RightSplitter.SetChildren(&ViewportWindows[2], &ViewportWindows[3]);
+
+	// 3. 초기 레이아웃 계산
+	const D3D11_VIEWPORT& ViewportInfo = URenderer::GetInstance().GetDeviceResources()->GetViewportInfo();
+	FRect FullScreenRect = { ViewportInfo.TopLeftX, ViewportInfo.TopLeftY, ViewportInfo.Width, ViewportInfo.Height };
+	RootSplitter.Resize(FullScreenRect);
+}
+
+void UEditor::UpdateLayout()
+{
+	URenderer& Renderer = URenderer::GetInstance();
+	UInputManager& Input = UInputManager::GetInstance();
+	const FPoint MousePosition = { Input.GetMousePosition().X, Input.GetMousePosition().Y };
+	bool bIsHoveredOnSplitter = false;
+
+	// 1. 드래그 상태가 아니라면 커서의 상태를 감지합니다.
+	if (DraggedSplitter == nullptr)
+	{
+		if (LeftSplitter.IsHovered(MousePosition) || RightSplitter.IsHovered(MousePosition))
+		{
+			bIsHoveredOnSplitter = true;
+		}
+		else if (RootSplitter.IsHovered(MousePosition))
+		{
+			bIsHoveredOnSplitter = true;
+		}
+	}
+
+	// 2. 스플리터 위에 커서가 있으며 클릭을 한다면, 드래그 상태로 활성화합니다.
+	if (UInputManager::GetInstance().IsKeyPressed(EKeyInput::MouseLeft) && bIsHoveredOnSplitter)
+	{
+		// 호버 상태에 따라 드래그할 스플리터를 결정합니다.
+		if (LeftSplitter.IsHovered(MousePosition)) { DraggedSplitter = &LeftSplitter; }				// 좌상, 좌하
+		else if (RightSplitter.IsHovered(MousePosition)) { DraggedSplitter = &RightSplitter; }		// 우상, 우하
+		else if (RootSplitter.IsHovered(MousePosition)) { DraggedSplitter = &RootSplitter; }
+	}
+
+	// 3. 드래그 상태라면 스플리터 기능을 이행합니다.
+	if (DraggedSplitter)
+	{
+		FRect ParentRect;
+
+		if (DraggedSplitter == &RootSplitter)
+		{
+			const D3D11_VIEWPORT& ViewportInfo = URenderer::GetInstance().GetDeviceResources()->GetViewportInfo();
+			ParentRect = { ViewportInfo.TopLeftX, ViewportInfo.TopLeftY, ViewportInfo.Width, ViewportInfo.Height };
+			RootSplitter.Resize(ParentRect);
+		}
+		else
+		{
+			const D3D11_VIEWPORT& ViewportInfo = URenderer::GetInstance().GetDeviceResources()->GetViewportInfo();
+			FRect ScreenRect = { ViewportInfo.TopLeftX, ViewportInfo.TopLeftY, ViewportInfo.Width, ViewportInfo.Height };
+			if (DraggedSplitter == &LeftSplitter)
+			{
+				ParentRect.Left = ScreenRect.Left;
+				ParentRect.Top = ScreenRect.Top;
+				ParentRect.Width = ScreenRect.Width * RootSplitter.GetRatio();
+				ParentRect.Height = ScreenRect.Height;
+			}
+			else if (DraggedSplitter == &RightSplitter)
+			{
+				ParentRect.Left = ScreenRect.Left + ScreenRect.Width * RootSplitter.GetRatio();
+				ParentRect.Top = ScreenRect.Top;
+				ParentRect.Width = ScreenRect.Width * (1.0f - RootSplitter.GetRatio());
+				ParentRect.Height = ScreenRect.Height;
+			}
+		}
+
+		// 마우스 위치를 부모 영역에 대한 비율(0.0 ~ 1.0)로 변환합니다.
+		float NewRatio = 0.5f;
+		if (dynamic_cast<SSplitterV*>(DraggedSplitter)) // 수직 스플리터
+		{
+			if (ParentRect.Width > 0)
+			{
+				NewRatio = (MousePosition.X - ParentRect.Left) / ParentRect.Width;
+			}
+		}
+		else // 수평 스플리터
+		{
+			if (ParentRect.Height > 0)
+			{
+				NewRatio = (MousePosition.Y - ParentRect.Top) / ParentRect.Height;
+			}
+		}
+
+		// 계산된 비율을 스플리터에 적용합니다.
+		DraggedSplitter->SetRatio(NewRatio);
+	}
+
+	// 4. 매 프레임 현재 비율에 맞게 전체 레이아웃 크기를 다시 계산하고, 그 결과를 실제 FViewport에 반영합니다.
+	const D3D11_VIEWPORT& ViewportInfo = URenderer::GetInstance().GetDeviceResources()->GetViewportInfo();
+	FRect FullScreenRect = { ViewportInfo.TopLeftX, ViewportInfo.TopLeftY, ViewportInfo.Width, ViewportInfo.Height };
+	RootSplitter.Resize(FullScreenRect);
+
+	if (FViewportClient* ViewportClient = URenderer::GetInstance().GetViewportClient())
+	{
+		auto& Viewports = ViewportClient->GetViewports();
+		for (int i = 0; i < 4; ++i)
+		{
+			if (i < Viewports.size())
+			{
+				const FRect& Rect = ViewportWindows[i].Rect;
+				Viewports[i].SetViewport({ Rect.Left, Rect.Top, Rect.Width, Rect.Height, 0.0f, 1.0f });
+			}
+		}
+	}
+
+	// 드래그 비활성화를 했으므로 스플리터 상태를 저장
+	if (UInputManager::GetInstance().IsKeyReleased(EKeyInput::MouseLeft))
+	{
+		if (DraggedSplitter)
+		{
+			DraggedSplitter = nullptr;
+			// Edit.ini
+		}
+	}
+
 }
 
 void UEditor::ProcessMouseInput(ULevel* InLevel)

@@ -173,6 +173,7 @@
     <ClInclude Include="Source\Component\Mesh\Sample\Rectangle.h" />
     <ClInclude Include="Source\Component\Mesh\Sample\Sphere.h" />
     <ClInclude Include="Source\Component\Mesh\Sample\Triangle.h" />
+    <ClInclude Include="Source\Editor\Public\SplitterWindow.h" />
     <ClInclude Include="Source\Editor\Public\Viewport.h" />
     <ClInclude Include="Source\Editor\Public\ViewportClient.h" />
     <ClInclude Include="Source\Global\Quaternion.h" />
@@ -281,6 +282,7 @@
     <ClCompile Include="Source\Component\Mesh\Private\SquareComponent.cpp" />
     <ClCompile Include="Source\Component\Mesh\Private\TriangleComponent.cpp" />
     <ClCompile Include="Source\Component\Mesh\Private\VertexDatas.cpp" />
+    <ClCompile Include="Source\Editor\Private\SplitterWindow.cpp" />
     <ClCompile Include="Source\Editor\Private\Viewport.cpp" />
     <ClCompile Include="Source\Editor\Private\ViewportClient.cpp" />
     <ClCompile Include="Source\Global\Quaternion.cpp" />

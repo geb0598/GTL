@@ -61,3 +61,26 @@ struct FTransform
 	{
 	}
 };
+
+/**
+ * @brief 2차원 좌표의 정보를 담는 구조체
+ */
+struct FPoint
+{
+	float X = 0.0f;
+	float Y = 0.0f;
+};
+
+/**
+ * @brief 윈도우를 비롯한 2D 화면의 정보를 담는 구조체
+ */
+struct FRect
+{
+	float Left = 0.0f;
+	float Top = 0.0f;
+	float Width = 0.0f;
+	float Height = 0.0f;
+
+	float GetRight() const { return Left + Width; }
+	float GetBottom() const { return Top + Height; }
+};
