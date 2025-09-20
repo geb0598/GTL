@@ -198,7 +198,7 @@ bool UObjectPicker::IsRayPrimitiveCollided(UCamera* InActiveCamera, const FRay& 
 			TriangleVertices[2] = (*Vertices)[TriIndex * 3 + 2].Position;
 		}
 
-		if (IsRayTriangleCollided(ModelRay, TriangleVertices[0], TriangleVertices[1], TriangleVertices[2], ModelMatrix, &Distance)) //Ray와 삼각형이 충돌하면 거리 비교 후 최단거리 갱신
+		if (IsRayTriangleCollided(InActiveCamera, ModelRay, TriangleVertices[0], TriangleVertices[1], TriangleVertices[2], ModelMatrix, &Distance)) //Ray와 삼각형이 충돌하면 거리 비교 후 최단거리 갱신
 		{
 			bIsHit = true;
 			if (Distance < *ShortestDistance)
