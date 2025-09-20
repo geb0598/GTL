@@ -246,7 +246,7 @@ void URenderer::Update()
 		UCamera* CurrentCamera = &ViewportInfo.Camera;
 
 		// 3. 해당 카메라의 View/Projection 행렬로 상수 버퍼를 업데이트합니다.
-		//    (중요: Camera::Update()는 Editor에서 이미 호출되었어야 함)
+		CurrentCamera->Update(ViewportInfo.GetViewport());
 		UpdateConstant(CurrentCamera->GetFViewProjConstants());
 
 		// 4. 씬(레벨, 에디터 요소 등)을 이 뷰포트와 카메라 기준으로 렌더링합니다.
