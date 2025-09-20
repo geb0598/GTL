@@ -4,32 +4,26 @@
 #include "Manager/Time/Public/TimeManager.h"
 #include "Render/Renderer/Public/Renderer.h"
 
-void UCamera::Update()
+void UCamera::Update(const D3D11_VIEWPORT& InViewport)
 {
 	const UInputManager& Input = UInputManager::GetInstance();
+	const FMatrix RotationMatrix = FMatrix::RotationMatrix(FVector::GetDegreeToRadian(RelativeRotation));
+	const FVector4 Forward4 = FVector4(1, 0, 0, 1) * RotationMatrix;
+	const FVector4 WorldUp4 = FVector4(0, 0, 1, 1) * RotationMatrix;
+	const FVector WorldUp = { WorldUp4.X, WorldUp4.Y, WorldUp4.Z };
 
-	//FVector rotationRadians = {};
-	//// roll
-	//rotationRadians.X = 0.0f;
-	//// pitch
-	//rotationRadians.Y = FVector::GetDegreeToRadian(RelativeRotation.X);
-	//// yaw
-	//rotationRadians.Z = FVector::GetDegreeToRadian(RelativeRotation.Y);
-
-	//FMatrix rotationMatrix = FMatrix::RotationMatrix(rotationRadians);
-	
-	FMatrix rotationMatrix = FMatrix::RotationMatrix(FVector::GetDegreeToRadian(RelativeRotation));
-
-	FVector4 Forward4 = FVector4(1, 0, 0, 1) * rotationMatrix;
 	Forward = FVector(Forward4.X, Forward4.Y, Forward4.Z);
 	Forward.Normalize();
-
-	FVector4 worldUp4 = FVector4(0, 0, 1, 1) * rotationMatrix;
-	FVector worldUp = { worldUp4.X, worldUp4.Y, worldUp4.Z };
-	Right = Forward.Cross(worldUp);
+	Right = Forward.Cross(WorldUp);
 	Right.Normalize();
 	Up = Right.Cross(Forward);
 	Up.Normalize();
+
+	// 종횡비 갱신
+	if (InViewport.Width > 0.f && InViewport.Height > 0.f)
+	{
+		SetAspect(InViewport.Width / InViewport.Height);
+	}
 	
 	/**
 	 * @brief 마우스 우클릭을 하고 있는 동안 카메라 제어가 가능합니다.
@@ -75,13 +69,6 @@ void UCamera::Update()
 		if (RelativeRotation.Y < -89.0f) RelativeRotation.Y = -89.0f;
 	}
 
-	if (URenderer::GetInstance().GetDeviceResources())
-	{
-		float Width = URenderer::GetInstance().GetDeviceResources()->GetViewportInfo().Width;
-		float Height = URenderer::GetInstance().GetDeviceResources()->GetViewportInfo().Height;
-		SetAspect(Width / Height);
-	}
-
 	switch (CameraType)
 	{
 	case ECameraType::ECT_Perspective:
@@ -92,9 +79,7 @@ void UCamera::Update()
 		break;
 	}
 
-	// TEST CODE
 	URenderer::GetInstance().UpdateConstant(ViewProjConstants);
-	
 }
 
 void UCamera::UpdateMatrixByPers()
@@ -106,10 +91,6 @@ void UCamera::UpdateMatrixByPers()
 	FMatrix R = FMatrix(Right, Up, Forward);
 	R = R.Transpose();
 	ViewProjConstants.View = T * R;
-	/*FMatrix T = FMatrix::TranslationMatrixInverse(RelativeLocation);
-	FMatrix R = FMatrix::RotationMatrixInverse(FVector::GetDegreeToRadian(RelativeRotation));
-	ViewProjConstants.View = T * R;*/
-	
 
 	/**
 	 * @brief Projection 행렬 연산

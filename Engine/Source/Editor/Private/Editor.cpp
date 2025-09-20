@@ -53,7 +53,7 @@ void UEditor::Update()
 	// 2. 활성 뷰포트의 카메라만 업데이트합니다.
 	if (UCamera* ActiveCamera = ViewportClient->GetActiveCamera())
 	{
-		ActiveCamera->Update();
+		ActiveCamera->Update(ViewportClient->GetActiveViewport()->GetViewport());
 	}
 	
 	if (AActor* SelectedActor = ULevelManager::GetInstance().GetCurrentLevel()->GetSelectedActor())

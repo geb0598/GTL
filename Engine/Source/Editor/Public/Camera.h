@@ -30,7 +30,7 @@ public:
 		UConfigManager::GetInstance().SetCameraSensitivity(CurrentMoveSpeed);
 	}
 
-	void Update();
+	void Update(const D3D11_VIEWPORT& InViewport);
 	void UpdateMatrixByPers();
 	void UpdateMatrixByOrth();
 
