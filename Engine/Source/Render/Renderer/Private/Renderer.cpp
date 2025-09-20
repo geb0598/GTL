@@ -9,6 +9,8 @@
 #include "Component/Public/PrimitiveComponent.h"
 #include "Render/FontRenderer/Public/FontRenderer.h"
 #include "Render/Renderer/Public/Pipeline.h"
+#include "Editor/Public/ViewportClient.h"
+#include "Editor/Public/Camera.h"
 
 IMPLEMENT_SINGLETON_CLASS_BASE(URenderer)
 
@@ -20,6 +22,7 @@ void URenderer::Init(HWND InWindowHandle)
 {
 	DeviceResources = new UDeviceResources(InWindowHandle);
 	Pipeline = new UPipeline(GetDeviceContext());
+	ViewportClient = new FViewportClient();
 
 	// 래스터라이저 상태 생성
 	CreateRasterizerState();
@@ -42,6 +45,8 @@ void URenderer::Release()
 	ReleaseDefaultShader();
 	ReleaseDepthStencilState();
 	ReleaseRasterizerState();
+
+	SafeDelete(ViewportClient);
 
 	// FontRenderer 해제
 	SafeDelete(FontRenderer);
@@ -182,24 +187,39 @@ void URenderer::ReleaseDepthStencilState()
 	{
 		GetDeviceContext()->OMSetRenderTargets(0, nullptr, nullptr);
 	}
-}
+}    
 
+// Renderer.cpp
 void URenderer::Update()
 {
 	RenderBegin();
 
-	// TODO(KHJ): 여기 묶어낼 수 없을까?
-	RenderLevel();
-	ULevelManager::GetInstance().GetEditor()->RenderEditor();
+	// FViewportClient로부터 모든 뷰포트를 가져옵니다.
+	for (FViewport& ViewportInfo : ViewportClient->GetViewports())
+	{
+		// 1. 현재 뷰포트의 영역을 설정합니다.
+		ViewportInfo.Apply(GetDeviceContext());
 
-	// 폰트 렌더링
-	//RenderFont();
+		// 2. 현재 뷰포트의 카메라 정보를 가져옵니다.
+		UCamera* CurrentCamera = &ViewportInfo.Camera;
 
-	// ImGui 자체 Render 처리가 진행되어야 하므로 따로 처리
+		// 3. 해당 카메라의 View/Projection 행렬로 상수 버퍼를 업데이트합니다.
+		//    (중요: Camera::Update()는 Editor에서 이미 호출되었어야 함)
+		UpdateConstant(CurrentCamera->GetFViewProjConstants());
+
+		// 4. 씬(레벨, 에디터 요소 등)을 이 뷰포트와 카메라 기준으로 렌더링합니다.
+		RenderLevel(CurrentCamera);
+
+		// 5. 에디터를 렌더링합니다.
+		ULevelManager::GetInstance().GetEditor()->RenderEditor();
+	}
+
+	// 최상위 에디터/GUI는 프레임에 1회만
 	UUIManager::GetInstance().Render();
 
-	RenderEnd();
+	RenderEnd(); // Present 1회
 }
+
 
 /**
  * @brief Render Prepare Step
@@ -211,18 +231,19 @@ void URenderer::RenderBegin() const
 	auto* DepthStencilView = DeviceResources->GetDepthStencilView();
 	GetDeviceContext()->ClearDepthStencilView(DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-	GetDeviceContext()->RSSetViewports(1, &DeviceResources->GetViewportInfo());
-
 	ID3D11RenderTargetView* rtvs[] = {RenderTargetView}; // 배열 생성
 
 	GetDeviceContext()->OMSetRenderTargets(1, rtvs, DeviceResources->GetDepthStencilView());
 	DeviceResources->UpdateViewport();
+
+	// 다중 뷰포트 정보 초기화
+	ViewportClient->InitializeLayout(DeviceResources->GetViewportInfo());
 }
 
 /**
  * @brief Buffer에 데이터 입력 및 Draw
  */
-void URenderer::RenderLevel()
+void URenderer::RenderLevel(UCamera* InCurrentCamera)
 {
 	// Level 없으면 Early Return
 	if (!ULevelManager::GetInstance().GetCurrentLevel())
@@ -295,15 +316,14 @@ void URenderer::RenderLevel()
 
 	if (BillBoard)
 	{
-		//BillBoard->UpdateRotationMatrix();
+		// 이제 올바른 카메라 위치를 전달하여 빌보드 회전 업데이트
+		BillBoard->UpdateRotationMatrix(InCurrentCamera->GetLocation());
 
 		FString UUIDString = "UID: " + std::to_string(BillBoard->GetUUID());
-
 		FMatrix RT = BillBoard->GetRTMatrix();
-		//RT = FMatrix::Identity();
 
-		const FViewProjConstants& viewProjConstData = ULevelManager::GetInstance().GetEditor()->GetViewProjConstData();
-		//const FMatrix viewProjM = viewProjConstData.View * viewProjConstData.Projection;
+		// UEditor에서 가져오는 대신, 인자로 받은 카메라의 ViewProj 행렬을 사용
+		const FViewProjConstants& viewProjConstData = InCurrentCamera->GetFViewProjConstants();
 		FontRenderer->RenderText(UUIDString.c_str(), RT, viewProjConstData);
 	}
 }
@@ -858,39 +878,3 @@ D3D11_FILL_MODE URenderer::ToD3D11(EFillMode InFill)
 		return D3D11_FILL_SOLID;
 	}
 }
-
-/**
- * @brief 폰트 렌더링 함수 - FontRenderer를 사용하여 텍스트 렌더링
- */
-//void URenderer::RenderFont()
-//{
-//	if (!FontRenderer)
-//	{
-//		return;
-//	}
-//
-//	// 단순한 직교 투영을 사용하여 테스트 (-100~100 좌표계)
-//	FMatrix WorldMatrix = FMatrix::Identity();
-//
-//	// 직교 투영 행렬 생성 (2D 화면에 맞게)
-//	float left = -100.0f, right = 100.0f;
-//	float bottom = -100.0f, top = 100.0f;
-//	float nearPlane = -1.0f, farPlane = 1.0f;
-//
-//	FMatrix OrthoMatrix;
-//	OrthoMatrix.Data[0][0] = 2.0f / (right - left);
-//	OrthoMatrix.Data[1][1] = 2.0f / (top - bottom);
-//	OrthoMatrix.Data[2][2] = -2.0f / (farPlane - nearPlane);
-//	OrthoMatrix.Data[3][0] = -(right + left) / (right - left);
-//	OrthoMatrix.Data[3][1] = -(top + bottom) / (top - bottom);
-//	OrthoMatrix.Data[3][2] = -(farPlane + nearPlane) / (farPlane - nearPlane);
-//	OrthoMatrix.Data[0][1] = OrthoMatrix.Data[0][2] = OrthoMatrix.Data[0][3] = 0.0f;
-//	OrthoMatrix.Data[1][0] = OrthoMatrix.Data[1][2] = OrthoMatrix.Data[1][3] = 0.0f;
-//	OrthoMatrix.Data[2][0] = OrthoMatrix.Data[2][1] = OrthoMatrix.Data[2][3] = 0.0f;
-//	OrthoMatrix.Data[3][3] = 1.0f;
-//
-//	FMatrix ViewProjMatrix = OrthoMatrix; // 단순히 직교 투영만 사용
-//
-//	// FontRenderer를 사용하여 "Hello, World!" 텍스트 렌더링
-//	FontRenderer->RenderHelloWorld(WorldMatrix, ViewProjMatrix);
-//}
