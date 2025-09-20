@@ -288,6 +288,9 @@
     <ClCompile Include="Source\Factory\Actor\Private\StaticMeshActorFactory.cpp">
       <Filter>Source\Factory\Actor\Private</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\Private\SplitterWindow.cpp">
+      <Filter>Source\Editor\Private</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -624,6 +627,9 @@
     </ClInclude>
     <ClInclude Include="Source\Factory\Actor\Public\StaticMeshActorFactory.h">
       <Filter>Source\Factory\Actor\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\Public\SplitterWindow.h">
+      <Filter>Source\Editor\Public</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

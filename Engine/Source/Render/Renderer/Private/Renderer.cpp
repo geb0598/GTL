@@ -43,6 +43,8 @@ void URenderer::Init(HWND InWindowHandle)
 		UE_LOG("FontRenderer 초기화 실패");
 		SafeDelete(FontRenderer);
 	}
+
+	ViewportClient->InitializeLayout(DeviceResources->GetViewportInfo());
 }
 
 void URenderer::Release()
@@ -275,9 +277,6 @@ void URenderer::RenderBegin() const
 
 	GetDeviceContext()->OMSetRenderTargets(1, rtvs, DeviceResources->GetDepthStencilView());
 	DeviceResources->UpdateViewport();
-
-	// 다중 뷰포트 정보 초기화
-	ViewportClient->InitializeLayout(DeviceResources->GetViewportInfo());
 }
 
 /**

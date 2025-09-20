@@ -311,6 +311,7 @@
     <ClCompile Include="Source\Component\Mesh\Private\SquareComponent.cpp" />
     <ClCompile Include="Source\Component\Mesh\Private\TriangleComponent.cpp" />
     <ClCompile Include="Source\Component\Mesh\Private\VertexDatas.cpp" />
+    <ClCompile Include="Source\Editor\Private\SplitterWindow.cpp" />
     <ClCompile Include="Source\Editor\Private\Viewport.cpp" />
     <ClCompile Include="Source\Editor\Private\ViewportClient.cpp" />
     <ClCompile Include="Source\Factory\Actor\Private\StaticMeshActorFactory.cpp">
