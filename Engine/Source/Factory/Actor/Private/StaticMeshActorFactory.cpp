@@ -4,11 +4,8 @@
 
 IMPLEMENT_CLASS(UStaticMeshActorFactory, UActorFactory)
 
-/**
- * @brief Factory Constructor
- * Factory 등록도 함께 수행
- */
-	UStaticMeshActorFactory::UStaticMeshActorFactory()
+
+UStaticMeshActorFactory::UStaticMeshActorFactory()
 {
 	SupportedClass = AStaticMeshActor::StaticClass();
 	Description = "StaticMeshActor Factory";

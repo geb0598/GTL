@@ -12,7 +12,7 @@ class UStaticMeshComponent : public UMeshComponent
 
 public:
 	UStaticMeshComponent();
-
+	~UStaticMeshComponent();
 	//void Serialize(bool bIsLoading, Json Handle)
 	//{
 	//	Super::Serialize(IsLoading, Handle);

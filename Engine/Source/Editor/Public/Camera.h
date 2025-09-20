@@ -30,7 +30,13 @@ public:
 		UConfigManager::GetInstance().SetCameraSensitivity(CurrentMoveSpeed);
 	}
 
-	void Update();
+	/* *
+	* @brief Update 관련 함수
+	* UpdateInput 함수는 사용자 입력으로 비롯된 변화의 갱신를 담당합니다.
+	* Update, UpdateMatrix 함수들은 카메라의 변환 행렬의 갱신을 담당합니다.
+	*/
+	void UpdateInput();
+	void Update(const D3D11_VIEWPORT& InViewport);
 	void UpdateMatrixByPers();
 	void UpdateMatrixByOrth();
 
