@@ -55,7 +55,7 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FString& PathFileName)
 			TexCoordIndex = ObjectInfo.TexCoordIndexList[i];
 		}
 
-		VertexKey Key{VertexIndex, NormalIndex, TexCoordIndex};
+		VertexKey Key{ VertexIndex, NormalIndex, TexCoordIndex };
 		auto It = VertexMap.find(Key);
 		if (It == VertexMap.end())
 		{
@@ -94,6 +94,14 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FString& PathFileName)
 
 UStaticMesh* FObjManager::LoadObjStaticMesh(const FString& PathFileName)
 {
+	// Map에 해당 키가 이미 있는지 확인합니다.
+	auto Iter = ObjUStaticMeshMap.find(PathFileName);
+	if (Iter != ObjUStaticMeshMap.end())
+	{
+		// 이미 있다면, 저장된 unique_ptr에서 raw pointer를 얻어 반환합니다.
+		return Iter->second.get();
+	}
+
 	//for (TObjectIterator<UStaticMesh> It; It; ++It)
 	//{
 	//	UStaticMesh* StaticMesh = *It;
