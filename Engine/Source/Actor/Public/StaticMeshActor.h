@@ -1,6 +1,6 @@
 #pragma once
 #include "Actor/Public/Actor.h"
-#include <Component/Mesh/Public/StaticMeshComponent.h>
+#include "Component/Mesh/Public/StaticMeshComponent.h"
 
 class UCubeComponent;
 

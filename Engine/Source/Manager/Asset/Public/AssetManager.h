@@ -22,6 +22,8 @@ public:
 	TArray<FNormalVertex>* GetVertexData(EPrimitiveType InType);
 	ID3D11Buffer* GetVertexbuffer(EPrimitiveType InType);
 	uint32 GetNumVertices(EPrimitiveType InType);
+	ID3D11Buffer* CreateVertexBuffer(TArray<FNormalVertex> InVertices);
+	ID3D11Buffer* CreateIndexBuffer(TArray<uint32> InIndices);
 
 	// Index 관련 함수들
 	TArray<uint32>* GetIndexData(EPrimitiveType InType);

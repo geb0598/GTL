@@ -4,24 +4,39 @@
 #include "Component/Mesh/Public/StaticMeshComponent.h"
 #include "Component/Mesh/Public/MeshComponent.h"
 #include "Manager/Asset/Public/ObjManager.h"
+#include "Manager/Asset/Public/AssetManager.h"
 
 IMPLEMENT_CLASS(UStaticMeshComponent, UMeshComponent)
 
 UStaticMeshComponent::UStaticMeshComponent()
 {
-	StaticMesh = FObjManager::LoadObjStaticMesh("");
+	UAssetManager& AssetManager = UAssetManager::GetInstance();
+
+	StaticMesh = FObjManager::LoadObjStaticMesh("Data/Cube.obj");
 	// Material = FObjManager::LoadObjMaterial("");
 	Type = EPrimitiveType::StaticMesh;
 
 	Vertices = &(StaticMesh.Get()->GetVertices());
-	//VertexBuffer = StaticMesh.Get()->GetVertexBuffer();
+	VertexBuffer = AssetManager.CreateVertexBuffer(*Vertices);
 	NumVertices = Vertices->size();
 
 	Indices = &(StaticMesh.Get()->GetIndices());
-	//IndexBuffer = StaticMesh.Get()->GetIndexBuffer();
+	IndexBuffer = AssetManager.CreateIndexBuffer(*Indices);
 	NumIndices = Indices->size();
 
 	RenderState.CullMode = ECullMode::Back;
 	RenderState.FillMode = EFillMode::Solid;
 	//BoundingBox = &ResourceManager.GetAABB();
+}
+
+UStaticMeshComponent::~UStaticMeshComponent()
+{
+	if (VertexBuffer)
+	{
+		VertexBuffer->Release();
+	}
+	if (IndexBuffer)
+	{
+		IndexBuffer->Release();
+	}
 }
