@@ -23,6 +23,11 @@ public:
 		return CameraSensitivity;
 	}
 
+	TArray<float> GetSplitterRatio() const
+	{
+		return TArray<float>({ RootSplitterRatio, LeftSplitterRatio, RightSplitterRatio });
+	}
+
 	void SetCellSize(const float cellSize)
 	{
 		CellSize = cellSize;
@@ -33,9 +38,18 @@ public:
 		CameraSensitivity = cameraSensitivity;
 	}
 
+	void SetSplitterRatio(const float RootRatio, const float LeftRatio, const float RightRatio)
+	{
+		RootSplitterRatio = RootRatio;
+		LeftSplitterRatio = LeftRatio;
+		RightSplitterRatio = RightRatio;
+	}
 
 private:
 	FName EditorIniFileName;
 	float CellSize;
 	float CameraSensitivity;
+	float RootSplitterRatio;
+	float LeftSplitterRatio;
+	float RightSplitterRatio;
 };

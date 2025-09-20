@@ -9,6 +9,7 @@
 #include "Manager/Level/Public/LevelManager.h"
 #include "Manager/UI/Public/UIManager.h"
 #include "Manager/Input/Public/InputManager.h"
+#include "Manager/Config/Public/ConfigManager.h"
 #include "Component/Public/PrimitiveComponent.h"
 #include "Level/Public/Level.h"
 #include "Global/Quaternion.h"
@@ -27,11 +28,17 @@ UEditor::UEditor()
 		reinterpret_cast<UFPSWidget*>(UIManager.FindWidget("FPS Widget"));
 	FPSWidget->SetBatchLine(&BatchLines);
 
+	TArray<float> SplitterRatio = UConfigManager::GetInstance().GetSplitterRatio();
+	RootSplitter.SetRatio(SplitterRatio[0]);
+	LeftSplitter.SetRatio(SplitterRatio[1]);
+	RightSplitter.SetRatio(SplitterRatio[2]);
+
 	InitializeLayout();
 }
 
 UEditor::~UEditor()
 {
+	UConfigManager::GetInstance().SetSplitterRatio(RootSplitter.GetRatio(), LeftSplitter.GetRatio(), RightSplitter.GetRatio());
 	SafeDelete(DraggedSplitter);
 }
 
@@ -211,16 +218,8 @@ void UEditor::UpdateLayout()
 		}
 	}
 
-	// 드래그 비활성화를 했으므로 스플리터 상태를 저장
-	if (UInputManager::GetInstance().IsKeyReleased(EKeyInput::MouseLeft))
-	{
-		if (DraggedSplitter)
-		{
-			DraggedSplitter = nullptr;
-			// Edit.ini
-		}
-	}
-
+	// 마우스 클릭 해제를 하면 드래그 비활성화
+	if (UInputManager::GetInstance().IsKeyReleased(EKeyInput::MouseLeft)) { DraggedSplitter = nullptr; }
 }
 
 void UEditor::ProcessMouseInput(ULevel* InLevel)

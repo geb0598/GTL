@@ -23,6 +23,9 @@ void UConfigManager::SaveEditorSetting()
 	{
 		ofs << "CellSize=" << CellSize << "\n";
 		ofs << "CameraSensitivity=" << CameraSensitivity << "\n";
+		ofs << "RootSplitterRatio=" << RootSplitterRatio << "\n";
+		ofs << "LeftSplitterRatio=" << LeftSplitterRatio << "\n";
+		ofs << "RightSplitterRatio=" << RightSplitterRatio << "\n";
 	}
 }
 
@@ -47,6 +50,18 @@ void UConfigManager::LoadEditorSetting()
 		else if (line.rfind("CameraSensitivity=", 0) == 0)
 		{
 			CameraSensitivity = std::stof(line.substr(18));
+		}
+		else if (line.rfind("RootSplitterRatio=", 0) == 0)
+		{
+			RootSplitterRatio = std::stof(line.substr(18));
+		}
+		else if (line.rfind("LeftSplitterRatio=", 0) == 0)
+		{
+			LeftSplitterRatio = std::stof(line.substr(18));
+		}
+		else if (line.rfind("RightSplitterRatio=", 0) == 0)
+		{
+			RightSplitterRatio = std::stof(line.substr(19));
 		}
 	}
 }
