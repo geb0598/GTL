@@ -195,8 +195,8 @@ void UEditor::UpdateLayout()
 
 	// 4. 매 프레임 현재 비율에 맞게 전체 레이아웃 크기를 다시 계산하고, 그 결과를 실제 FViewport에 반영합니다.
 	const D3D11_VIEWPORT& ViewportInfo = URenderer::GetInstance().GetDeviceResources()->GetViewportInfo();
-	FRect fullScreenRect = { ViewportInfo.TopLeftX, ViewportInfo.TopLeftY, ViewportInfo.Width, ViewportInfo.Height };
-	RootSplitter.Resize(fullScreenRect);
+	FRect FullScreenRect = { ViewportInfo.TopLeftX, ViewportInfo.TopLeftY, ViewportInfo.Width, ViewportInfo.Height };
+	RootSplitter.Resize(FullScreenRect);
 
 	if (FViewportClient* ViewportClient = URenderer::GetInstance().GetViewportClient())
 	{
