@@ -10,30 +10,82 @@
 #include "Global/Types.h"
 #include "Global/Vector.h"
 
-struct FObjInfo
+
+struct FObjectInfo
 {
+	FString ObjectName;
+	FString MaterialLibraryName;
+
+	/** Vertex Information */
 	TArray<FVector> Vertices;
 	TArray<FVector> Normals;
 	TArray<FVector2> TexCoords;
 
+	/** Face Information */
 	TArray<size_t> VertexIndices;
 	TArray<size_t> NormalIndices;
 	TArray<size_t> TexCoordIndices;
 
-	TArray<FString> Materials;
-	TArray<FString> Textures;
+	/** Group Information */
+	TArray<FString> GroupNames;
+	TArray<size_t> GroupIndices; 
+
+	/** Material Information */
+	TArray<FString> MaterialNames;
+	TArray<size_t> MaterialIndices; 
+
+	TArray<FString> TextureNames;
 };
 
 struct FObjMaterialInfo
 {
 	/** @todo */
-	//FString Name;
+	FString Name;
+
+	/** Ambient Color */
+	FVector Ka;
+
+	/** Diffuse Color */
+	FVector Kd;
+
+	/** Specular Color */
+	FVector Ks;
+
+	/** Specualr Exponent */
+	float Ns;
+
+	/** Optical Density */
+	float Ni;
+
+	/** Dissolve */
+	float D;
+
+	/** Illumination */
+	int32 Illumination;
+
+	/** Ambient Texture Map */
+	FString KaMap;
+
+	/** Diffuse Texture Map */
+	FString KdMap;
+
+	/** Specular Texture Map */
+	FString KsMap;
+
+	/** Specular Highlight Map */
+	FString NsMap;
+
+	/** Alpha Texture Map */
+	FString DMap;
+
+	/** Bump Map */
+	FString BumpMap;
 };
 
 struct FObjImporter
 {
 	/** @todo: Parse texture and material information */
-	static bool LoadObj(const std::filesystem::path& FileName, FObjInfo* ObjInfo, FObjMaterialInfo* ObjMaterialInfo)
+	static bool LoadObj(const std::filesystem::path& FileName, FObjectInfo* ObjInfo, FObjMaterialInfo* ObjMaterialInfo)
 	{
 		if (!std::filesystem::exists(FileName))
 		{
@@ -54,6 +106,11 @@ struct FObjImporter
 			return false;
 		}
 
+		size_t FaceCount = 0;
+
+		bool bHasNormal = false;
+		bool bHasTexCoord = false;
+
 		FString Buffer;
 		while (std::getline(File, Buffer))
 		{
@@ -61,6 +118,8 @@ struct FObjImporter
 			FString Prefix;
 
 			Tokenizer >> Prefix;
+
+			// ========================== Vertex Information ============================ //
 
 			/** Vertex Position */
 			if (Prefix == "v")
@@ -116,6 +175,49 @@ struct FObjImporter
 
 				ObjInfo->TexCoords.emplace_back(TexCoord);
 			}
+
+			// =========================== Group Information ============================ //
+
+			/** Object Information */
+			else if (Prefix == "o")
+			{
+				if (!ObjInfo)
+				{
+					continue;
+				}
+
+				FString ObjectName;
+				if (!(Tokenizer >> ObjectName))
+				{
+					UE_LOG_ERROR("오브젝트 이름 형식이 잘못되었습니다");
+					return false;
+				}
+
+				ObjInfo->ObjectName = std::move(ObjectName);
+				// For now, there is no support for multiple objects.
+			}
+
+			/** Group Information */
+			else if (Prefix == "g")
+			{
+				if (!ObjInfo)
+				{
+					continue;
+				}
+
+				FString GroupName;
+				if (!(Tokenizer >> GroupName))
+				{
+					UE_LOG_ERROR("잘못된 그룹 이름 형식입니다");
+					return false;
+				}
+
+				ObjInfo->GroupIndices.emplace_back(FaceCount);
+				ObjInfo->GroupNames.emplace_back(GroupName);
+			}
+
+			// ============================ Face Information ============================ //
+
 			/** Face Information */
 			else if (Prefix == "f")
 			{
@@ -125,70 +227,92 @@ struct FObjImporter
 					continue;
 				}
 
+				TArray<FString> FaceBuffers;
 				FString FaceBuffer;
 				while (Tokenizer >> FaceBuffer)
 				{
-					std::istringstream FaceTokenizer(Buffer);
-					FString IndexBuffer;
+					FaceBuffers.emplace_back(FaceBuffer);
+				}
 
-					/** #1. Parse Index of Vertex Position */
-					if (!std::getline(FaceTokenizer, IndexBuffer, '/') || IndexBuffer.empty())
-					{
-						UE_LOG_ERROR("정점 위치 인덱스 형식이 잘못되었습니다");
-						return false;
-					}
+				if (FaceBuffers.size() < 2)
+				{
+					UE_LOG_ERROR("면 형식이 잘못되었습니다");
+					return false;
+				}
 
-					try
-					{
-						ObjInfo->VertexIndices.push_back(std::stoull(IndexBuffer) - 1);
-					}
-					catch ([[maybe_unused]] const std::invalid_argument& exception)
-					{
-						UE_LOG_ERROR("정점 위치 인덱스 형식이 잘못되었습니다");
-						return false;
-					}
+				/** @todo: Support other types of meshes in later */
+				if (FaceBuffers.size() > 3)
+				{
+					UE_LOG_ERROR("삼각형 메쉬만을 지원합니다");
+					return false;
+				}
 
-					/** #2. Parse Index of Vertex Normal */
-					if (!std::getline(FaceTokenizer, IndexBuffer, '/') || IndexBuffer.empty())
+				for (size_t i = 0; i < FaceBuffers.size(); ++i)
+				{
+					if (!ParseFaceBuffer(FaceBuffers[i], ObjInfo))
 					{
-						UE_LOG_ERROR("정점 법선 인덱스 형식이 잘못되었습니다");
-						return false;
-					}
-
-					try
-					{
-						ObjInfo->NormalIndices.push_back(std::stoull(IndexBuffer) - 1);
-					}
-					catch ([[maybe_unused]] const std::invalid_argument& exception)
-					{
-						UE_LOG_ERROR("정점 법선 인덱스 형식이 잘못되었습니다");
-						return false;
-					}
-
-					/** #3. Parse Index of Texture Coordinate */
-					if (!std::getline(FaceTokenizer, IndexBuffer, '/') || IndexBuffer.empty())
-					{
-						UE_LOG_ERROR("정점 텍스쳐 좌표 인덱스 형식이 잘못되었습니다");
-						return false;
-					}
-
-					try
-					{
-						ObjInfo->TexCoordIndices.push_back(std::stoull(IndexBuffer) - 1);
-					}
-					catch ([[maybe_unused]] const std::invalid_argument& exception)
-					{
-						UE_LOG_ERROR("정점 텍스쳐 좌표 인덱스 형식이 잘못되었습니다");
 						return false;
 					}
 				}
+
+				++FaceCount;
 			}
-			/** Others... */
+
+			// ============================ Material Information ============================ //
+
+			/** relative path */
+			else if (Prefix == "mtllib")
+			{
+
+			}
+
+			else if (Prefix == "usemtl")
+			{
+
+			}
 		}
+
+
+		return true;
+	}
+
+	static bool LoadMaterial(const std::filesystem::path& FileName, FObjMaterialInfo* ObjMaterialInfo)
+	{
+		if (!std::filesystem::exists(FileName))
+		{
+			UE_LOG_ERROR("파일을 찾지 못했습니다: %s", FileName.string().c_str());
+			return false;
+		}
+
+		if (FileName.extension() != ".mtl")
+		{
+			UE_LOG_ERROR("잘못된 파일 확장자입니다: %s", FileName.string().c_str());
+			return false;
+		}
+
+		std::ifstream File(FileName);
+		if (!File)
+		{
+			UE_LOG_ERROR("파일을 열지 못했습니다: %s", FileName.string().c_str());
+			return false;
+		}
+
+		// TODO
+
+		return true;
 	}
 
 private:
-	static bool ParseFaceBuffer(const FString& FaceBuffer, FObjInfo* ObjInfo)
+	/**
+	 * @brief 
+	 * @param FaceBuffer 
+	 * @param ObjInfo 
+	 * @return 
+	 * @note: This function doesn't care about difference between faces.
+	 * So, it would be problematic to use different face formats at same file.
+	 * (e.g., 'f 1//2 2//3 2//4' and 'f 1/1/2 2/2/3 3/2/3' in the same file)
+	 */
+	static bool ParseFaceBuffer(const FString& FaceBuffer, FObjectInfo* ObjInfo)
 	{
 		/** Ignore data when ObjInfo is nullptr */
 		if (!ObjInfo)
@@ -196,25 +320,21 @@ private:
 			return false;
 		}
 
-		TArray<FString> Indices;
-		size_t Position = 0;
-		size_t NextPosition = FaceBuffer.find('/');
-
-		while (NextPosition != FString::npos)
+		TArray<FString> IndexBuffers;
+		std::istringstream Tokenizer(FaceBuffer);
+		FString IndexBuffer;
+		while (std::getline(Tokenizer, IndexBuffer, '/'))
 		{
-			Indices.push_back(FaceBuffer.substr(Position, NextPosition - Position));
-			Position = NextPosition + 1;
-			NextPosition = FaceBuffer.find('/');
+			IndexBuffers.emplace_back(IndexBuffer);
 		}
-		Indices.push_back(FaceBuffer.substr(Position));
 
-		if (Indices.empty())
+		if (IndexBuffers.empty())
 		{
 			UE_LOG_ERROR("면 형식이 잘못되었습니다");
 			return false;
 		}
 
-		if (Indices[0].empty())
+		if (IndexBuffers[0].empty())
 		{
 			UE_LOG_ERROR("정점 위치 형식이 잘못되었습니다");
 			return false;
@@ -222,21 +342,21 @@ private:
 
 		try
 		{
-			ObjInfo->VertexIndices.push_back(std::stoull(Indices[0]) - 1);
+			ObjInfo->VertexIndices.push_back(std::stoull(IndexBuffers[0]) - 1);
 		}
 		catch ([[maybe_unused]] const std::invalid_argument& Exception)
 		{
 			UE_LOG_ERROR("정점 위치 인덱스 형식이 잘못되었습니다");
 		}
 
-		switch (Indices.size())
+		switch (IndexBuffers.size())
 		{
 		case 1:
 			/** @brief: Only position data (e.g., 'f 1 2 3') */
 			break;
 		case 2:
 			/** @brief: Position and texture coordinate data (e.g., 'f 1/1 2/1') */
-			if (Indices[1].empty())
+			if (IndexBuffers[1].empty())
 			{
 				UE_LOG_ERROR("정점 텍스쳐 좌표 인덱스 형식이 잘못되었습니다");
 				return false;
@@ -244,7 +364,7 @@ private:
 
 			try
 			{
-				ObjInfo->TexCoordIndices.push_back(std::stoull(Indices[1]) - 1);
+				ObjInfo->TexCoordIndices.push_back(std::stoull(IndexBuffers[1]) - 1);
 			}
 			catch ([[maybe_unused]] const std::invalid_argument& Exception)
 			{
@@ -254,9 +374,9 @@ private:
 			break;
 		case 3:
 			/** @brief: Position, texture coordinate and vertex normal data (e.g., 'f 1/1/1 2/2/1' or 'f 1//1 2//1') */
-			if (Indices[1].empty()) /** Position and vertex normal */
+			if (IndexBuffers[1].empty()) /** Position and vertex normal */
 			{
-				if (Indices[2].empty())
+				if (IndexBuffers[2].empty())
 				{
 					UE_LOG_ERROR("정점 법선 인덱스 형식이 잘못되었습니다");
 					return false;
@@ -264,7 +384,7 @@ private:
 
 				try
 				{
-					ObjInfo->NormalIndices.push_back(std::stoull(Indices[2]) - 1);
+					ObjInfo->NormalIndices.push_back(std::stoull(IndexBuffers[2]) - 1);
 				}
 				catch ([[maybe_unused]] const std::invalid_argument& Exception)
 				{
@@ -274,12 +394,23 @@ private:
 			}
 			else /** Position, texture coordinate, and vertex normal */
 			{
-				if (Indices[1].empty() || Indices[2].empty())
+				if (IndexBuffers[1].empty() || IndexBuffers[2].empty())
 				{
-					UE_LOG_ERROR("정점 텍스쳐 좌표 또는 법선 인덱스 형식이 잘못되었습니다")
+					UE_LOG_ERROR("정점 텍스쳐 좌표 또는 법선 인덱스 형식이 잘못되었습니다");
+					return false;
+				}
+
+				try
+				{
+					ObjInfo->TexCoordIndices.push_back(std::stoull(IndexBuffers[1]) - 1);
+					ObjInfo->NormalIndices.push_back(std::stoull(IndexBuffers[2]) - 1);
+				}
+				catch ([[maybe_unused]] const std::invalid_argument& Exception)
+				{
+					UE_LOG_ERROR("정점 텍스쳐 좌표 또는 법선 인덱스 형식이 잘못되었습니다");
+					return false;
 				}
 			}
-
 			break;
 		}
 	}
