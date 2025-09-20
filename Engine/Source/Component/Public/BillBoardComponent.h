@@ -10,7 +10,7 @@ public:
 	UBillBoardComponent(AActor* InOwnerActor, float InYOffset);
 	~UBillBoardComponent();
 
-	void UpdateRotationMatrix();
+	void UpdateRotationMatrix(const FVector& InCameraLocation);
 
 	FMatrix GetRTMatrix() const { return RTMatrix; }
 private:
