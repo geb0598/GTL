@@ -2,9 +2,8 @@
 #include "Editor/Public/Camera.h"
 #include "Manager/Input/Public/InputManager.h"
 #include "Manager/Time/Public/TimeManager.h"
-#include "Render/Renderer/Public/Renderer.h"
 
-void UCamera::Update(const D3D11_VIEWPORT& InViewport)
+void UCamera::UpdateInput()
 {
 	const UInputManager& Input = UInputManager::GetInstance();
 	const FMatrix RotationMatrix = FMatrix::RotationMatrix(FVector::GetDegreeToRadian(RelativeRotation));
@@ -19,12 +18,6 @@ void UCamera::Update(const D3D11_VIEWPORT& InViewport)
 	Up = Right.Cross(Forward);
 	Up.Normalize();
 
-	// 종횡비 갱신
-	if (InViewport.Width > 0.f && InViewport.Height > 0.f)
-	{
-		SetAspect(InViewport.Width / InViewport.Height);
-	}
-	
 	/**
 	 * @brief 마우스 우클릭을 하고 있는 동안 카메라 제어가 가능합니다.
 	 */
@@ -63,12 +56,21 @@ void UCamera::Update(const D3D11_VIEWPORT& InViewport)
 		// Yaw 래핑(값이 무한히 커지지 않도록)
 		if (RelativeRotation.Z > 180.0f) RelativeRotation.Z -= 360.0f;
 		if (RelativeRotation.Z < -180.0f) RelativeRotation.Z += 360.0f;
-		
+
 		// Pitch 클램프(짐벌 플립 방지)
 		if (RelativeRotation.Y > 89.0f)  RelativeRotation.Y = 89.0f;
 		if (RelativeRotation.Y < -89.0f) RelativeRotation.Y = -89.0f;
 	}
+}
 
+void UCamera::Update(const D3D11_VIEWPORT& InViewport)
+{
+	// 종횡비 갱신
+	if (InViewport.Width > 0.f && InViewport.Height > 0.f)
+	{
+		SetAspect(InViewport.Width / InViewport.Height);
+	}
+	
 	switch (CameraType)
 	{
 	case ECameraType::ECT_Perspective:
@@ -78,8 +80,6 @@ void UCamera::Update(const D3D11_VIEWPORT& InViewport)
 		UpdateMatrixByOrth();
 		break;
 	}
-
-	URenderer::GetInstance().UpdateConstant(ViewProjConstants);
 }
 
 void UCamera::UpdateMatrixByPers()
@@ -201,7 +201,6 @@ const FViewProjConstants UCamera::GetFViewProjConstantsInverse() const
 	return Result;
 }
 
-
 FRay UCamera::ConvertToWorldRay(float NdcX, float NdcY) const
 {
 	/* *
@@ -210,7 +209,6 @@ FRay UCamera::ConvertToWorldRay(float NdcX, float NdcY) const
 	FRay Ray = {};
 
 	const FViewProjConstants& ViewProjMatrix = GetFViewProjConstantsInverse();
-
 
 	/* *
 	 * @brief NDC 좌표 정보를 행렬로 변환합니다.
