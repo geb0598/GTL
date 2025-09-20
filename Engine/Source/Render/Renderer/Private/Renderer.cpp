@@ -130,35 +130,35 @@ void URenderer::CreateDefaultShader()
 
 void URenderer::CreateTextureShader()
 {
-	ID3DBlob* TexturedVSBlob;
-	ID3DBlob* TexturedPSBlob;
+	ID3DBlob* TextureVSBlob;
+	ID3DBlob* TexturePSBlob;
 
-	D3DCompileFromFile(L"Asset/Shader/TexturedShader.hlsl", nullptr, nullptr, "mainVS", "vs_5_0", 0, 0,
-					  &TexturedVSBlob, nullptr);
+	D3DCompileFromFile(L"Asset/Shader/TextureShader.hlsl", nullptr, nullptr, "mainVS", "vs_5_0", 0, 0,
+					  &TextureVSBlob, nullptr);
 
-	GetDevice()->CreateVertexShader(TexturedVSBlob->GetBufferPointer(),
-									TexturedVSBlob->GetBufferSize(), nullptr, &TexturedVertexShader);
+	GetDevice()->CreateVertexShader(TextureVSBlob->GetBufferPointer(),
+									TextureVSBlob->GetBufferSize(), nullptr, &TextureVertexShader);
 
-	D3DCompileFromFile(L"Asset/Shader/TexturedShader.hlsl", nullptr, nullptr, "mainPS", "ps_5_0", 0, 0,
-					  &TexturedPSBlob, nullptr);
+	D3DCompileFromFile(L"Asset/Shader/TextureShader.hlsl", nullptr, nullptr, "mainPS", "ps_5_0", 0, 0,
+					  &TexturePSBlob, nullptr);
 
-	GetDevice()->CreatePixelShader(TexturedPSBlob->GetBufferPointer(),
-								   TexturedPSBlob->GetBufferSize(), nullptr, &TexturedPixelShader);
+	GetDevice()->CreatePixelShader(TexturePSBlob->GetBufferPointer(),
+								   TexturePSBlob->GetBufferSize(), nullptr, &TexturePixelShader);
 
-	D3D11_INPUT_ELEMENT_DESC TexturedLayout[] =
+	D3D11_INPUT_ELEMENT_DESC TextureLayout[] =
 	{
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
 		{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 16, D3D11_INPUT_PER_VERTEX_DATA, 0},
 		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 32, D3D11_INPUT_PER_VERTEX_DATA, 0},
 	};
-	GetDevice()->CreateInputLayout(TexturedLayout, ARRAYSIZE(TexturedLayout), TexturedVSBlob->GetBufferPointer(),
-		TexturedVSBlob->GetBufferSize(), &TexturedInputLayout);
+	GetDevice()->CreateInputLayout(TextureLayout, ARRAYSIZE(TextureLayout), TextureVSBlob->GetBufferPointer(),
+		TextureVSBlob->GetBufferSize(), &TextureInputLayout);
 
 	// TODO(KHJ): ShaderBlob 파일로 저장하고, 이후 이미 존재하는 경우 컴파일 없이 Blob을 로드할 수 있도록 할 것
 	// TODO(KHJ): 실제 텍스처용 셰이더를 별도로 생성해야 함 (UV 좌표 포함)
 	
-	TexturedVSBlob->Release();
-	TexturedPSBlob->Release();
+	TextureVSBlob->Release();
+	TexturePSBlob->Release();
 }
 
 /**
@@ -318,11 +318,11 @@ void URenderer::RenderLevel()
 					if (Material && Material->GetDiffuseTexture())
 					{
 						FPipelineInfo PipelineInfo = {
-							TexturedInputLayout,
-							TexturedVertexShader,
+							TextureInputLayout,
+							TextureVertexShader,
 							LoadedRasterizerState,
 							DefaultDepthStencilState,
-							TexturedPixelShader,
+							TexturePixelShader,
 							nullptr,
 						};
 						Pipeline->UpdatePipeline(PipelineInfo);

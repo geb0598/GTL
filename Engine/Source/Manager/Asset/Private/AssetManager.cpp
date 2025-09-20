@@ -6,6 +6,8 @@
 #include "DirectXTK/DDSTextureLoader.h"
 #include "Component/Mesh/Public/VertexDatas.h"
 #include "Physics/Public/AABB.h"
+#include "Texture/Public/TextureRenderProxy.h"
+#include "Texture/Public/Texture.h"
 
 IMPLEMENT_SINGLETON_CLASS_BASE(UAssetManager)
 
@@ -192,10 +194,35 @@ ComPtr<ID3D11ShaderResourceView> UAssetManager::LoadTexture(const FString& InFil
 
 	// 새로운 텍스처 로드
 	ID3D11ShaderResourceView* TextureSRV = CreateTextureFromFile(InFilePath);
-	if (TextureSRV)
+	if (!TextureSRV)
 	{
-		TextureCache[InFilePath] = TextureSRV;
+		UE_LOG_ERROR("AssetManager: LoadTexture 실패 - %s", InFilePath.c_str());
+		return nullptr;
 	}
+
+	ID3D11SamplerState* Sampler = nullptr;
+	D3D11_SAMPLER_DESC SamplerDesc = {};
+	SamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	SamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;       // UV가 범위를 벗어나면 클램프
+	SamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	SamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	SamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	SamplerDesc.MinLOD = 0;
+	SamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+	//URenderer::GetInstance()->CreateSamplerState();
+	/*if (FAILED(hr))l
+	{
+		UE_LOG_ERROR("FontRenderer: 샘플러 스테이트 생성 실패 (HRESULT: 0x%08lX)", hr);
+		return false;
+	}
+
+	UE_LOG_SUCCESS("FontRenderer: 샘플러 스테이트 생성 완료");
+	return true;*/
+
+	auto* Proxy = new FTextureRenderProxy(TextureSRV, Sampler);
+
+	//TextureCache[InFilePath] = ;
 
 	return TextureSRV;
 }
