@@ -169,20 +169,36 @@ void UObjectPicker::PickGizmo(UCamera* InActiveCamera, const FRay& WorldRay, UGi
 bool UObjectPicker::IsRayPrimitiveCollided(UCamera* InActiveCamera, const FRay& ModelRay, UPrimitiveComponent* Primitive, const FMatrix& ModelMatrix, float* ShortestDistance)
 
 {
-	//FRay ModelRay = GetModelRay(Ray, Primitive);
+	const uint32 NumVertices = Primitive->GetNumVertices();
+	const uint32 NumIndices = Primitive->GetNumIndices();
 
 	const TArray<FVertex>* Vertices = Primitive->GetVerticesData();
+	const TArray<uint32>* Indices = Primitive->GetIndicesData();
 
 	float Distance = D3D11_FLOAT32_MAX; //Distance 초기화
 	bool bIsHit = false;
-	for (int32 a = 0; a < Vertices->size(); a = a + 3) //삼각형 단위로 Vertex 위치정보 읽음
+
+	const int32 NumTriangles = (NumIndices > 0) ? (NumIndices / 3) : (NumVertices / 3);
+
+	for (int32 TriIndex = 0; TriIndex < NumTriangles; TriIndex++) //삼각형 단위로 Vertex 위치정보 읽음
 	{
-		const FVector& Vertex1 = (*Vertices)[a].Position;
-		const FVector& Vertex2 = (*Vertices)[a + 1].Position;
-		const FVector& Vertex3 = (*Vertices)[a + 2].Position;
+		FVector TriangleVertices[3];
 
-		if (IsRayTriangleCollided(InActiveCamera, ModelRay, Vertex1, Vertex2, Vertex3, ModelMatrix, &Distance)) //Ray와 삼각형이 충돌하면 거리 비교 후 최단거리 갱신
+		// 인덱스 버퍼 사용 여부에 따라 정점 구성
+		if (Indices)
+		{
+			TriangleVertices[0] = (*Vertices)[(*Indices)[TriIndex * 3 + 0]].Position;
+			TriangleVertices[1] = (*Vertices)[(*Indices)[TriIndex * 3 + 1]].Position;
+			TriangleVertices[2] = (*Vertices)[(*Indices)[TriIndex * 3 + 2]].Position;
+		}
+		else
+		{
+			TriangleVertices[0] = (*Vertices)[TriIndex * 3 + 0].Position;
+			TriangleVertices[1] = (*Vertices)[TriIndex * 3 + 1].Position;
+			TriangleVertices[2] = (*Vertices)[TriIndex * 3 + 2].Position;
+		}
 
+		if (IsRayTriangleCollided(ModelRay, TriangleVertices[0], TriangleVertices[1], TriangleVertices[2], ModelMatrix, &Distance)) //Ray와 삼각형이 충돌하면 거리 비교 후 최단거리 갱신
 		{
 			bIsHit = true;
 			if (Distance < *ShortestDistance)
