@@ -332,6 +332,9 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera)
 				Pipeline->SetVertexBuffer(MeshComp->GetVertexBuffer(), sizeof(FNormalVertex));
 				Pipeline->SetIndexBuffer(MeshComp->GetIndexBuffer(), 0);
 
+				Pipeline->DrawIndexed(MeshAsset->Indices.size(), 0, 0);
+				continue;	// 아직 머티리얼 적용이 안돼서 그냥 바로 draw 후 continue
+
 				for (const FMeshSection& Section : MeshAsset->Sections)
 				{
 					UMaterial* Material = MeshComp->GetStaticMesh()->GetMaterial(Section.MaterialSlot);
