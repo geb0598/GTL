@@ -5,13 +5,13 @@
 #include "Component/Mesh/Public/StaticMesh.h"
 
 UCLASS()
-class UStaticMeshComp : public UMeshComponent
+class UStaticMeshComponent : public UMeshComponent
 {
 	GENERATED_BODY()
-	DECLARE_CLASS(UStaticMeshComp, UMeshComponent)
+	DECLARE_CLASS(UStaticMeshComponent, UMeshComponent)
 
 public:
-	UStaticMeshComp();
+	UStaticMeshComponent();
 
 	//void Serialize(bool bIsLoading, Json Handle)
 	//{

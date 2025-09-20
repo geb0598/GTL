@@ -35,6 +35,7 @@ public:
 
 	// Texture 관련 함수들
 	ComPtr<ID3D11ShaderResourceView> LoadTexture(const FString& InFilePath, const FName& InName = FName::None);
+	UTexture* CreateTexture(const FString& InFilePath, const FName& InName = FName::None);
 	ComPtr<ID3D11ShaderResourceView> GetTexture(const FString& InFilePath);
 	void ReleaseTexture(const FString& InFilePath);
 	bool HasTexture(const FString& InFilePath) const;

@@ -6,6 +6,8 @@
 #include "DirectXTK/DDSTextureLoader.h"
 #include "Component/Mesh/Public/VertexDatas.h"
 #include "Physics/Public/AABB.h"
+#include "Texture/Public/TextureRenderProxy.h"
+#include "Texture/Public/Texture.h"
 
 IMPLEMENT_SINGLETON_CLASS_BASE(UAssetManager)
 
@@ -198,6 +200,35 @@ ComPtr<ID3D11ShaderResourceView> UAssetManager::LoadTexture(const FString& InFil
 	}
 
 	return TextureSRV;
+}
+
+UTexture* UAssetManager::CreateTexture(const FString& InFilePath, const FName& InName)
+{
+	auto SRV = LoadTexture(InFilePath);
+	if (!SRV)	return nullptr;
+
+	ID3D11SamplerState* Sampler = nullptr;
+	D3D11_SAMPLER_DESC SamplerDesc = {};
+	SamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	SamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;       // UV가 범위를 벗어나면 클램프
+	SamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	SamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	SamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	SamplerDesc.MinLOD = 0;
+	SamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+	HRESULT hr = URenderer::GetInstance().GetDevice()->CreateSamplerState(&SamplerDesc, &Sampler);
+	if (FAILED(hr))
+	{
+		UE_LOG_ERROR("CreateSamplerState failed (HRESULT: 0x%08lX)", hr);
+		return nullptr;
+	}
+
+	auto* Proxy = new FTextureRenderProxy(SRV, Sampler);
+	auto* Texture = new UTexture(InFilePath, InName);
+	Texture->SetRenderProxy(Proxy);
+
+	return Texture;
 }
 
 /**

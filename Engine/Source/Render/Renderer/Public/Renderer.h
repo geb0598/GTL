@@ -127,9 +127,9 @@ private:
 	ID3D11PixelShader* DefaultPixelShader = nullptr;
 	ID3D11InputLayout* DefaultInputLayout = nullptr;
 	
-	ID3D11VertexShader* TexturedVertexShader = nullptr;
-	ID3D11PixelShader* TexturedPixelShader = nullptr;
-	ID3D11InputLayout* TexturedInputLayout = nullptr;
+	ID3D11VertexShader* TextureVertexShader = nullptr;
+	ID3D11PixelShader* TexturePixelShader = nullptr;
+	ID3D11InputLayout* TextureInputLayout = nullptr;
 	
 	uint32 Stride = 0;
 
