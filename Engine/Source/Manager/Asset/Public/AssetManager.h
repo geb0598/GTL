@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ObjImporter.h"
+
 struct FAABB;
 
 /**
@@ -17,7 +19,7 @@ public:
 	void Release();
 
 	// Vertex 관련 함수들
-	TArray<FVertex>* GetVertexData(EPrimitiveType InType);
+	TArray<FNormalVertex>* GetVertexData(EPrimitiveType InType);
 	ID3D11Buffer* GetVertexbuffer(EPrimitiveType InType);
 	uint32 GetNumVertices(EPrimitiveType InType);
 
@@ -33,6 +35,7 @@ public:
 
 	// Texture 관련 함수들
 	ComPtr<ID3D11ShaderResourceView> LoadTexture(const FString& InFilePath, const FName& InName = FName::None);
+	UTexture* CreateTexture(const FString& InFilePath, const FName& InName = FName::None);
 	ComPtr<ID3D11ShaderResourceView> GetTexture(const FString& InFilePath);
 	void ReleaseTexture(const FString& InFilePath);
 	bool HasTexture(const FString& InFilePath) const;
@@ -48,7 +51,7 @@ private:
 	// Vertex Resource
 	TMap<EPrimitiveType, ID3D11Buffer*> VertexBuffers;
 	TMap<EPrimitiveType, uint32> NumVertices;
-	TMap<EPrimitiveType, TArray<FVertex>*> VertexDatas;
+	TMap<EPrimitiveType, TArray<FNormalVertex>*> VertexDatas;
 
 	// 인덱스 리소스
 	TMap<EPrimitiveType, ID3D11Buffer*> IndexBuffers;

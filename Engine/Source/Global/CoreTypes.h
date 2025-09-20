@@ -1,6 +1,9 @@
 #pragma once
 #include "Global/Vector.h"
 #include "Global/Matrix.h"
+#include "Global/Types.h"
+#include "Core/Public/Name.h"
+#include <Texture/Public/Material.h>
 
 //struct BatchLineContants
 //{
@@ -22,11 +25,18 @@ struct FViewProjConstants
 	FMatrix Projection;
 };
 
-
 struct FVertex
 {
 	FVector Position;
 	FVector4 Color;
+};
+
+struct FNormalVertex
+{
+	FVector Position;
+	FVector Normal;
+	FVector4 Color;
+	FVector2 TexCoord;
 };
 
 struct FRay
@@ -56,7 +66,7 @@ struct FTransform
 	FTransform() = default;
 
 	FTransform(const FVector& InLocation, const FVector& InRotation = FVector::ZeroVector(),
-			   const FVector& InScale = FVector::OneVector())
+		const FVector& InScale = FVector::OneVector())
 		: Location(InLocation), Rotation(InRotation), Scale(InScale)
 	{
 	}

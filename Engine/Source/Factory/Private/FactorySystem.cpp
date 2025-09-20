@@ -6,6 +6,7 @@
 #include "Factory/Actor/Public/SphereActorFactory.h"
 #include "Factory/Actor/Public/TriangleActorFactory.h"
 #include "Factory/Actor/Public/SquareActorFactory.h"
+#include "Factory/Actor/Public/StaticMeshActorFactory.h"
 
 bool FFactorySystem::bIsInitialized = false;
 
@@ -28,6 +29,7 @@ void FFactorySystem::Initialize()
 	static USphereActorFactory SphereFactory;
 	static UTriangleActorFactory TriangleFactory;
 	static USquareActorFactory SquareFactory;
+	static UStaticMeshActorFactory StaticMeshFactory;
 
 	bIsInitialized = true;
 
@@ -69,10 +71,10 @@ void FFactorySystem::PrintAllFactories()
 		if (Factory)
 		{
 			UE_LOG("[%llu] %s -> %s",
-			       i,
-			       Factory->GetDescription().data(),
-			       Factory->GetSupportedClass() ?
-			       Factory->GetSupportedClass()->GetClassTypeName().ToString().data() :"Unknown");
+				i,
+				Factory->GetDescription().data(),
+				Factory->GetSupportedClass() ?
+				Factory->GetSupportedClass()->GetClassTypeName().ToString().data() : "Unknown");
 		}
 	}
 
