@@ -91,17 +91,17 @@ void UEditor::Update()
 	UpdateLayout();
 }
 
-void UEditor::RenderEditor()
+void UEditor::RenderEditor(UCamera* InCamera)
 {
 	// Grid, Axis 등 에디터 요소를 렌더링합니다.
 	BatchLines.Render();
 	Axis.Render();
 
 	// Gizmo 렌더링 시, 현재 활성화된 카메라의 위치를 전달해야 합니다.
-	if (UCamera* ActiveCamera = URenderer::GetInstance().GetViewportClient()->GetActiveCamera())
+	if (InCamera)
 	{
 		AActor* SelectedActor = ULevelManager::GetInstance().GetCurrentLevel()->GetSelectedActor();
-		Gizmo.RenderGizmo(SelectedActor, ActiveCamera->GetLocation());
+		Gizmo.RenderGizmo(SelectedActor, InCamera->GetLocation());
 	}
 }
 

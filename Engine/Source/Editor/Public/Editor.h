@@ -27,7 +27,7 @@ public:
 	~UEditor();
 
 	void Update();
-	void RenderEditor();
+	void RenderEditor(UCamera* InCamera);
 
 	void SetViewMode(EViewModeIndex InNewViewMode) { CurrentViewMode = InNewViewMode; }
 	EViewModeIndex GetViewMode() const { return CurrentViewMode; }
