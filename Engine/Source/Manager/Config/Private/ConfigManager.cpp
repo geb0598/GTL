@@ -18,50 +18,50 @@ UConfigManager::~UConfigManager()
 
 void UConfigManager::SaveEditorSetting()
 {
-	std::ofstream ofs(EditorIniFileName.ToString());
-	if (ofs.is_open())
+	std::ofstream Ofs(EditorIniFileName.ToString());
+	if (Ofs.is_open())
 	{
-		ofs << "CellSize=" << CellSize << "\n";
-		ofs << "CameraSensitivity=" << CameraSensitivity << "\n";
-		ofs << "RootSplitterRatio=" << RootSplitterRatio << "\n";
-		ofs << "LeftSplitterRatio=" << LeftSplitterRatio << "\n";
-		ofs << "RightSplitterRatio=" << RightSplitterRatio << "\n";
+		Ofs << "CellSize=" << CellSize << "\n";
+		Ofs << "CameraSensitivity=" << CameraSensitivity << "\n";
+		Ofs << "RootSplitterRatio=" << RootSplitterRatio << "\n";
+		Ofs << "LeftSplitterRatio=" << LeftSplitterRatio << "\n";
+		Ofs << "RightSplitterRatio=" << RightSplitterRatio << "\n";
 	}
 }
 
 void UConfigManager::LoadEditorSetting()
 {
-	const FString& fileNameStr = EditorIniFileName.ToString();
-	std::ifstream ifs(fileNameStr);
-	if (!ifs.is_open())
+	const FString& FileNameStr = EditorIniFileName.ToString();
+	std::ifstream Ifs(FileNameStr);
+	if (!Ifs.is_open())
 	{
 		CellSize = 1.0f;
 		CameraSensitivity = UCamera::DEFAULT_SPEED;
 		return; // 파일이 없으면 기본값 유지
 	}
 
-	std::string line;
-	while (std::getline(ifs, line))
+	std::string Line;
+	while (std::getline(Ifs, Line))
 	{
-		if (line.rfind("CellSize=", 0) == 0)
+		if (Line.rfind("CellSize=", 0) == 0)
 		{
-			CellSize = std::stof(line.substr(9));
+			CellSize = std::stof(Line.substr(9));
 		}
-		else if (line.rfind("CameraSensitivity=", 0) == 0)
+		else if (Line.rfind("CameraSensitivity=", 0) == 0)
 		{
-			CameraSensitivity = std::stof(line.substr(18));
+			CameraSensitivity = std::stof(Line.substr(18));
 		}
-		else if (line.rfind("RootSplitterRatio=", 0) == 0)
+		else if (Line.rfind("RootSplitterRatio=", 0) == 0)
 		{
-			RootSplitterRatio = std::stof(line.substr(18));
+			RootSplitterRatio = std::stof(Line.substr(18));
 		}
-		else if (line.rfind("LeftSplitterRatio=", 0) == 0)
+		else if (Line.rfind("LeftSplitterRatio=", 0) == 0)
 		{
-			LeftSplitterRatio = std::stof(line.substr(18));
+			LeftSplitterRatio = std::stof(Line.substr(18));
 		}
-		else if (line.rfind("RightSplitterRatio=", 0) == 0)
+		else if (Line.rfind("RightSplitterRatio=", 0) == 0)
 		{
-			RightSplitterRatio = std::stof(line.substr(19));
+			RightSplitterRatio = std::stof(Line.substr(19));
 		}
 	}
 }
