@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "Render/Renderer/Public/ViewportClient.h"
+#include "Editor/Public/ViewportClient.h"
 #include "Render/Renderer/Public/Renderer.h"
 
 void FViewportClient::UpdateLayout(const D3D11_VIEWPORT& InViewport)
@@ -16,8 +16,12 @@ void FViewportClient::UpdateLayout(const D3D11_VIEWPORT& InViewport)
 	Viewports[3].SetViewport({ BaseX + HalfW,    BaseY + HalfH,    HalfW, HalfH, 0.0f, 1.0f });
 }
 
-void FViewportClient::Render(URenderer& Renderer, ID3D11DeviceContext* DeviceContext, ID3D11DepthStencilView* DepthStencilView)
+void FViewportClient::Render()
 {
+	URenderer& Renderer = URenderer::GetInstance();
+	ID3D11DeviceContext* DeviceContext = Renderer.GetDeviceContext();
+	ID3D11DepthStencilView* DepthStencilView = Renderer.GetDeviceResources()->GetDepthStencilView();
+
 	// 각 뷰포트의 값을 갱신합니다.
 	UpdateLayout(Renderer.GetDeviceResources()->GetViewportInfo());
 

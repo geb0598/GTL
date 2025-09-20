@@ -1,5 +1,5 @@
 #pragma once
-#include "Render/Renderer/Public/Viewport.h"
+#include "Editor/Public/Viewport.h"
 
 class URenderer;
 
@@ -18,7 +18,7 @@ public:
 	/**
 	* @brief 각각의 Viewport를 적용하여 최종적으로 화면에 출력합니다.
 	*/
-	void Render(URenderer& Renderer, ID3D11DeviceContext* DeviceContext, ID3D11DepthStencilView* DepthStencilView);
+	void Render();
 
 	TArray<FViewport>& GetViewports() { return Viewports; }
 

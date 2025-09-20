@@ -9,7 +9,7 @@
 #include "Component/Public/PrimitiveComponent.h"
 #include "Render/FontRenderer/Public/FontRenderer.h"
 #include "Render/Renderer/Public/Pipeline.h"
-#include "Render/Renderer/Public/ViewportClient.h"
+#include "Editor/Public/ViewportClient.h"
 
 IMPLEMENT_SINGLETON_CLASS_BASE(URenderer)
 
@@ -193,9 +193,7 @@ void URenderer::Update()
 {
 	RenderBegin();
 
-	//const auto vp = DeviceResources->GetViewportInfo();
-	//ViewportClient->Resize(static_cast<int>(vp.Width), static_cast<int>(vp.Height));
-	ViewportClient->Render(*this, GetDeviceContext(), DeviceResources->GetDepthStencilView());
+	ViewportClient->Render();
 
 	// 최상위 에디터/GUI는 프레임에 1회만
 	UUIManager::GetInstance().Render();
