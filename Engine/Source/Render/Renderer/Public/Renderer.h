@@ -11,6 +11,8 @@ class AActor;
 class AGizmo;
 class UEditor;
 class UFontRenderer;
+class FViewportClient;
+class UCamera;
 
 /**
  * @brief Rendering Pipeline 전반을 처리하는 클래스
@@ -64,8 +66,7 @@ public:
 	// Render
 	void Update();
 	void RenderBegin() const;
-	void RenderLevel();
-	void RenderFont();
+	void RenderLevel(UCamera* InCurrentCamera);
 	void RenderEnd() const;
 	void RenderPrimitive(const FEditorPrimitive& InPrimitive, const FRenderState& InRenderState);
 	void RenderPrimitiveIndexed(const FEditorPrimitive& InPrimitive, const FRenderState& InRenderState,
@@ -102,6 +103,7 @@ public:
 	IDXGISwapChain* GetSwapChain() const { return DeviceResources->GetSwapChain(); }
 	ID3D11RenderTargetView* GetRenderTargetView() const { return DeviceResources->GetRenderTargetView(); }
 	UDeviceResources* GetDeviceResources() const { return DeviceResources; }
+	FViewportClient* GetViewportClient() const { return ViewportClient; }
 	bool GetIsResizing() const { return bIsResizing; }
 
 	void SetIsResizing(bool isResizing) { bIsResizing = isResizing; }
@@ -130,6 +132,8 @@ private:
 	ID3D11InputLayout* TexturedInputLayout = nullptr;
 	
 	uint32 Stride = 0;
+
+	FViewportClient* ViewportClient = nullptr;
 
 	struct FRasterKey
 	{
@@ -164,10 +168,4 @@ private:
 	ID3D11RasterizerState* GetRasterizerState(const FRenderState& InRenderState);
 
 	bool bIsResizing = false;
-
-	///////////////////////////////////////////
-	// 카메라 VP Matrix 값 전달 받는 용도
-	// (차후 리팩터링이 필요합니다)
-	FViewProjConstants ViewProjConstants;
-	///////////////////////////////////////////
 };
