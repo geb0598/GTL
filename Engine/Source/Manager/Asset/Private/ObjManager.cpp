@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Manager/Asset/Public/ObjManager.h"
+#include "Manager/Asset/Public/ObjImporter.h"
 // ... 기타 필요한 include ...
 
 // static 멤버 변수의 실체를 정의(메모리 할당)합니다.
@@ -17,59 +18,72 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FString& PathFileName)
 	}
 
 	// 2. std::make_unique로 FStaticMesh 객체를 안전하게 생성
+
+	FObjInfo ObjInfo = {};
+	if (!FObjImporter::LoadObj(PathFileName, &ObjInfo))
+	{
+		UE_LOG("파일 정보를 읽어오는데 실패했습니다: %s", PathFileName);
+		return nullptr;
+	}
+
 	auto NewMesh = std::make_unique<FStaticMesh>();
 	NewMesh->PathFileName = PathFileName;
 
-	// 3. 큐브 데이터 하드코딩
-	//    (정확한 조명을 위해 8개가 아닌 24개의 정점을 사용하여 각 면의 노멀을 다르게 지정)
-	// Vertices
-	NewMesh->Vertices = {
-		// Front Face (+Z)
-		{ FVector(-0.5f, -0.5f,  0.5f), FVector(0.f, 0.f, 1.f), FVector4(1,1,1,1), FVector2(0, 1) },
-		{ FVector(-0.5f,  0.5f,  0.5f), FVector(0.f, 0.f, 1.f), FVector4(1,1,1,1), FVector2(0, 0) },
-		{ FVector(0.5f,  0.5f,  0.5f), FVector(0.f, 0.f, 1.f), FVector4(1,1,1,1), FVector2(1, 0) },
-		{ FVector(0.5f, -0.5f,  0.5f), FVector(0.f, 0.f, 1.f), FVector4(1,1,1,1), FVector2(1, 1) },
-		// Back Face (-Z)
-		{ FVector(0.5f, -0.5f, -0.5f), FVector(0.f, 0.f, -1.f), FVector4(1,1,1,1), FVector2(0, 1) },
-		{ FVector(0.5f,  0.5f, -0.5f), FVector(0.f, 0.f, -1.f), FVector4(1,1,1,1), FVector2(0, 0) },
-		{ FVector(-0.5f,  0.5f, -0.5f), FVector(0.f, 0.f, -1.f), FVector4(1,1,1,1), FVector2(1, 0) },
-		{ FVector(-0.5f, -0.5f, -0.5f), FVector(0.f, 0.f, -1.f), FVector4(1,1,1,1), FVector2(1, 1) },
-		// Left Face (-X)
-		{ FVector(-0.5f, -0.5f, -0.5f), FVector(-1.f, 0.f, 0.f), FVector4(1,1,1,1), FVector2(0, 1) },
-		{ FVector(-0.5f,  0.5f, -0.5f), FVector(-1.f, 0.f, 0.f), FVector4(1,1,1,1), FVector2(0, 0) },
-		{ FVector(-0.5f,  0.5f,  0.5f), FVector(-1.f, 0.f, 0.f), FVector4(1,1,1,1), FVector2(1, 0) },
-		{ FVector(-0.5f, -0.5f,  0.5f), FVector(-1.f, 0.f, 0.f), FVector4(1,1,1,1), FVector2(1, 1) },
-		// Right Face (+X)
-		{ FVector(0.5f, -0.5f,  0.5f), FVector(1.f, 0.f, 0.f), FVector4(1,1,1,1), FVector2(0, 1) },
-		{ FVector(0.5f,  0.5f,  0.5f), FVector(1.f, 0.f, 0.f), FVector4(1,1,1,1), FVector2(0, 0) },
-		{ FVector(0.5f,  0.5f, -0.5f), FVector(1.f, 0.f, 0.f), FVector4(1,1,1,1), FVector2(1, 0) },
-		{ FVector(0.5f, -0.5f, -0.5f), FVector(1.f, 0.f, 0.f), FVector4(1,1,1,1), FVector2(1, 1) },
-		// Top Face (+Y)
-		{ FVector(-0.5f,  0.5f,  0.5f), FVector(0.f, 1.f, 0.f), FVector4(1,1,1,1), FVector2(0, 1) },
-		{ FVector(-0.5f,  0.5f, -0.5f), FVector(0.f, 1.f, 0.f), FVector4(1,1,1,1), FVector2(0, 0) },
-		{ FVector(0.5f,  0.5f, -0.5f), FVector(0.f, 1.f, 0.f), FVector4(1,1,1,1), FVector2(1, 0) },
-		{ FVector(0.5f,  0.5f,  0.5f), FVector(0.f, 1.f, 0.f), FVector4(1,1,1,1), FVector2(1, 1) },
-		// Bottom Face (-Y)
-		{ FVector(-0.5f, -0.5f, -0.5f), FVector(0.f, -1.f, 0.f), FVector4(1,1,1,1), FVector2(0, 1) },
-		{ FVector(-0.5f, -0.5f,  0.5f), FVector(0.f, -1.f, 0.f), FVector4(1,1,1,1), FVector2(0, 0) },
-		{ FVector(0.5f, -0.5f,  0.5f), FVector(0.f, -1.f, 0.f), FVector4(1,1,1,1), FVector2(1, 0) },
-		{ FVector(0.5f, -0.5f, -0.5f), FVector(0.f, -1.f, 0.f), FVector4(1,1,1,1), FVector2(1, 1) }
-	};
-	// Indices
-	NewMesh->Indices = {
-		// Front Face
-		0, 1, 2,  0, 2, 3,
-		// Back Face
-		4, 5, 6,  4, 6, 7,
-		// Left Face
-		8, 9, 10, 8, 10, 11,
-		// Right Face
-		12, 13, 14, 12, 14, 15,
-		// Top Face
-		16, 17, 18, 16, 18, 19,
-		// Bottom Face
-		20, 21, 22, 20, 22, 23
-	};
+	if (ObjInfo.ObjectInfoList.size() == 0)
+	{
+		UE_LOG("오브젝트 정보를 찾을 수 없습니다");
+		return nullptr;
+	}
+
+	/** @note: Use only first object in '.obj' file to create FStaticMesh. */
+	FObjectInfo& ObjectInfo = ObjInfo.ObjectInfoList[0];
+
+	TMap<VertexKey, size_t> VertexMap;
+	for (size_t i = 0; i < ObjectInfo.VertexIndexList.size(); ++i)
+	{
+		size_t VertexIndex = ObjectInfo.VertexIndexList[i];
+
+		size_t NormalIndex = INVALID_INDEX;
+		if (!ObjectInfo.NormalIndexList.empty())
+		{
+			NormalIndex = ObjectInfo.NormalIndexList[i];
+		}
+
+		size_t TexCoordIndex = INVALID_INDEX;
+		if (!ObjectInfo.TexCoordIndexList.empty())
+		{
+			TexCoordIndex = ObjectInfo.TexCoordIndexList[i];
+		}
+
+		VertexKey Key{VertexIndex, NormalIndex, TexCoordIndex};
+		auto It = VertexMap.find(Key);
+		if (It == VertexMap.end())
+		{
+			FNormalVertex Vertex = {};
+			Vertex.Position = ObjInfo.VertexList[VertexIndex];
+
+			if (NormalIndex != INVALID_INDEX)
+			{
+				assert("Vertex normal index out of range" && NormalIndex < ObjInfo.NormalList.size());
+				Vertex.Normal = ObjInfo.NormalList[NormalIndex];
+			}
+
+			if (TexCoordIndex != INVALID_INDEX)
+			{
+				assert("Texture coordinate index out of range" && NormalIndex < ObjInfo.NormalList.size());
+				Vertex.TexCoord = ObjInfo.TexCoordList[TexCoordIndex];
+			}
+
+			size_t Index = NewMesh->Vertices.size();
+			NewMesh->Vertices.push_back(Vertex);
+			NewMesh->Indices.push_back(Index);
+			VertexMap[Key] = Index;
+		}
+		else
+		{
+			NewMesh->Indices.push_back(It->second);
+		}
+	}
 
 	// 4. emplace()를 사용하여 TMap에 소유권을 이전하고, 원시 포인터를 반환
 	FStaticMesh* ReturnPtr = NewMesh.get();

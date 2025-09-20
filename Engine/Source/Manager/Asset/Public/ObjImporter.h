@@ -14,9 +14,7 @@
 struct FObjectInfo;
 struct FObjectMaterialInfo;
 
-/**
- * @brief Holds all the data parsed from a single .obj file, including all objects, materials, and global vertex data.
- */
+/** @brief Holds all the data parsed from a single .obj file, including all objects, materials, and global vertex data. */
 struct FObjInfo
 {
 	TArray<FObjectInfo> ObjectInfoList;

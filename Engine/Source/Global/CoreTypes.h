@@ -87,11 +87,9 @@ struct FStaticMesh
 	TArray<FNormalVertex> Vertices;
 	TArray<uint32> Indices;
 
-
 	// GPU 메모리에 올라간 버퍼에 대한 포인터
 	ID3D11Buffer* VertexBuffer = nullptr;
 	ID3D11Buffer* IndexBuffer = nullptr;
-
 
 	// --- 2. 재질 정보 (Materials) ---
 	// 이 메시에 사용되는 모든 고유 재질의 목록 (페인트 팔레트)

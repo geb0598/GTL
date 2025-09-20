@@ -6,7 +6,7 @@
 #include "Component/Mesh/Public/StaticMesh.h" // FStaticMesh 구조체 정의
 
 // 전방 선언: FStaticMesh의 전체 정의를 포함할 필요 없이 포인터만 사용
-class FStaticMesh;
+struct FStaticMesh;
 
 /**
  * @brief FStaticMesh(Cooked Data)를 엔진 오브젝트 시스템에 통합하는 래퍼 클래스.
