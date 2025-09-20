@@ -1,13 +1,13 @@
 #include "pch.h"
 #include "Core/Public/Class.h"       // UObject 기반 클래스 및 매크로
 #include "Core/Public/ObjectPtr.h"
-#include "Component/Mesh/Public/StaticMeshComp.h"
+#include "Component/Mesh/Public/StaticMeshComponent.h"
 #include "Component/Mesh/Public/MeshComponent.h"
 #include "Manager/Asset/Public/ObjManager.h"
 
-IMPLEMENT_CLASS(UStaticMeshComp, UMeshComponent)
+IMPLEMENT_CLASS(UStaticMeshComponent, UMeshComponent)
 
-UStaticMeshComp::UStaticMeshComp()
+UStaticMeshComponent::UStaticMeshComponent()
 {
 	StaticMesh = FObjManager::LoadObjStaticMesh("");
 	Type = EPrimitiveType::StaticMesh;

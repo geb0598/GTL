@@ -159,12 +159,15 @@
     <ClInclude Include="Source\Actor\Public\CubeActor.h" />
     <ClInclude Include="Source\Actor\Public\SphereActor.h" />
     <ClInclude Include="Source\Actor\Public\SquareActor.h" />
+    <ClInclude Include="Source\Actor\Public\StaticMeshActor.h">
+      <DeploymentContent>false</DeploymentContent>
+    </ClInclude>
     <ClInclude Include="Source\Actor\Public\TriangleActor.h" />
     <ClInclude Include="Source\Component\Mesh\Public\MeshComponent.h">
       <DeploymentContent>false</DeploymentContent>
     </ClInclude>
     <ClInclude Include="Source\Component\Mesh\Public\StaticMesh.h" />
-    <ClInclude Include="Source\Component\Mesh\Public\StaticMeshComp.h">
+    <ClInclude Include="Source\Component\Mesh\Public\StaticMeshComponent.h">
       <DeploymentContent>false</DeploymentContent>
     </ClInclude>
     <ClInclude Include="Source\Component\Public\ActorComponent.h" />
@@ -177,11 +180,11 @@
     <ClInclude Include="Source\Component\Mesh\Public\SquareComponent.h" />
     <ClInclude Include="Source\Component\Mesh\Public\TriangleComponent.h" />
     <ClInclude Include="Source\Component\Mesh\Public\VertexDatas.h" />
-    <ClInclude Include="Source\Component\Mesh\Sample\Rectangle.h" />
-    <ClInclude Include="Source\Component\Mesh\Sample\Sphere.h" />
-    <ClInclude Include="Source\Component\Mesh\Sample\Triangle.h" />
     <ClInclude Include="Source\Editor\Public\Viewport.h" />
     <ClInclude Include="Source\Editor\Public\ViewportClient.h" />
+    <ClInclude Include="Source\Factory\Actor\Public\StaticMeshActorFactory.h">
+      <DeploymentContent>false</DeploymentContent>
+    </ClInclude>
     <ClInclude Include="Source\Global\Quaternion.h" />
     <ClInclude Include="Source\Manager\Asset\Public\ObjImporter.h">
       <DeploymentContent>false</DeploymentContent>
@@ -285,6 +288,9 @@
     <ClCompile Include="Source\Actor\Private\CubeActor.cpp" />
     <ClCompile Include="Source\Actor\Private\SphereActor.cpp" />
     <ClCompile Include="Source\Actor\Private\SquareActor.cpp" />
+    <ClCompile Include="Source\Actor\Private\StaticMeshActor.cpp">
+      <DeploymentContent>false</DeploymentContent>
+    </ClCompile>
     <ClCompile Include="Source\Actor\Private\TriangleActor.cpp" />
     <ClCompile Include="Source\Component\Mesh\Private\MeshComponent.cpp">
       <DeploymentContent>false</DeploymentContent>
@@ -292,7 +298,7 @@
     <ClCompile Include="Source\Component\Mesh\Private\StaticMesh.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
-    <ClCompile Include="Source\Component\Mesh\Private\StaticMeshComp.cpp">
+    <ClCompile Include="Source\Component\Mesh\Private\StaticMeshComponent.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
     <ClCompile Include="Source\Component\Private\ActorComponent.cpp" />
@@ -307,6 +313,9 @@
     <ClCompile Include="Source\Component\Mesh\Private\VertexDatas.cpp" />
     <ClCompile Include="Source\Editor\Private\Viewport.cpp" />
     <ClCompile Include="Source\Editor\Private\ViewportClient.cpp" />
+    <ClCompile Include="Source\Factory\Actor\Private\StaticMeshActorFactory.cpp">
+      <DeploymentContent>false</DeploymentContent>
+    </ClCompile>
     <ClCompile Include="Source\Global\Quaternion.cpp" />
     <ClCompile Include="Source\Manager\Asset\Private\AssetManager.cpp" />
     <ClCompile Include="Source\Manager\Asset\Private\ObjImporter.cpp">

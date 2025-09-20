@@ -12,7 +12,7 @@
 #include "Texture/Public/Material.h"
 #include "Texture/Public/Texture.h"
 #include "Texture/Public/TextureRenderProxy.h"
-#include "Component/Mesh/Public/StaticMeshComp.h"
+#include "Component/Mesh/Public/StaticMeshComponent.h"
 #include "Source/Component/Mesh/Public/StaticMesh.h"
 #include "Editor/Public/ViewportClient.h"
 #include "Editor/Public/Camera.h"
@@ -318,7 +318,7 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera)
 			}
 			ID3D11RasterizerState* LoadedRasterizerState = GetRasterizerState(RenderState);
 
-			if (auto MeshComp = Cast<UStaticMeshComp>(PrimitiveComponent))
+			if (auto MeshComp = Cast<UStaticMeshComponent>(PrimitiveComponent))
 			{
 				FStaticMesh* MeshAsset = MeshComp->GetStaticMesh()->GetStaticMeshAsset();
 				if (!MeshAsset)	continue;

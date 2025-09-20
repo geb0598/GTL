@@ -131,13 +131,13 @@ enum class EPrimitiveType : uint8
 	Cube,
 	Triangle,
 	Square,
+	StaticMesh,
 	Torus,
 	Arrow,
 	CubeArrow,
 	Ring,
 	Line,
 	BillBoard,
-	StaticMesh,
 
 	End = 0xFF
 };
