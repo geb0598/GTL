@@ -1,12 +1,13 @@
 #pragma once
 
 //STL Redefine
-#include <vector>
-#include <unordered_set>
-#include <unordered_map>
 #include <list>
+#include <optional>
 #include <queue>
 #include <stack>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 template<typename T, typename Alloc = std::allocator<T>>
 using TArray = std::vector<T, Alloc>;
@@ -24,6 +25,8 @@ template<typename T, size_t N>
 using TStaticArray = std::array<T, N>;
 template<typename T, typename Container = std::deque<T>>
 using TQueue = std::queue<T, Container>;
+template<typename T>
+using TOptional = std::optional<T>;
 
 using FString = std::string;
 using uint8 = std::uint8_t;
