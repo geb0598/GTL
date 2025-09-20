@@ -55,16 +55,6 @@ const TArray<uint32>& UStaticMesh::GetIndices() const
 	return EmptyIndices;
 }
 
-ID3D11Buffer* UStaticMesh::GetVertexBuffer() const
-{
-	return StaticMeshAsset ? VertexBuffer : nullptr;
-}
-
-ID3D11Buffer* UStaticMesh::GetIndexBuffer() const
-{
-	return StaticMeshAsset ? IndexBuffer : nullptr;
-}
-
 UMaterial* UStaticMesh::GetMaterial(int32 MaterialIndex) const
 {
 	return (MaterialIndex >= 0 && MaterialIndex < Materials.size()) ? Materials[MaterialIndex] : nullptr;

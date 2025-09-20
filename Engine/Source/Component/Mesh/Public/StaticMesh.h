@@ -69,8 +69,6 @@ public:
 	// Geometry Data
 	const TArray<FNormalVertex>& GetVertices() const;
 	const TArray<uint32>& GetIndices() const;
-	ID3D11Buffer* GetVertexBuffer() const;
-	ID3D11Buffer* GetIndexBuffer() const;
 
 	// Material Data
 	UMaterial* GetMaterial(int32 MaterialIndex) const;
@@ -87,7 +85,4 @@ private:
 	TObjectPtr<FStaticMesh> StaticMeshAsset;
 
 	TArray<UMaterial*> Materials;
-
-	ID3D11Buffer* VertexBuffer;
-	ID3D11Buffer* IndexBuffer;
 };

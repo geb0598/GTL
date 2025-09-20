@@ -14,11 +14,11 @@ UStaticMeshComponent::UStaticMeshComponent()
 	Type = EPrimitiveType::StaticMesh;
 
 	Vertices = &(StaticMesh.Get()->GetVertices());
-	VertexBuffer = StaticMesh.Get()->GetVertexBuffer();
+	//VertexBuffer = StaticMesh.Get()->GetVertexBuffer();
 	NumVertices = Vertices->size();
 
 	Indices = &(StaticMesh.Get()->GetIndices());
-	IndexBuffer = StaticMesh.Get()->GetIndexBuffer();
+	//IndexBuffer = StaticMesh.Get()->GetIndexBuffer();
 	NumIndices = Indices->size();
 
 	RenderState.CullMode = ECullMode::Back;
