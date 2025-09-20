@@ -104,7 +104,6 @@ void FClientApp::UpdateSystem() const
 	auto& Renderer = URenderer::GetInstance();
 	auto& LevelManager = ULevelManager::GetInstance();
 
-	//Editor->Update();
 	LevelManager.Update();
 	TimeManager.Update();
 	InputManager.Update(Window);
