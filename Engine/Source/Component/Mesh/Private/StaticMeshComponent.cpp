@@ -12,16 +12,18 @@ UStaticMeshComponent::UStaticMeshComponent()
 {
 	UAssetManager& AssetManager = UAssetManager::GetInstance();
 
-	StaticMesh = FObjManager::LoadObjStaticMesh("Data/fruits/fruits.obj");
+	FString DefaultObjPath = "Data/fruits/fruits.obj";
+
+	StaticMesh = FObjManager::LoadObjStaticMesh(DefaultObjPath);
 	// Material = FObjManager::LoadObjMaterial("");
 	Type = EPrimitiveType::StaticMesh;
 
 	Vertices = &(StaticMesh.Get()->GetVertices());
-	VertexBuffer = AssetManager.CreateVertexBuffer(*Vertices);
+	VertexBuffer = AssetManager.GetVertexBuffer(DefaultObjPath);
 	NumVertices = Vertices->size();
 
 	Indices = &(StaticMesh.Get()->GetIndices());
-	IndexBuffer = AssetManager.CreateIndexBuffer(*Indices);
+	IndexBuffer = AssetManager.GetIndexBuffer(DefaultObjPath);
 	NumIndices = Indices->size();
 
 	RenderState.CullMode = ECullMode::Back;
@@ -31,12 +33,4 @@ UStaticMeshComponent::UStaticMeshComponent()
 
 UStaticMeshComponent::~UStaticMeshComponent()
 {
-	if (VertexBuffer)
-	{
-		VertexBuffer->Release();
-	}
-	if (IndexBuffer)
-	{
-		IndexBuffer->Release();
-	}
 }
