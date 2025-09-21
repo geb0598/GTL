@@ -6,6 +6,7 @@
 #include "Render/UI/Widget/Public/CameraControlWidget.h"
 #include "Render/UI/Widget/Public/FPSWidget.h"
 #include "Render/UI/Widget/Public/SceneHierarchyWidget.h"
+#include "Render/UI/Widget/Public/SplitterDebugWidget.h"
 #include "Manager/Level/Public/LevelManager.h"
 #include "Manager/UI/Public/UIManager.h"
 #include "Manager/Input/Public/InputManager.h"
@@ -23,15 +24,23 @@ UEditor::UEditor()
 	// auto* CameraControlWidget = reinterpret_cast<UCameraControlWidget*>(UIManager.FindWidget("Camera Control Widget"));
 	// auto* SceneHierarchyWidget = reinterpret_cast<USceneHierarchyWidget*>(UIManager.FindWidget("Scene Hierarchy Widget"));
 
-	auto& UIManager = UUIManager::GetInstance();
-	auto* FPSWidget =
-		reinterpret_cast<UFPSWidget*>(UIManager.FindWidget("FPS Widget"));
-	FPSWidget->SetBatchLine(&BatchLines);
-
-	TArray<float> SplitterRatio = UConfigManager::GetInstance().GetSplitterRatio();
+	const TArray<float>& SplitterRatio = UConfigManager::GetInstance().GetSplitterRatio();
 	RootSplitter.SetRatio(SplitterRatio[0]);
 	LeftSplitter.SetRatio(SplitterRatio[1]);
 	RightSplitter.SetRatio(SplitterRatio[2]);
+
+	auto& UIManager = UUIManager::GetInstance();
+
+	if (auto* FPSWidget = reinterpret_cast<UFPSWidget*>(UIManager.FindWidget("FPS Widget")))
+	{
+		FPSWidget->SetBatchLine(&BatchLines);
+	}
+
+	// Splitter UI에게 Splitter 정보를 전달합니다.
+	if (auto* SplitterWidget = reinterpret_cast<USplitterDebugWidget*>(UIManager.FindWidget("Splitter Widget")))
+	{
+		SplitterWidget->SetSplitters(&RootSplitter, &LeftSplitter, &RightSplitter);
+	}
 
 	InitializeLayout();
 }
@@ -40,6 +49,7 @@ UEditor::~UEditor()
 {
 	UConfigManager::GetInstance().SetSplitterRatio(RootSplitter.GetRatio(), LeftSplitter.GetRatio(), RightSplitter.GetRatio());
 	SafeDelete(DraggedSplitter);
+	SafeDelete(InteractionViewport);
 }
 
 void UEditor::Update()
@@ -90,17 +100,17 @@ void UEditor::Update()
 	UpdateLayout();
 }
 
-void UEditor::RenderEditor()
+void UEditor::RenderEditor(UCamera* InCamera)
 {
 	// Grid, Axis 등 에디터 요소를 렌더링합니다.
 	BatchLines.Render();
 	Axis.Render();
 
 	// Gizmo 렌더링 시, 현재 활성화된 카메라의 위치를 전달해야 합니다.
-	if (UCamera* ActiveCamera = URenderer::GetInstance().GetViewportClient()->GetActiveCamera())
+	if (InCamera)
 	{
 		AActor* SelectedActor = ULevelManager::GetInstance().GetCurrentLevel()->GetSelectedActor();
-		Gizmo.RenderGizmo(SelectedActor, ActiveCamera->GetLocation());
+		Gizmo.RenderGizmo(SelectedActor, InCamera->GetLocation());
 	}
 }
 
@@ -201,9 +211,9 @@ void UEditor::UpdateLayout()
 	}
 
 	// 4. 매 프레임 현재 비율에 맞게 전체 레이아웃 크기를 다시 계산하고, 그 결과를 실제 FViewport에 반영합니다.
-	const D3D11_VIEWPORT& ViewportInfo = URenderer::GetInstance().GetDeviceResources()->GetViewportInfo();
-	FRect FullScreenRect = { ViewportInfo.TopLeftX, ViewportInfo.TopLeftY, ViewportInfo.Width, ViewportInfo.Height };
-	RootSplitter.Resize(FullScreenRect);
+	const ImGuiViewport* Viewport = ImGui::GetMainViewport(); // 사용자에게만 보이는 영역의 정보를 가져옵니다. 
+	FRect WorkableRect = { Viewport->WorkPos.x, Viewport->WorkPos.y, Viewport->WorkSize.x, Viewport->WorkSize.y };
+	RootSplitter.Resize(WorkableRect);
 
 	if (FViewportClient* ViewportClient = URenderer::GetInstance().GetViewportClient())
 	{
@@ -226,19 +236,26 @@ void UEditor::ProcessMouseInput(ULevel* InLevel)
 {
 	// 선택된 뷰포트의 정보들을 가져옵니다.
 	FViewportClient* ViewportClient = URenderer::GetInstance().GetViewportClient();
-	UCamera* ActiveCamera = ViewportClient->GetActiveCamera();
-	FViewport* ActiveViewport = ViewportClient->GetActiveViewport();
+	FViewport* CurrentViewport = nullptr;
+	UCamera* CurrentCamera = nullptr;  
 
-	if (ActiveCamera == nullptr || ActiveViewport == nullptr) { return; }
+	// 이미 선택된 뷰포트 영역이 존재한다면 선택된 뷰포트 처리를 진행합니다.
+	if (InteractionViewport) { CurrentViewport = InteractionViewport; }
+	// 선택된 뷰포트 영역이 존재하지 않는다면 현재 마우스 위치의 뷰포트를 선택합니다.
+	else { CurrentViewport = ViewportClient->GetActiveViewport(); }
 
-	const FVector& MousePos = UInputManager::GetInstance().GetMousePosition();
-	const D3D11_VIEWPORT& ViewportInfo = ActiveViewport->GetViewport();
+	// 처리할 영역이 존재하지 않으면 진행을 중단합니다.
+	if (CurrentViewport == nullptr) { return; }
 
-	float NdcX = ((MousePos.X - ViewportInfo.TopLeftX) / ViewportInfo.Width) * 2.0f - 1.0f;
-	float NdcY = -(((MousePos.Y - ViewportInfo.TopLeftY) / ViewportInfo.Height) * 2.0f - 1.0f);
-
-	FRay WorldRay = ActiveCamera->ConvertToWorldRay(NdcX, NdcY);
+	CurrentCamera = &CurrentViewport->Camera;
 	const UInputManager& InputManager = UInputManager::GetInstance();
+	const FVector& MousePos = InputManager.GetMousePosition();
+	const D3D11_VIEWPORT& ViewportInfo = CurrentViewport->GetViewport();
+
+	const float NdcX = ((MousePos.X - ViewportInfo.TopLeftX) / ViewportInfo.Width) * 2.0f - 1.0f;
+	const float NdcY = -(((MousePos.Y - ViewportInfo.TopLeftY) / ViewportInfo.Height) * 2.0f - 1.0f);
+
+	FRay WorldRay = CurrentCamera->ConvertToWorldRay(NdcX, NdcY);
 
 	static EGizmoDirection PreviousGizmoDirection = EGizmoDirection::None;
 	TObjectPtr<AActor> ActorPicked = InLevel->GetSelectedActor();
@@ -256,6 +273,8 @@ void UEditor::ProcessMouseInput(ULevel* InLevel)
 	if (InputManager.IsKeyReleased(EKeyInput::MouseLeft))
 	{
 		Gizmo.EndDrag();
+		// 드래그가 끝나면 선택된 뷰포트를 비활성화 합니다.
+		InteractionViewport = nullptr; 
 	}
 
 	if (Gizmo.IsDragging() && Gizmo.GetSelectedActor())
@@ -264,19 +283,19 @@ void UEditor::ProcessMouseInput(ULevel* InLevel)
 		{
 		case EGizmoMode::Translate:
 		{
-			FVector GizmoDragLocation = GetGizmoDragLocation(ActiveCamera, WorldRay);
+			FVector GizmoDragLocation = GetGizmoDragLocation(CurrentCamera, WorldRay);
 			Gizmo.SetLocation(GizmoDragLocation);
 			break;
 		}
 		case EGizmoMode::Rotate:
 		{
-			FVector GizmoDragRotation = GetGizmoDragRotation(ActiveCamera, WorldRay);
+			FVector GizmoDragRotation = GetGizmoDragRotation(CurrentCamera, WorldRay);
 			Gizmo.SetActorRotation(GizmoDragRotation);
 			break;
 		}
 		case EGizmoMode::Scale:
 		{
-			FVector GizmoDragScale = GetGizmoDragScale(ActiveCamera, WorldRay);
+			FVector GizmoDragScale = GetGizmoDragScale(CurrentCamera, WorldRay);
 			Gizmo.SetActorScale(GizmoDragScale);
 		}
 		}
@@ -285,7 +304,7 @@ void UEditor::ProcessMouseInput(ULevel* InLevel)
 	{
 		if (InLevel->GetSelectedActor() && Gizmo.HasActor())
 		{
-			ObjectPicker.PickGizmo(ActiveCamera, WorldRay, Gizmo, CollisionPoint);
+			ObjectPicker.PickGizmo(CurrentCamera, WorldRay, Gizmo, CollisionPoint);
 		}
 		else
 		{
@@ -297,7 +316,7 @@ void UEditor::ProcessMouseInput(ULevel* InLevel)
 			if (ULevelManager::GetInstance().GetCurrentLevel()->GetShowFlags() & EEngineShowFlags::SF_Primitives)
 			{
 				TArray<UPrimitiveComponent*> Candidate = FindCandidatePrimitives(InLevel);
-				UPrimitiveComponent* PrimitiveCollided = ObjectPicker.PickPrimitive(ActiveCamera, WorldRay, Candidate, &ActorDistance);
+				UPrimitiveComponent* PrimitiveCollided = ObjectPicker.PickPrimitive(CurrentCamera, WorldRay, Candidate, &ActorDistance);
 				ActorPicked = PrimitiveCollided ? PrimitiveCollided->GetOwner() : nullptr;
 			}
 		}
@@ -316,6 +335,8 @@ void UEditor::ProcessMouseInput(ULevel* InLevel)
 			if (InputManager.IsKeyPressed(EKeyInput::MouseLeft))
 			{
 				Gizmo.OnMouseDragStart(CollisionPoint);
+				// 드래그가 활성화하면 뷰포트를 고정합니다.
+				InteractionViewport = CurrentViewport;
 			}
 			else
 			{

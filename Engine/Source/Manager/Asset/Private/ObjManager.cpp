@@ -3,7 +3,10 @@
 #include "Core/Public/ObjectIterator.h"
 #include "Manager/Asset/Public/ObjManager.h"
 #include "Manager/Asset/Public/ObjImporter.h"
-// ... 기타 필요한 include ...
+#include "Manager/Asset/Public/AssetManager.h"
+#include "Texture/Public/Material.h"
+#include "Texture/Public/Texture.h"
+#include <filesystem>
 
 // static 멤버 변수의 실체를 정의(메모리 할당)합니다.
 TMap<FString, std::unique_ptr<FStaticMesh>> FObjManager::ObjFStaticMeshMap;
@@ -28,7 +31,7 @@ struct VertexKeyHash
 };
 
 /** @todo: std::filesystem으로 변경 */
-FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FString& PathFileName)
+FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FString& PathFileName, const FObjImporter::Configuration& Config)
 {
 	auto Iter = ObjFStaticMeshMap.find(PathFileName);
 	if (Iter != ObjFStaticMeshMap.end())
@@ -38,7 +41,7 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FString& PathFileName)
 
 	/** #1. '.obj' 파일로부터 오브젝트 정보를 로드 */
 	FObjInfo ObjInfo;
-	if (!FObjImporter::LoadObj(PathFileName, &ObjInfo))
+	if (!FObjImporter::LoadObj(PathFileName, &ObjInfo, Config))
 	{
 		UE_LOG_ERROR("파일 정보를 읽어오는데 실패했습니다: %s", PathFileName.c_str());
 		return nullptr;
@@ -74,7 +77,7 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FString& PathFileName)
 			TexCoordIndex = ObjectInfo.TexCoordIndexList[i];
 		}
 
-		VertexKey Key{VertexIndex, NormalIndex, TexCoordIndex};
+		VertexKey Key{ VertexIndex, NormalIndex, TexCoordIndex };
 		auto It = VertexMap.find(Key);
 		if (It == VertexMap.end())
 		{
@@ -177,7 +180,105 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FString& PathFileName)
 	return ObjFStaticMeshMap[PathFileName].get();
 }
 
-UStaticMesh* FObjManager::LoadObjStaticMesh(const FString& PathFileName)
+/**
+ * @brief MTL 정보를 바탕으로 UStaticMesh에 재질을 설정하는 함수
+ */
+void FObjManager::CreateMaterialsFromMTL(UStaticMesh* StaticMesh, FStaticMesh* StaticMeshAsset, const FString& ObjFilePath)
+{
+	if (!StaticMesh || !StaticMeshAsset || StaticMeshAsset->MaterialInfo.empty())
+	{
+		return;
+	}
+
+	// OBJ 파일이 있는 디렉토리 경로 추출
+	std::filesystem::path ObjPath(ObjFilePath);
+	std::filesystem::path ObjDirectory = ObjPath.parent_path();
+
+	UAssetManager& AssetManager = UAssetManager::GetInstance();
+
+	// MaterialInfo 개수만큼 UMaterial 배열 크기 설정
+	size_t MaterialCount = StaticMeshAsset->MaterialInfo.size();
+	for (size_t i = 0; i < MaterialCount; ++i)
+	{
+		const FMaterial& MaterialInfo = StaticMeshAsset->MaterialInfo[i];
+		
+		// UMaterial 객체 생성
+		auto* Material = new UMaterial();
+		
+		// Diffuse 텍스처 로드 (map_Kd)
+		if (!MaterialInfo.KdMap.empty())
+		{
+			std::filesystem::path TexturePath = ObjDirectory / MaterialInfo.KdMap;
+			FString TexturePathStr = TexturePath.string();
+			
+			UE_LOG("텍스처 로드 시도: %s -> %s", MaterialInfo.KdMap.c_str(), TexturePathStr.c_str());
+			
+			// 파일 존재 여부 확인
+			if (std::filesystem::exists(TexturePath))
+			{
+				UE_LOG("텍스처 파일 존재: %s", TexturePathStr.c_str());
+				UTexture* DiffuseTexture = AssetManager.CreateTexture(TexturePathStr);
+				if (DiffuseTexture)
+				{
+					Material->SetDiffuseTexture(DiffuseTexture);
+					UE_LOG("재질 %s에 Diffuse 텍스처 로드 성공: %s", MaterialInfo.Name.c_str(), TexturePathStr.c_str());
+				}
+				else
+				{
+					UE_LOG_ERROR("텍스처 생성 실패: %s", TexturePathStr.c_str());
+				}
+			}
+			else
+			{
+				UE_LOG_ERROR("텍스처 파일 없음: %s", TexturePathStr.c_str());
+			}
+		}
+		
+		// Ambient 텍스처 로드 (map_Ka)
+		if (!MaterialInfo.KaMap.empty())
+		{
+			std::filesystem::path TexturePath = ObjDirectory / MaterialInfo.KaMap;
+			FString TexturePathStr = TexturePath.string();
+			
+			UTexture* AmbientTexture = AssetManager.CreateTexture(TexturePathStr);
+			if (AmbientTexture)
+			{
+				Material->SetAmbientTexture(AmbientTexture);
+			}
+		}
+		
+		// Specular 텍스처 로드 (map_Ks)
+		if (!MaterialInfo.KsMap.empty())
+		{
+			std::filesystem::path TexturePath = ObjDirectory / MaterialInfo.KsMap;
+			FString TexturePathStr = TexturePath.string();
+			
+			UTexture* SpecularTexture = AssetManager.CreateTexture(TexturePathStr);
+			if (SpecularTexture)
+			{
+				Material->SetSpecularTexture(SpecularTexture);
+			}
+		}
+		
+		// Alpha 텍스처 로드 (map_d)
+		if (!MaterialInfo.DMap.empty())
+		{
+			std::filesystem::path TexturePath = ObjDirectory / MaterialInfo.DMap;
+			FString TexturePathStr = TexturePath.string();
+			
+			UTexture* AlphaTexture = AssetManager.CreateTexture(TexturePathStr);
+			if (AlphaTexture)
+			{
+				Material->SetAlphaTexture(AlphaTexture);
+			}
+		}
+		
+		// UStaticMesh에 재질 설정
+		StaticMesh->SetMaterial(static_cast<int32>(i), Material);
+	}
+}
+
+UStaticMesh* FObjManager::LoadObjStaticMesh(const FString& PathFileName, const FObjImporter::Configuration& Config)
 {
 	for (TObjectIterator<UStaticMesh> It; It; ++It)
 	{
@@ -188,8 +289,12 @@ UStaticMesh* FObjManager::LoadObjStaticMesh(const FString& PathFileName)
 		}
 	}
 
-	FStaticMesh* StaticMeshAsset = FObjManager::LoadObjStaticMeshAsset(PathFileName);
+	FStaticMesh* StaticMeshAsset = FObjManager::LoadObjStaticMeshAsset(PathFileName, Config);
 	UStaticMesh* StaticMesh = new UStaticMesh();
 	StaticMesh->SetStaticMeshAsset(StaticMeshAsset);
+
+	// MTL 정보를 바탕으로 재질 객체 생성
+	CreateMaterialsFromMTL(StaticMesh, StaticMeshAsset, PathFileName);
+
 	return StaticMesh;
 }

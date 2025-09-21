@@ -17,64 +17,121 @@ void SSplitter::SetChildren(SWindow* InSideLT, SWindow* InSideRB)
 
 void SSplitter::SetRatio(float NewRatio)
 {
-	// 뷰포트가 너무 작아지거나 사라지는 것을 방지합니다.
-	Ratio = std::clamp(NewRatio, 0.05f, 0.95f);
+	if (NewRatio < CollapseThreshold)
+	{
+		CollapseState = ECollapseState::SideLT;
+	}
+	else if (NewRatio > (1.0f - CollapseThreshold))
+	{
+		CollapseState = ECollapseState::SideRB;
+	}
+	else
+	{
+		CollapseState = ECollapseState::Normal;
+		Ratio = NewRatio;
+	}
 }
 
 void SSplitterH::Resize(const FRect& ParentRect)
 {
-	// 1. 부모 영역을 기반으로 자신의 위치(비율)를 먼저 계산합니다.
-	Rect.Left = ParentRect.Left;
-	Rect.Width = ParentRect.Width;
-	Rect.Top = ParentRect.Top + (ParentRect.Height * Ratio) - (Thickness / 2.0f);
-	Rect.Height = Thickness;
+	FRect RectTop, RectBottom;
 
-	// 2. 자식들이 존재한다면, 자신의 위치를 기준으로 자식들의 영역을 재계산합니다.
+	// 접힘 상태에 따라 영역을 다르게 계산
+	switch (CollapseState)
+	{
+	case ECollapseState::SideLT: // 위쪽 뷰포트가 접혔을 때
+		// 스플리터는 상단에 작은 탭으로 표시
+		Rect.Left = ParentRect.Left;
+		Rect.Width = ParentRect.Width;
+		Rect.Top = ParentRect.Top;
+		Rect.Height = Thickness;
+
+		// 위쪽 자식은 크기를 0으로 설정
+		RectTop = { ParentRect.Left, ParentRect.Top, 0.0f, 0.0f };
+		// 아래쪽 자식이 부모 영역 전체를 차지
+		RectBottom = { ParentRect.Left, Rect.GetBottom(), ParentRect.Width, ParentRect.Height - Thickness };
+		break;
+
+	case ECollapseState::SideRB: // 아래쪽 뷰포트가 접혔을 때
+		// 스플리터는 하단에 작은 탭으로 표시
+		Rect.Left = ParentRect.Left;
+		Rect.Width = ParentRect.Width;
+		Rect.Top = ParentRect.GetBottom() - Thickness;
+		Rect.Height = Thickness;
+
+		// 위쪽 자식이 부모 영역 전체를 차지
+		RectTop = { ParentRect.Left, ParentRect.Top, ParentRect.Width, ParentRect.Height - Thickness };
+		// 아래쪽 자식은 크기를 0으로 설정
+		RectBottom = { ParentRect.Left, Rect.GetBottom(), 0.0f, 0.0f };
+		break;
+
+	case ECollapseState::Normal: // 일반 상태
+	default:
+		Rect.Left = ParentRect.Left;
+		Rect.Width = ParentRect.Width;
+		Rect.Top = ParentRect.Top + (ParentRect.Height * Ratio) - (Thickness / 2.0f);
+		Rect.Height = Thickness;
+
+		RectTop = { ParentRect.Left, ParentRect.Top, ParentRect.Width, Rect.Top - ParentRect.Top };
+		RectBottom = { ParentRect.Left, Rect.GetBottom(), ParentRect.Width, ParentRect.GetBottom() - Rect.GetBottom() };
+		break;
+	}
+
 	if (SideLT && SideRB)
 	{
-		// 위쪽 자식(SideLT)의 영역
-		FRect RectTop;
-		RectTop.Left = ParentRect.Left;
-		RectTop.Top = ParentRect.Top;
-		RectTop.Width = ParentRect.Width;
-		RectTop.Height = Rect.Top - ParentRect.Top;
 		SideLT->Resize(RectTop);
-
-		// 아래쪽 자식(SideRB)의 영역
-		FRect RectBottom;
-		RectBottom.Left = ParentRect.Left;
-		RectBottom.Top = Rect.GetBottom();
-		RectBottom.Width = ParentRect.Width;
-		RectBottom.Height = ParentRect.GetBottom() - Rect.GetBottom();
 		SideRB->Resize(RectBottom);
 	}
 }
 
 void SSplitterV::Resize(const FRect& ParentRect)
 {
-	// 1. 부모 영역을 기반으로 자신의 위치(비율)를 먼저 계산합니다.
-	Rect.Top = ParentRect.Top;
-	Rect.Height = ParentRect.Height;
-	Rect.Left = ParentRect.Left + (ParentRect.Width * Ratio) - (Thickness / 2.0f);
-	Rect.Width = Thickness;
+	FRect RectLeft, RectRight;
 
-	// 2. 자식들이 존재한다면, 자신의 위치를 기준으로 자식들의 영역을 재계산합니다.
+	// 접힘 상태에 따라 영역을 다르게 계산
+	switch (CollapseState)
+	{
+	case ECollapseState::SideLT: // 왼쪽 뷰포트가 접혔을 때
+		// 스플리터는 왼쪽에 작은 탭으로 표시
+		Rect.Top = ParentRect.Top;
+		Rect.Height = ParentRect.Height;
+		Rect.Left = ParentRect.Left;
+		Rect.Width = Thickness;
+
+		// 왼쪽 자식은 크기를 0으로 설정
+		RectLeft = { ParentRect.Left, ParentRect.Top, 0.0f, 0.0f };
+		// 오른쪽 자식이 부모 영역 전체를 차지
+		RectRight = { Rect.GetRight(), ParentRect.Top, ParentRect.Width - Thickness, ParentRect.Height };
+		break;
+
+	case ECollapseState::SideRB: // 오른쪽 뷰포트가 접혔을 때
+		// 스플리터는 오른쪽에 작은 탭으로 표시
+		Rect.Top = ParentRect.Top;
+		Rect.Height = ParentRect.Height;
+		Rect.Left = ParentRect.GetRight() - Thickness;
+		Rect.Width = Thickness;
+
+		// 왼쪽 자식이 부모 영역 전체를 차지
+		RectLeft = { ParentRect.Left, ParentRect.Top, ParentRect.Width - Thickness, ParentRect.Height };
+		// 오른쪽 자식은 크기를 0으로 설정
+		RectRight = { Rect.GetRight(), ParentRect.Top, 0.0f, 0.0f };
+		break;
+
+	case ECollapseState::Normal: // 일반 상태 (기존 로직)
+	default:
+		Rect.Top = ParentRect.Top;
+		Rect.Height = ParentRect.Height;
+		Rect.Left = ParentRect.Left + (ParentRect.Width * Ratio) - (Thickness / 2.0f);
+		Rect.Width = Thickness;
+
+		RectLeft = { ParentRect.Left, ParentRect.Top, Rect.Left - ParentRect.Left, ParentRect.Height };
+		RectRight = { Rect.GetRight(), ParentRect.Top, ParentRect.GetRight() - Rect.GetRight(), ParentRect.Height };
+		break;
+	}
+
 	if (SideLT && SideRB)
 	{
-		// 왼쪽 자식(SideLT)의 영역
-		FRect RectLeft;
-		RectLeft.Left = ParentRect.Left;
-		RectLeft.Top = ParentRect.Top;
-		RectLeft.Width = Rect.Left - ParentRect.Left;
-		RectLeft.Height = ParentRect.Height;
 		SideLT->Resize(RectLeft);
-
-		// 오른쪽 자식(SideRB)의 영역
-		FRect RectRight;
-		RectRight.Left = Rect.GetRight();
-		RectRight.Top = ParentRect.Top;
-		RectRight.Width = ParentRect.GetRight() - Rect.GetRight();
-		RectRight.Height = ParentRect.Height;
 		SideRB->Resize(RectRight);
 	}
 }

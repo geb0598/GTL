@@ -15,6 +15,16 @@ UStaticMesh::~UStaticMesh()
 {
 	// 이 클래스는 FStaticMesh 데이터의 소유자가 아닙니다.
 	// 실제 데이터는 AssetManager가 관리하므로, 여기서는 아무것도 하지 않습니다.
+
+	// 임시로 할당된 Material 해제 -> 이후 GUObject에서 관리 예정
+	for (UMaterial* Material : Materials)
+	{
+		if (Material)
+		{
+			delete Material;
+		}
+	}
+	Materials.clear();
 }
 
 void UStaticMesh::SetStaticMeshAsset(FStaticMesh* InStaticMeshAsset)
@@ -62,8 +72,13 @@ UMaterial* UStaticMesh::GetMaterial(int32 MaterialIndex) const
 
 void UStaticMesh::SetMaterial(int32 MaterialIndex, UMaterial* Material)
 {
-	if (MaterialIndex >= 0 && MaterialIndex < Materials.size())
+	if (MaterialIndex >= 0)
 	{
+		// 배열 크기가 부족하면 확장
+		if (MaterialIndex >= static_cast<int32>(Materials.size()))
+		{
+			Materials.resize(MaterialIndex + 1, nullptr);
+		}
 		Materials[MaterialIndex] = Material;
 	}
 }
