@@ -32,9 +32,8 @@ void UPipeline::UpdatePipeline(FPipelineInfo Info)
 		DeviceContext->RSSetState(Info.RasterizerState);
 		LastPipelineInfo.RasterizerState = Info.RasterizerState;
 	}
-	if (LastPipelineInfo.DepthStencilState != Info.DepthStencilState) {
+	if (Info.DepthStencilState) {
 		DeviceContext->OMSetDepthStencilState(Info.DepthStencilState, 0);
-		LastPipelineInfo.DepthStencilState = Info.DepthStencilState;
 	}
 	if (LastPipelineInfo.PixelShader != Info.PixelShader) {
 		DeviceContext->PSSetShader(Info.PixelShader, nullptr, 0);
