@@ -7,27 +7,44 @@
 TMap<FString, std::unique_ptr<FStaticMesh>> FObjManager::ObjFStaticMeshMap;
 TMap<FString, std::unique_ptr<UStaticMesh>> FObjManager::ObjUStaticMeshMap;
 
+/** @brief: Vertex Key for creating index buffer */
+using VertexKey = std::tuple<size_t, size_t, size_t>;
+
+struct VertexKeyHash
+{
+	std::size_t operator() (VertexKey Key) const
+	{
+		auto Hash1 = std::hash<size_t>{}(std::get<0>(Key));
+		auto Hash2 = std::hash<size_t>{}(std::get<1>(Key));
+		auto Hash3 = std::hash<size_t>{}(std::get<2>(Key));
+
+		std::size_t Seed = Hash1;
+		Seed ^= Hash2 + 0x9e3779b97f4a7c15ULL + (Seed << 6) + (Seed >> 2);
+		Seed ^= Hash3 + 0x9e3779b97f4a7c15ULL + (Seed << 6) + (Seed >> 2);
+
+		return Seed;
+	}
+};
+
+/** @todo: std::filesystem으로 변경 */
 FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FString& PathFileName)
 {
-	// 1. find()를 사용하여 캐시에 있는지 확인
 	auto Iter = ObjFStaticMeshMap.find(PathFileName);
 	if (Iter != ObjFStaticMeshMap.end())
 	{
-		// 찾았다면, iterator를 통해 값(unique_ptr)에 접근하고 .get()으로 원시 포인터 반환
 		return Iter->second.get();
 	}
 
-	// 2. std::make_unique로 FStaticMesh 객체를 안전하게 생성
-
-	FObjInfo ObjInfo = {};
+	/** #1. '.obj' 파일로부터 오브젝트 정보를 로드 */
+	FObjInfo ObjInfo;
 	if (!FObjImporter::LoadObj(PathFileName, &ObjInfo))
 	{
 		UE_LOG_ERROR("파일 정보를 읽어오는데 실패했습니다: %s", PathFileName.c_str());
 		return nullptr;
 	}
 
-	auto NewMesh = std::make_unique<FStaticMesh>();
-	NewMesh->PathFileName = PathFileName;
+	auto StaticMesh = std::make_unique<FStaticMesh>();
+	StaticMesh->PathFileName = PathFileName;
 
 	if (ObjInfo.ObjectInfoList.size() == 0)
 	{
@@ -35,6 +52,7 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FString& PathFileName)
 		return nullptr;
 	}
 
+	/** #2. 오브젝트 정보로부터 버텍스 배열과 인덱스 배열을 구성 */
 	/** @note: Use only first object in '.obj' file to create FStaticMesh. */
 	FObjectInfo& ObjectInfo = ObjInfo.ObjectInfoList[0];
 
@@ -70,26 +88,72 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FString& PathFileName)
 
 			if (TexCoordIndex != INVALID_INDEX)
 			{
-				assert("Texture coordinate index out of range" && NormalIndex < ObjInfo.NormalList.size());
+				assert("Texture coordinate index out of range" && TexCoordIndex < ObjInfo.TexCoordList.size());
 				Vertex.TexCoord = ObjInfo.TexCoordList[TexCoordIndex];
 			}
 
-			size_t Index = NewMesh->Vertices.size();
-			NewMesh->Vertices.push_back(Vertex);
-			NewMesh->Indices.push_back(Index);
+			size_t Index = StaticMesh->Vertices.size();
+			StaticMesh->Vertices.push_back(Vertex);
+			StaticMesh->Indices.push_back(Index);
 			VertexMap[Key] = Index;
 		}
 		else
 		{
-			NewMesh->Indices.push_back(It->second);
+			StaticMesh->Indices.push_back(It->second);
 		}
 	}
 
-	// 4. emplace()를 사용하여 TMap에 소유권을 이전하고, 원시 포인터를 반환
-	FStaticMesh* ReturnPtr = NewMesh.get();
-	ObjFStaticMeshMap.emplace(PathFileName, std::move(NewMesh));
+	/** #3. 오브젝트가 사용하는 머티리얼의 목록을 저장 */
+	StaticMesh->MaterialInfo.resize(ObjectInfo.MaterialNameList.size());
+	for (size_t i = 0; i < ObjectInfo.MaterialNameList.size(); ++i)
+	{
+		for (size_t j = 0; j < ObjInfo.ObjectMaterialInfoList.size(); ++j)
+		{
+			if (ObjectInfo.MaterialNameList[i] == ObjInfo.ObjectMaterialInfoList[j].Name)
+			{
+				StaticMesh->MaterialInfo[i].Name			= std::move(ObjInfo.ObjectMaterialInfoList[j].Name);
+				StaticMesh->MaterialInfo[i].Ka				= std::move(ObjInfo.ObjectMaterialInfoList[j].Ka);
+				StaticMesh->MaterialInfo[i].Kd				= std::move(ObjInfo.ObjectMaterialInfoList[j].Kd);
+				StaticMesh->MaterialInfo[i].Ks				= std::move(ObjInfo.ObjectMaterialInfoList[j].Ks);
+				StaticMesh->MaterialInfo[i].Ke				= std::move(ObjInfo.ObjectMaterialInfoList[j].Ke);
+				StaticMesh->MaterialInfo[i].Ns				= std::move(ObjInfo.ObjectMaterialInfoList[j].Ns);
+				StaticMesh->MaterialInfo[i].Ni				= std::move(ObjInfo.ObjectMaterialInfoList[j].Ni);
+				StaticMesh->MaterialInfo[i].D				= std::move(ObjInfo.ObjectMaterialInfoList[j].D);
+				StaticMesh->MaterialInfo[i].Illumination	= std::move(ObjInfo.ObjectMaterialInfoList[j].Illumination);
+				StaticMesh->MaterialInfo[i].KaMap			= std::move(ObjInfo.ObjectMaterialInfoList[j].KaMap);
+				StaticMesh->MaterialInfo[i].KdMap			= std::move(ObjInfo.ObjectMaterialInfoList[j].KdMap);
+				StaticMesh->MaterialInfo[i].KsMap			= std::move(ObjInfo.ObjectMaterialInfoList[j].KsMap);
+				StaticMesh->MaterialInfo[i].NsMap			= std::move(ObjInfo.ObjectMaterialInfoList[j].NsMap);
+				StaticMesh->MaterialInfo[i].DMap			= std::move(ObjInfo.ObjectMaterialInfoList[j].DMap);
+				StaticMesh->MaterialInfo[i].BumpMap			= std::move(ObjInfo.ObjectMaterialInfoList[j].BumpMap);
 
-	return ReturnPtr;
+				continue;
+			}
+		}
+	}
+
+	/** #4. 오브젝트의 서브메쉬 정보를 저장 */
+
+	StaticMesh->Sections.resize(ObjectInfo.MaterialIndexList.size());
+	for (size_t i = 0; i < ObjectInfo.MaterialIndexList.size(); ++i)
+	{
+		StaticMesh->Sections[i].StartIndex = ObjectInfo.MaterialIndexList[i] * 3;
+
+		if (i < ObjectInfo.MaterialIndexList.size() - 1)
+		{
+			StaticMesh->Sections[i].IndexCount = (ObjectInfo.MaterialIndexList[i + 1] - ObjectInfo.MaterialIndexList[i]) * 3;
+		}
+		else
+		{
+			StaticMesh->Sections[i].IndexCount = (StaticMesh->Indices.size() / 3 - ObjectInfo.MaterialIndexList[i]) * 3;
+		}
+
+		StaticMesh->Sections[i].MaterialSlot = i;
+	}
+
+	ObjFStaticMeshMap.emplace(PathFileName, std::move(StaticMesh));
+
+	return ObjFStaticMeshMap[PathFileName].get();
 }
 
 UStaticMesh* FObjManager::LoadObjStaticMesh(const FString& PathFileName)

@@ -62,6 +62,9 @@ struct FObjectMaterialInfo
 	/** Specular color (Ks). */
 	FVector Ks;
 
+	/** Emissive color (Ke) */
+	FVector Ke;
+
 	/** Specular exponent (Ns). Defines the size of the specular highlight. */
 	float Ns;
 
@@ -98,8 +101,9 @@ struct FObjImporter
 	/** @todo: Implement configuration to manage behaviors of LoadObj */
 	struct Configuration
 	{
-		// FString DefaultName
-		// Disable Object
+		FString DefaultName = "DefaultObject";
+		bool bIsObjectEnabled = false;
+		// ...
 	};
 
 	/**

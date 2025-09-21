@@ -20,6 +20,9 @@ struct FMaterial
 	/** Specular color (Ks). */
 	FVector Ks;
 
+	/** Emissive color (Ke) */
+	FVector Ke;
+
 	/** Specular exponent (Ns). Defines the size of the specular highlight. */
 	float Ns;
 
