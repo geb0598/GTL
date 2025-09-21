@@ -9,9 +9,9 @@ public:
 	USplitterDebugWidget(const FString& InName) : UWidget(InName) {}
 	virtual ~USplitterDebugWidget() override;
 
-	virtual void Initialize() override {}
-	virtual void Update() override {}
-	virtual void RenderWidget() override;
+	void Initialize() override {}
+	void Update() override {}
+	void RenderWidget() override;
 
 	void SetSplitters(const SSplitter* InRoot, const SSplitter* InLeft, const SSplitter* InRight)
 	{

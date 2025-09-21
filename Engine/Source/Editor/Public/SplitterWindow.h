@@ -61,7 +61,7 @@ public:
 class SSplitterH : public SSplitter
 {
 public:
-	virtual void Resize(const FRect& ParentRect) override;
+	void Resize(const FRect& ParentRect) override;
 };
 
 /**
@@ -70,5 +70,5 @@ public:
 class SSplitterV : public SSplitter
 {
 public:
-	virtual void Resize(const FRect& ParentRect) override;
+	void Resize(const FRect& ParentRect) override;
 };

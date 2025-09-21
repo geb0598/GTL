@@ -6,7 +6,7 @@
 #include "Render/UI/Widget/Public/CameraControlWidget.h"
 #include "Render/UI/Widget/Public/FPSWidget.h"
 #include "Render/UI/Widget/Public/SceneHierarchyWidget.h"
-#include "Render/UI/Widget/Public/USplitterDebugWidget.h"
+#include "Render/UI/Widget/Public/SplitterDebugWidget.h"
 #include "Manager/Level/Public/LevelManager.h"
 #include "Manager/UI/Public/UIManager.h"
 #include "Manager/Input/Public/InputManager.h"

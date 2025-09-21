@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "Render/UI/Window/Public/EditorWindow.h"
-#include "Render/UI/Widget/Public/USplitterDebugWidget.h" 
+#include "Render/UI/Widget/Public/SplitterDebugWidget.h" 
 
 /**
  * @brief Editor Window Constructor
