@@ -1,4 +1,6 @@
 #include "pch.h"
+
+#include "Core/Public/ObjectIterator.h"
 #include "Manager/Asset/Public/ObjManager.h"
 #include "Manager/Asset/Public/ObjImporter.h"
 // ... 기타 필요한 include ...
@@ -158,16 +160,17 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FString& PathFileName)
 
 UStaticMesh* FObjManager::LoadObjStaticMesh(const FString& PathFileName)
 {
-	//for (TObjectIterator<UStaticMesh> It; It; ++It)
-	//{
-	//	UStaticMesh* StaticMesh = *It;
-	//	if (StaticMesh->GetAssetPathFileName() == PathFileName)
-	//		return It;
-	//}
+	for (TObjectIterator<UStaticMesh> It; It; ++It)
+	{
+		UStaticMesh* StaticMesh = *It;
+		if (StaticMesh->GetAssetPathFileName() == PathFileName)
+		{
+			return *It;
+		}
+	}
 
 	FStaticMesh* StaticMeshAsset = FObjManager::LoadObjStaticMeshAsset(PathFileName);
 	UStaticMesh* StaticMesh = new UStaticMesh();
-	ObjUStaticMeshMap.emplace(PathFileName, std::move(StaticMesh));
 	StaticMesh->SetStaticMeshAsset(StaticMeshAsset);
 	return StaticMesh;
 }

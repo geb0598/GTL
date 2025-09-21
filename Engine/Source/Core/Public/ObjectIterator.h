@@ -29,12 +29,12 @@ public:
 		return 0 <= Index && Index < ObjectArray.size();
 	}
 
-	bool operator !() const
+	bool operator!() const
 	{
 		return !(bool)*this;
 	}
 
-	TObject* operator* () const
+	TObject* operator*() const
 	{
 		return (TObject*)GetObject();
 	}
