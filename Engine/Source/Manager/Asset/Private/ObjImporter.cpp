@@ -154,24 +154,46 @@ bool FObjImporter::LoadObj(const std::filesystem::path& FilePath, FObjInfo* OutO
 			/** @todo: 오목 다각형에 대한 지원 필요, 현재는 볼록 다각형만 지원 */
 			for (size_t i = 1; i + 1 < FaceBuffers.size(); ++i)
 			{
-				if (!ParseFaceBuffer(FaceBuffers[0], &(*OptObjectInfo)))
+				if (Config.bFlipWindingOrder)
 				{
-					UE_LOG_ERROR("면 파싱에 실패했습니다");
-					return false;
-				}
+					if (!ParseFaceBuffer(FaceBuffers[0], &(*OptObjectInfo)))
+					{
+						UE_LOG_ERROR("면 파싱에 실패했습니다");
+						return false;
+					}
 
-				if (!ParseFaceBuffer(FaceBuffers[i], &(*OptObjectInfo)))
+					if (!ParseFaceBuffer(FaceBuffers[i + 1], &(*OptObjectInfo)))
+					{
+						UE_LOG_ERROR("면 파싱에 실패했습니다");
+						return false;
+					}
+
+					if (!ParseFaceBuffer(FaceBuffers[i], &(*OptObjectInfo)))
+					{
+						UE_LOG_ERROR("면 파싱에 실패했습니다");
+						return false;
+					}
+				}
+				else
 				{
-					UE_LOG_ERROR("면 파싱에 실패했습니다");
-					return false;
-				}
+					if (!ParseFaceBuffer(FaceBuffers[0], &(*OptObjectInfo)))
+					{
+						UE_LOG_ERROR("면 파싱에 실패했습니다");
+						return false;
+					}
 
-				if (!ParseFaceBuffer(FaceBuffers[i + 1], &(*OptObjectInfo)))
-				{
-					UE_LOG_ERROR("면 파싱에 실패했습니다");
-					return false;
-				}
+					if (!ParseFaceBuffer(FaceBuffers[i], &(*OptObjectInfo)))
+					{
+						UE_LOG_ERROR("면 파싱에 실패했습니다");
+						return false;
+					}
 
+					if (!ParseFaceBuffer(FaceBuffers[i + 1], &(*OptObjectInfo)))
+					{
+						UE_LOG_ERROR("면 파싱에 실패했습니다");
+						return false;
+					}
+				}
 				++FaceCount;
 			}
 		}

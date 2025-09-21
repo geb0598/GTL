@@ -103,6 +103,7 @@ struct FObjImporter
 	{
 		FString DefaultName = "DefaultObject";
 		bool bIsObjectEnabled = false;
+		bool bFlipWindingOrder = false;
 		// ...
 	};
 

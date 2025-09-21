@@ -120,7 +120,7 @@ public:
 	{
 	}
 
-	/** @note: UE에서도 소문자로 작성되어있음 */
+	/** @note: Ranged-For 지원 */
 	TObjectIterator<TObject> begin() const { return It; }
 	TObjectIterator<TObject> end() const
 	{
