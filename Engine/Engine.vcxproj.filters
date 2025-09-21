@@ -291,6 +291,12 @@
     <ClCompile Include="Source\Editor\Private\SplitterWindow.cpp">
       <Filter>Source\Editor\Private</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Render\UI\Window\Private\EditorWindow.cpp">
+      <Filter>Source\Render\UI\Window\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Render\UI\Widget\Private\SplitterDebugWidget.cpp">
+      <Filter>Source\Render\UI\Widget\Private</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Core\Private\ObjectIterator.cpp">
       <Filter>Source\Core\Private</Filter>
     </ClCompile>
@@ -633,6 +639,12 @@
     </ClInclude>
     <ClInclude Include="Source\Core\Public\ObjectIterator.h">
       <Filter>Source\Core\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Render\UI\Window\Public\EditorWindow.h">
+      <Filter>Source\Render\UI\Window\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Render\UI\Widget\Public\SplitterDebugWidget.h">
+      <Filter>Source\Render\UI\Widget\Public</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

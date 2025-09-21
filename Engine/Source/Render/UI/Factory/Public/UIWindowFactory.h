@@ -8,6 +8,7 @@ class UOutlinerWindow;
 class UCameraPanelWindow;
 class UDetailWindow;
 class UMainMenuWindow;
+class UEditorWindow;
 
 /**
  * @brief UI 윈도우 도킹 방향
@@ -36,4 +37,5 @@ public:
 	static UDetailWindow* CreateDetailWindow(EUIDockDirection InDockDirection = EUIDockDirection::Right);
 	static UExperimentalFeatureWindow*
 		CreateExperimentalFeatureWindow(EUIDockDirection InDockDirection = EUIDockDirection::Right);
+	static UEditorWindow* CreateEditorWindow(EUIDockDirection InDockDirection = EUIDockDirection::None);
 };
