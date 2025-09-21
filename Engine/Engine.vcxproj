@@ -180,6 +180,7 @@
     <ClInclude Include="Source\Component\Mesh\Public\SquareComponent.h" />
     <ClInclude Include="Source\Component\Mesh\Public\TriangleComponent.h" />
     <ClInclude Include="Source\Component\Mesh\Public\VertexDatas.h" />
+    <ClInclude Include="Source\Editor\Public\SplitterWindow.h" />
     <ClInclude Include="Source\Editor\Public\Viewport.h" />
     <ClInclude Include="Source\Editor\Public\ViewportClient.h" />
     <ClInclude Include="Source\Factory\Actor\Public\StaticMeshActorFactory.h">
@@ -263,10 +264,12 @@
     <ClInclude Include="Source\Render\UI\Widget\Public\PrimitiveSpawnWidget.h" />
     <ClInclude Include="Source\Render\UI\Widget\Public\SceneHierarchyWidget.h" />
     <ClInclude Include="Source\Render\UI\Widget\Public\SceneIOWidget.h" />
+    <ClInclude Include="Source\Render\UI\Widget\Public\SplitterDebugWidget.h" />
     <ClInclude Include="Source\Render\UI\Widget\Public\TargetActorTransformWidget.h" />
     <ClInclude Include="Source\Render\UI\Widget\Public\Widget.h" />
     <ClInclude Include="Source\Render\UI\Window\Public\ConsoleWindow.h" />
     <ClInclude Include="Source\Render\UI\Window\Public\ControlPanelWindow.h" />
+    <ClInclude Include="Source\Render\UI\Window\Public\EditorWindow.h" />
     <ClInclude Include="Source\Render\UI\Window\Public\ExperimentalFeatureWindow.h" />
     <ClInclude Include="Source\Render\UI\Window\Public\MainMenuWindow.h" />
     <ClInclude Include="Source\Render\UI\Window\Public\OutlinerWindow.h" />
@@ -382,10 +385,12 @@
     <ClCompile Include="Source\Render\UI\Widget\Private\PrimitiveSpawnWidget.cpp" />
     <ClCompile Include="Source\Render\UI\Widget\Private\SceneHierarchyWidget.cpp" />
     <ClCompile Include="Source\Render\UI\Widget\Private\SceneIOWidget.cpp" />
+    <ClCompile Include="Source\Render\UI\Widget\Private\SplitterDebugWidget.cpp" />
     <ClCompile Include="Source\Render\UI\Widget\Private\TargetActorTransformWidget.cpp" />
     <ClCompile Include="Source\Render\UI\Widget\Private\Widget.cpp" />
     <ClCompile Include="Source\Render\UI\Window\Private\ConsoleWindow.cpp" />
     <ClCompile Include="Source\Render\UI\Window\Private\ControlPanelWindow.cpp" />
+    <ClCompile Include="Source\Render\UI\Window\Private\EditorWindow.cpp" />
     <ClCompile Include="Source\Render\UI\Window\Private\ExperimentalFeatureWindow.cpp" />
     <ClCompile Include="Source\Render\UI\Window\Private\MainMenuWindow.cpp" />
     <ClCompile Include="Source\Render\UI\Window\Private\OutlinerWindow.cpp" />

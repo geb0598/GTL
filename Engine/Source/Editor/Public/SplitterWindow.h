@@ -1,6 +1,16 @@
 #pragma once
 #include "Global/CoreTypes.h"
 
+/* *
+* @brief 스플리터의 접힘 상태를 나타내는 Enum 타입입니다.
+*/
+enum class ECollapseState
+{
+	Normal,	// 기본 상태
+	SideLT, // 좌측 혹은 위에서 접힌 상태
+	SideRB  // 우측 혹은 아래에서 접힌 상태
+};
+
 /**
  * @brief 레이아웃 시스템의 가장 기본적인 단위. 화면의 사각 영역을 나타냅니다.
  */
@@ -40,7 +50,9 @@ public:
 	SWindow* SideLT = nullptr; // Left 혹은 Top을 맡는 윈도우
 	SWindow* SideRB = nullptr; // Right 혹은 Bottom을 맡는 윈도우
 	float Ratio = 0.5f;		   // 부모 윈도우 영역 대비 위치 비율
-	float Thickness = 10.0f;    // 드래그 판정이 가능한 범위
+	const float Thickness = 10.0f;    // 드래그 판정이 가능한 범위
+	const float CollapseThreshold = 0.03f; // 스플리터가 화면 비율을 감지하는 기준
+	ECollapseState CollapseState = ECollapseState::Normal; // 스플리터 상태
 };
 
 /**
@@ -49,7 +61,7 @@ public:
 class SSplitterH : public SSplitter
 {
 public:
-	virtual void Resize(const FRect& ParentRect) override;
+	void Resize(const FRect& ParentRect) override;
 };
 
 /**
@@ -58,5 +70,5 @@ public:
 class SSplitterV : public SSplitter
 {
 public:
-	virtual void Resize(const FRect& ParentRect) override;
+	void Resize(const FRect& ParentRect) override;
 };

@@ -8,6 +8,7 @@
 #include "Render/UI/Window/Public/OutlinerWindow.h"
 #include "Render/UI/Window/Public/DetailWindow.h"
 #include "Render/UI/Window/Public/MainMenuWindow.h"
+#include "Render/UI/Window/Public/EditorWindow.h"
 
 UMainMenuWindow& UUIWindowFactory::CreateMainMenuWindow()
 {
@@ -50,6 +51,14 @@ UExperimentalFeatureWindow* UUIWindowFactory::CreateExperimentalFeatureWindow(EU
 	return Window;
 }
 
+UEditorWindow* UUIWindowFactory::CreateEditorWindow(EUIDockDirection InDockDirection)
+{
+	auto* Window = new UEditorWindow();
+	Window->GetMutableConfig().DockDirection = InDockDirection;
+	return Window;
+}
+
+
 void UUIWindowFactory::CreateDefaultUILayout()
 {
 	auto& UIManager = UUIManager::GetInstance();
@@ -65,5 +74,6 @@ void UUIWindowFactory::CreateDefaultUILayout()
 	UIManager.RegisterUIWindow(CreateOutlinerWindow(EUIDockDirection::Center));
 	UIManager.RegisterUIWindow(CreateDetailWindow(EUIDockDirection::Right));
 	UIManager.RegisterUIWindow(CreateExperimentalFeatureWindow(EUIDockDirection::Right));
+	UIManager.RegisterUIWindow(CreateEditorWindow(EUIDockDirection::None));
 	UE_LOG_SUCCESS("UIWindowFactory: UI 생성이 성공적으로 완료되었습니다");
 }

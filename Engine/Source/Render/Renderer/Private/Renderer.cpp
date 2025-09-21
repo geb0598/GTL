@@ -239,6 +239,9 @@ void URenderer::Update()
 	// FViewportClient로부터 모든 뷰포트를 가져옵니다.
 	for (FViewport& ViewportInfo : ViewportClient->GetViewports())
 	{
+		// 0. 현재 뷰포트가 닫혀있다면 렌더링을 하지 않습니다.
+		if (ViewportInfo.GetViewport().Width < 1.0f || ViewportInfo.GetViewport().Height < 1.0f) { continue; }
+
 		// 1. 현재 뷰포트의 영역을 설정합니다.
 		ViewportInfo.Apply(GetDeviceContext());
 
