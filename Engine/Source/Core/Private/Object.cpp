@@ -8,6 +8,12 @@ TArray<TObjectPtr<UObject>> GUObjectArray;
 
 IMPLEMENT_CLASS_BASE(UObject)
 
+UObject::~UObject()
+{
+	/** @todo: 이후에 리뷰 필요 */
+	GUObjectArray[InternalIndex] = nullptr;
+}
+
 UObject::UObject()
 	: Name(FName::None), Outer(nullptr)
 {

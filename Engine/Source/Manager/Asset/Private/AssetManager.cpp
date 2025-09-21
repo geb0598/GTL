@@ -8,6 +8,7 @@
 #include "Physics/Public/AABB.h"
 #include "Texture/Public/TextureRenderProxy.h"
 #include "Texture/Public/Texture.h"
+#include "Manager/Asset/Public/ObjManager.h"
 
 IMPLEMENT_SINGLETON_CLASS_BASE(UAssetManager)
 
@@ -18,6 +19,9 @@ UAssetManager::~UAssetManager() = default;
 void UAssetManager::Initialize()
 {
 	URenderer& Renderer = URenderer::GetInstance();
+
+	// Data 폴더 속 모든 .obj 파일 로드 및 캐싱
+	LoadAllObjStaticMesh();
 
 	// TMap.Add()
 	VertexDatas.emplace(EPrimitiveType::Cube, &VerticesCube);
@@ -119,12 +123,72 @@ void UAssetManager::Release()
 		URenderer::GetInstance().ReleaseIndexBuffer(Pair.second);
 	}
 
+	for (auto& Pair : StaticMeshVertexBuffers)
+	{
+		URenderer::GetInstance().ReleaseVertexBuffer(Pair.second);
+	}
+	for (auto& Pair : StaticMeshIndexBuffers)
+	{
+		URenderer::GetInstance().ReleaseIndexBuffer(Pair.second);
+	}
+
+	StaticMeshCache.clear();	// unique ptr 이라서 자동으로 해제됨
+	StaticMeshVertexBuffers.clear();
+	StaticMeshIndexBuffers.clear();
+
 	// TMap.Empty()
 	VertexBuffers.clear();
 	IndexBuffers.clear();
 
 	// Texture Resource 해제
 	ReleaseAllTextures();
+}
+
+void UAssetManager::LoadAllObjStaticMesh()
+{
+	URenderer& Renderer = URenderer::GetInstance();
+
+	// Todo: 추후 Data 폴더 속 모든 obj 로드
+	const TArray<FString> ObjList =
+	{
+		"Data/fruits/fruits.obj",
+	};
+
+	// Enable winding order flip for this OBJ file
+	FObjImporter::Configuration Config;
+	Config.bFlipWindingOrder = true;
+
+	// 범위 기반 for문을 사용하여 배열의 모든 요소를 안전하고 간결하게 순회합니다.
+	for (const FString& ObjPath : ObjList)
+	{
+		// FObjManager가 UStaticMesh 포인터를 반환한다고 가정합니다.
+		UStaticMesh* LoadedMesh = FObjManager::LoadObjStaticMesh(ObjPath, Config);
+
+		// 로드에 성공했는지 항상 확인하는 것이 안전합니다.
+		if (LoadedMesh)
+		{
+			StaticMeshCache.emplace(ObjPath, LoadedMesh);
+
+			StaticMeshVertexBuffers.emplace(ObjPath, CreateVertexBuffer(LoadedMesh->GetVertices()));
+			StaticMeshIndexBuffers.emplace(ObjPath, CreateIndexBuffer(LoadedMesh->GetIndices()));
+		}
+	}
+}
+
+ID3D11Buffer* UAssetManager::GetVertexBuffer(FString InObjPath)
+{
+	if (StaticMeshVertexBuffers.count(InObjPath))
+	{
+		return StaticMeshVertexBuffers[InObjPath];
+	}
+}
+
+ID3D11Buffer* UAssetManager::GetIndexBuffer(FString InObjPath)
+{
+	if (StaticMeshIndexBuffers.count(InObjPath))
+	{
+		return StaticMeshIndexBuffers[InObjPath];
+	}
 }
 
 ID3D11Buffer* UAssetManager::CreateVertexBuffer(TArray<FNormalVertex> InVertices)

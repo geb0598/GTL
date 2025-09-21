@@ -1,4 +1,6 @@
 #include "pch.h"
+
+#include "Core/Public/ObjectIterator.h"
 #include "Manager/Asset/Public/ObjManager.h"
 #include "Manager/Asset/Public/ObjImporter.h"
 #include "Manager/Asset/Public/AssetManager.h"
@@ -8,7 +10,6 @@
 
 // static 멤버 변수의 실체를 정의(메모리 할당)합니다.
 TMap<FString, std::unique_ptr<FStaticMesh>> FObjManager::ObjFStaticMeshMap;
-TMap<FString, std::unique_ptr<UStaticMesh>> FObjManager::ObjUStaticMeshMap;
 
 /** @brief: Vertex Key for creating index buffer */
 using VertexKey = std::tuple<size_t, size_t, size_t>;
@@ -112,9 +113,11 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FString& PathFileName, co
 	{
 		UniqueMaterialNames.insert(MaterialName);
 	}
+
 	StaticMesh->MaterialInfo.resize(UniqueMaterialNames.size());
 	TMap<FString, int32> MaterialNameToSlot;
 	int32 CurrentMaterialSlot = 0;
+
 	for (const auto& MaterialName : UniqueMaterialNames)
 	{
 		for (size_t j = 0; j < ObjInfo.ObjectMaterialInfoList.size(); ++j)
@@ -136,7 +139,7 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FString& PathFileName, co
 				StaticMesh->MaterialInfo[CurrentMaterialSlot].NsMap = std::move(ObjInfo.ObjectMaterialInfoList[j].NsMap);
 				StaticMesh->MaterialInfo[CurrentMaterialSlot].DMap = std::move(ObjInfo.ObjectMaterialInfoList[j].DMap);
 				StaticMesh->MaterialInfo[CurrentMaterialSlot].BumpMap = std::move(ObjInfo.ObjectMaterialInfoList[j].BumpMap);
-
+				
 				MaterialNameToSlot.emplace(MaterialName, CurrentMaterialSlot);
 				CurrentMaterialSlot++;
 				break;
@@ -156,9 +159,10 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FString& PathFileName, co
 		{
 			StaticMesh->Sections[i].IndexCount = (StaticMesh->Indices.size() / 3 - ObjectInfo.MaterialIndexList[i]) * 3;
 		}
+
 		const FString& MaterialName = ObjectInfo.MaterialNameList[i];
 		auto It = MaterialNameToSlot.find(MaterialName);
-		if (It != MaterialNameToSlot.end())
+		if(It != MaterialNameToSlot.end())
 		{
 			StaticMesh->Sections[i].MaterialSlot = It->second;
 		}
@@ -273,24 +277,17 @@ void FObjManager::CreateMaterialsFromMTL(UStaticMesh* StaticMesh, FStaticMesh* S
 
 UStaticMesh* FObjManager::LoadObjStaticMesh(const FString& PathFileName, const FObjImporter::Configuration& Config)
 {
-	// Map에 해당 키가 이미 있는지 확인합니다.
-	auto Iter = ObjUStaticMeshMap.find(PathFileName);
-	if (Iter != ObjUStaticMeshMap.end())
+	for (TObjectIterator<UStaticMesh> It; It; ++It)
 	{
-		// 이미 있다면, 저장된 unique_ptr에서 raw pointer를 얻어 반환합니다.
-		return Iter->second.get();
+		UStaticMesh* StaticMesh = *It;
+		if (StaticMesh->GetAssetPathFileName() == PathFileName)
+		{
+			return *It;
+		}
 	}
-
-	//for (TObjectIterator<UStaticMesh> It; It; ++It)
-	//{
-	//	UStaticMesh* StaticMesh = *It;
-	//	if (StaticMesh->GetAssetPathFileName() == PathFileName)
-	//		return It;
-	//}
 
 	FStaticMesh* StaticMeshAsset = FObjManager::LoadObjStaticMeshAsset(PathFileName, Config);
 	UStaticMesh* StaticMesh = new UStaticMesh();
-	ObjUStaticMeshMap.emplace(PathFileName, std::move(StaticMesh));
 	StaticMesh->SetStaticMeshAsset(StaticMeshAsset);
 
 	// MTL 정보를 바탕으로 재질 객체 생성

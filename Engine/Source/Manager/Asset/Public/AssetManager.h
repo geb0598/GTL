@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ObjImporter.h"
+#include "Component/Mesh/Public/StaticMesh.h"
 
 struct FAABB;
 
@@ -22,8 +23,6 @@ public:
 	TArray<FNormalVertex>* GetVertexData(EPrimitiveType InType);
 	ID3D11Buffer* GetVertexbuffer(EPrimitiveType InType);
 	uint32 GetNumVertices(EPrimitiveType InType);
-	ID3D11Buffer* CreateVertexBuffer(TArray<FNormalVertex> InVertices);
-	ID3D11Buffer* CreateIndexBuffer(TArray<uint32> InIndices);
 
 	// Index 관련 함수들
 	TArray<uint32>* GetIndexData(EPrimitiveType InType);
@@ -41,6 +40,13 @@ public:
 	ComPtr<ID3D11ShaderResourceView> GetTexture(const FString& InFilePath);
 	void ReleaseTexture(const FString& InFilePath);
 	bool HasTexture(const FString& InFilePath) const;
+
+	// StaticMesh 관련 함수
+	void LoadAllObjStaticMesh();
+	ID3D11Buffer* CreateVertexBuffer(TArray<FNormalVertex> InVertices);
+	ID3D11Buffer* GetVertexBuffer(FString InObjPath);
+	ID3D11Buffer* CreateIndexBuffer(TArray<uint32> InIndices);
+	ID3D11Buffer* GetIndexBuffer(FString InObjPath);
 
 	// Create Texture
 	static ID3D11ShaderResourceView* CreateTextureFromFile(const path& InFilePath);
@@ -67,6 +73,11 @@ private:
 
 	// Texture Resource
 	TMap<FString, ID3D11ShaderResourceView*> TextureCache;
+
+	// StaticMesh Resource
+	TMap<FString, std::unique_ptr<UStaticMesh>> StaticMeshCache;
+	TMap<FString, ID3D11Buffer*> StaticMeshVertexBuffers;
+	TMap<FString, ID3D11Buffer*> StaticMeshIndexBuffers;
 
 	// Release Functions
 	void ReleaseAllTextures();

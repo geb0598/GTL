@@ -30,7 +30,7 @@ public:
 	// Special Member Function
 	UObject();
 	explicit UObject(const FName& InName);
-	virtual ~UObject() = default;
+	virtual ~UObject();
 
 	uint32 GetUUID() const { return UUID; }
 
