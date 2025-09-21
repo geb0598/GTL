@@ -11,6 +11,8 @@ class UOutlinerWindow
 	: public UUIWindow
 {
 public:
-    UOutlinerWindow();
+	UOutlinerWindow();
+	virtual ~UOutlinerWindow() override {}
+
 	void Initialize() override;
 };

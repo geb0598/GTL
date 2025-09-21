@@ -9,7 +9,7 @@ UEditorWindow::UEditorWindow()
 {
 	FUIWindowConfig Config;
 	Config.WindowTitle = "Editor";
-	Config.DefaultSize = ImVec2(Render::INIT_SCREEN_WIDTH, Render::INIT_SCREEN_HEIGHT);
+	Config.DefaultSize = ImVec2(0, 0);
 	Config.DefaultPosition = ImVec2(0, 0);
 	Config.DockDirection = EUIDockDirection::None; // 특정 위치에 고정하지 않음
 	Config.Priority = 0; // 가장 뒤에 그려지도록 우선순위를 낮게 설정
@@ -25,7 +25,20 @@ UEditorWindow::UEditorWindow()
 
 	SetConfig(Config);
 
-	AddWidget(new USplitterDebugWidget("Splitter WIdget"));
+	// 위젯 생성 및 초기화
+	if (SplitterDebugWidget = new USplitterDebugWidget("Splitter WIdget"))
+	{
+		SplitterDebugWidget->Initialize();
+		AddWidget(SplitterDebugWidget);
+		UE_LOG("EditorWindow: SplitterDebugWidget이 생성되고 초기화되었습니다");
+	}
+	else
+	{
+		UE_LOG("EditorWindow: Error: SplitterDebugWidget 생성에 실패했습니다!");
+		return;
+	}
+
+	UE_LOG("EditorWindow: 메인 메뉴 윈도우가 초기화되었습니다");
 }
 
 /**
