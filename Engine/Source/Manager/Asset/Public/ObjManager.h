@@ -2,13 +2,14 @@
 #include <Global/CoreTypes.h>
 #include <Global/Types.h>
 #include <Component/Mesh/Public/StaticMesh.h>
+#include <Manager/Asset/Public/ObjImporter.h>
 #include <memory>
 
 class FObjManager
 {
 public:
-	static FStaticMesh* LoadObjStaticMeshAsset(const FString& PathFileName);
-	static UStaticMesh* LoadObjStaticMesh(const FString& PathFileName);
+	static FStaticMesh* LoadObjStaticMeshAsset(const FString& PathFileName, const FObjImporter::Configuration& Config = {});
+	static UStaticMesh* LoadObjStaticMesh(const FString& PathFileName, const FObjImporter::Configuration& Config = {});
 	static void CreateMaterialsFromMTL(UStaticMesh* StaticMesh, FStaticMesh* StaticMeshAsset, const FString& ObjFilePath);
 
 	static constexpr size_t INVALID_INDEX = SIZE_MAX;

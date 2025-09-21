@@ -30,7 +30,7 @@ struct VertexKeyHash
 };
 
 /** @todo: std::filesystem으로 변경 */
-FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FString& PathFileName)
+FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FString& PathFileName, const FObjImporter::Configuration& Config)
 {
 	auto Iter = ObjFStaticMeshMap.find(PathFileName);
 	if (Iter != ObjFStaticMeshMap.end())
@@ -40,7 +40,7 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FString& PathFileName)
 
 	/** #1. '.obj' 파일로부터 오브젝트 정보를 로드 */
 	FObjInfo ObjInfo;
-	if (!FObjImporter::LoadObj(PathFileName, &ObjInfo))
+	if (!FObjImporter::LoadObj(PathFileName, &ObjInfo, Config))
 	{
 		UE_LOG_ERROR("파일 정보를 읽어오는데 실패했습니다: %s", PathFileName.c_str());
 		return nullptr;
@@ -257,7 +257,7 @@ void FObjManager::CreateMaterialsFromMTL(UStaticMesh* StaticMesh, FStaticMesh* S
 	}
 }
 
-UStaticMesh* FObjManager::LoadObjStaticMesh(const FString& PathFileName)
+UStaticMesh* FObjManager::LoadObjStaticMesh(const FString& PathFileName, const FObjImporter::Configuration& Config)
 {
 	// Map에 해당 키가 이미 있는지 확인합니다.
 	auto Iter = ObjUStaticMeshMap.find(PathFileName);
@@ -274,7 +274,7 @@ UStaticMesh* FObjManager::LoadObjStaticMesh(const FString& PathFileName)
 	//		return It;
 	//}
 
-	FStaticMesh* StaticMeshAsset = FObjManager::LoadObjStaticMeshAsset(PathFileName);
+	FStaticMesh* StaticMeshAsset = FObjManager::LoadObjStaticMeshAsset(PathFileName, Config);
 	UStaticMesh* StaticMesh = new UStaticMesh();
 	ObjUStaticMeshMap.emplace(PathFileName, std::move(StaticMesh));
 	StaticMesh->SetStaticMeshAsset(StaticMeshAsset);

@@ -12,7 +12,11 @@ UStaticMeshComponent::UStaticMeshComponent()
 {
 	UAssetManager& AssetManager = UAssetManager::GetInstance();
 
-	StaticMesh = FObjManager::LoadObjStaticMesh("Data/fruits/fruits.obj");
+	// Enable winding order flip for this OBJ file
+	FObjImporter::Configuration Config;
+	Config.bFlipWindingOrder = true;
+	
+	StaticMesh = FObjManager::LoadObjStaticMesh("Data/fruits/fruits.obj", Config);
 	// Material = FObjManager::LoadObjMaterial("");
 	Type = EPrimitiveType::StaticMesh;
 
