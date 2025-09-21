@@ -9,6 +9,7 @@ class FObjManager
 public:
 	static FStaticMesh* LoadObjStaticMeshAsset(const FString& PathFileName);
 	static UStaticMesh* LoadObjStaticMesh(const FString& PathFileName);
+	static void CreateMaterialsFromMTL(UStaticMesh* StaticMesh, FStaticMesh* StaticMeshAsset, const FString& ObjFilePath);
 
 	static constexpr size_t INVALID_INDEX = SIZE_MAX;
 

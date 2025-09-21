@@ -393,6 +393,9 @@
     <ClCompile Include="Source\Render\UI\Window\Private\OutlinerWindow.cpp" />
     <ClCompile Include="Source\Render\UI\Window\Private\DetailWindow.cpp" />
     <ClCompile Include="Source\Render\UI\Window\Private\UIWindow.cpp" />
+    <ClCompile Include="Source\Texture\Private\Material.cpp">
+      <DeploymentContent>false</DeploymentContent>
+    </ClCompile>
     <ClCompile Include="Source\Texture\Private\Texture.cpp" />
     <ClCompile Include="Source\Utility\Private\JsonSerializer.cpp" />
     <ClCompile Include="Source\Utility\Private\UELogParser.cpp" />
