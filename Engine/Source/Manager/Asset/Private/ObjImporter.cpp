@@ -76,7 +76,7 @@ bool FObjImporter::LoadObj(const std::filesystem::path& FilePath, FObjInfo* OutO
 				UE_LOG_ERROR("정점 텍스쳐 좌표 형식이 잘못되었습니다");
 				return false;
 			}
-
+			TexCoord.Y = 1 - TexCoord.Y;	// Blender: top => 0
 			OutObjInfo->TexCoordList.emplace_back(TexCoord);
 		}
 
