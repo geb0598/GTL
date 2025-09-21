@@ -253,7 +253,7 @@ void URenderer::Update()
 		RenderLevel(CurrentCamera);
 
 		// 5. 에디터를 렌더링합니다.
-		ULevelManager::GetInstance().GetEditor()->RenderEditor();
+		ULevelManager::GetInstance().GetEditor()->RenderEditor(CurrentCamera);
 	}
 
 	// 최상위 에디터/GUI는 프레임에 1회만
