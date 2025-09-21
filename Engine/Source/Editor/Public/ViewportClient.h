@@ -21,6 +21,17 @@ public:
 	void UpdateActiveViewport(const FVector& InMousePosition);
 
 	/**
+	* @brief 모든 뷰포트의 카메라를 업데이트합니다.
+	*/
+	void UpdateAllViewportCameras();
+
+	/**
+	 * @brief 직교 카메라의 이동량을 받아 포커스 포인트를 갱신하고,
+	 * 활성 뷰포트를 제외한 나머지 직교 카메라들을 업데이트합니다.
+	 */
+	void UpdateOrthoFocusPointByDelta(const FVector& InDelta);
+
+	/**
 	* @brief 현재 활성화된 뷰포트를 반환합니다.
 	* @return 활성 뷰포트의 포인터. 없으면 nullptr.
 	*/
@@ -37,5 +48,6 @@ public:
 private:
 	TArray<FViewport> Viewports = {};
 	FViewport* ActiveViewport = nullptr;
+	FVector FocusPoint = { 0.0f, 0.0f, 0.0f }; 	// 직교 투영 카메라가 공유하는 좌표
 };
 

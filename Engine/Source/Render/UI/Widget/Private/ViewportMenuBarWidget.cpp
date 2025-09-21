@@ -41,15 +41,44 @@ void UViewportMenuBarWidget::RenderWidget()
 			if (ImGui::BeginMenu(ViewportTypeToString(Viewport.GetViewportCameraType())))
 			{
 				// 메뉴를 클릭하면 아래 항목들이 드롭다운으로 나타납니다.
-				if (ImGui::MenuItem("Perspective")) { Viewport.SetViewportCameraType(EViewportCameraType::Perspective); }
+				if (ImGui::MenuItem("Perspective"))
+				{
+					Viewport.SetViewportCameraType(EViewportCameraType::Perspective);
+					ViewportClient->UpdateAllViewportCameras();
+				}
+
 				if (ImGui::BeginMenu("Orthographic"))
 				{
-					if (ImGui::MenuItem("Top")) { Viewport.SetViewportCameraType(EViewportCameraType::Ortho_Top); }
-					if (ImGui::MenuItem("Bottom")) { Viewport.SetViewportCameraType(EViewportCameraType::Ortho_Bottom); }
-					if (ImGui::MenuItem("Left")) { Viewport.SetViewportCameraType(EViewportCameraType::Ortho_Left); }
-					if (ImGui::MenuItem("Right")) { Viewport.SetViewportCameraType(EViewportCameraType::Ortho_Right); }
-					if (ImGui::MenuItem("Front")) { Viewport.SetViewportCameraType(EViewportCameraType::Ortho_Front); }
-					if (ImGui::MenuItem("Back")) { Viewport.SetViewportCameraType(EViewportCameraType::Ortho_Back); }
+					if (ImGui::MenuItem("Top"))
+					{
+						Viewport.SetViewportCameraType(EViewportCameraType::Ortho_Top);
+						ViewportClient->UpdateAllViewportCameras();
+					}
+					if (ImGui::MenuItem("Bottom"))
+					{
+						Viewport.SetViewportCameraType(EViewportCameraType::Ortho_Bottom);
+						ViewportClient->UpdateAllViewportCameras();
+					}
+					if (ImGui::MenuItem("Left"))
+					{
+						Viewport.SetViewportCameraType(EViewportCameraType::Ortho_Left);
+						ViewportClient->UpdateAllViewportCameras();
+					}
+					if (ImGui::MenuItem("Right"))
+					{
+						Viewport.SetViewportCameraType(EViewportCameraType::Ortho_Right);
+						ViewportClient->UpdateAllViewportCameras();
+					}
+					if (ImGui::MenuItem("Front"))
+					{
+						Viewport.SetViewportCameraType(EViewportCameraType::Ortho_Front);
+						ViewportClient->UpdateAllViewportCameras();
+					}
+					if (ImGui::MenuItem("Back"))
+					{
+						Viewport.SetViewportCameraType(EViewportCameraType::Ortho_Back);
+						ViewportClient->UpdateAllViewportCameras();
+					}
 					ImGui::EndMenu();
 				}
 				ImGui::EndMenu();

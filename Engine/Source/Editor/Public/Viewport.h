@@ -25,7 +25,7 @@ inline const char* ViewportTypeToString(EViewportCameraType InType)
 	case EViewportCameraType::Ortho_Back:    return "Back";
 	case EViewportCameraType::Ortho_Left:    return "Left";
 	case EViewportCameraType::Ortho_Right:   return "Right";
-	default:                           return "Unknown";
+	default:                                 return "Unknown";
 	}
 }
 
@@ -45,13 +45,20 @@ public:
 	*/
 	void ClearDepth(ID3D11DeviceContext* InContext, ID3D11DepthStencilView* InStencilView) const;
 
+	/* *
+	* @brief 카메라 상태를 업데이트합니다.
+	*/
+	void SnapCameraToView(const FVector& InFocusPoint);
+
+	bool IsOrthographic() const { return CameraType != EViewportCameraType::Perspective; }
+
 	// Getter
 	D3D11_VIEWPORT GetViewport() const { return ViewportInfo; }
 	EViewportCameraType GetViewportCameraType() const { return CameraType; }
 
 	// Setter
 	void SetViewport(const D3D11_VIEWPORT& InViewport) { ViewportInfo = InViewport; }
-	void SetViewportCameraType(EViewportCameraType InViewportCameraType) { CameraType = InViewportCameraType; }
+	void SetViewportCameraType(EViewportCameraType InViewportCameraType);
 
 	D3D11_VIEWPORT ViewportInfo = {};
 	UCamera Camera;

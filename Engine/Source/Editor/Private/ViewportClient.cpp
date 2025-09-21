@@ -14,6 +14,11 @@ void FViewportClient::InitializeLayout(const D3D11_VIEWPORT& InViewport)
 	Viewports[1].SetViewport({ BaseX + HalfW,    BaseY + 0.0f,     HalfW, HalfH, 0.0f, 1.0f });
 	Viewports[2].SetViewport({ BaseX + 0.0f,     BaseY + HalfH,    HalfW, HalfH, 0.0f, 1.0f });
 	Viewports[3].SetViewport({ BaseX + HalfW,    BaseY + HalfH,    HalfW, HalfH, 0.0f, 1.0f });
+
+	Viewports[1].SetViewportCameraType(EViewportCameraType::Ortho_Back);
+	Viewports[2].SetViewportCameraType(EViewportCameraType::Ortho_Right);
+	Viewports[3].SetViewportCameraType(EViewportCameraType::Ortho_Top);
+	UpdateAllViewportCameras();
 }
 
 void FViewportClient::UpdateActiveViewport(const FVector& InMousePosition)
@@ -33,5 +38,24 @@ void FViewportClient::UpdateActiveViewport(const FVector& InMousePosition)
 		}
 
 		// 다른 뷰포트들의 bIsActive 플래그를 false로 만들기 위해, 전부 순회함
+	}
+}
+
+void FViewportClient::UpdateAllViewportCameras()
+{
+	for (FViewport& Viewport : Viewports) { Viewport.SnapCameraToView(FocusPoint); }
+}
+
+void FViewportClient::UpdateOrthoFocusPointByDelta(const FVector& InDelta)
+{
+	FocusPoint += InDelta;
+
+	for (FViewport& Viewport : Viewports)
+	{
+		// 현재 활성화되어 조작 중인 뷰포트와 Perspective 뷰포트는 제외합니다.
+		if (&Viewport != ActiveViewport && Viewport.GetViewportCameraType() != EViewportCameraType::Perspective)
+		{
+			Viewport.SnapCameraToView(FocusPoint);
+		}
 	}
 }
