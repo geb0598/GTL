@@ -145,15 +145,32 @@ void UAssetManager::Release()
 	ReleaseAllTextures();
 }
 
+/**
+ * @brief Data/ 경로 하위에 모든 .obj 파일을 로드 후 캐싱한다
+ */
 void UAssetManager::LoadAllObjStaticMesh()
 {
 	URenderer& Renderer = URenderer::GetInstance();
 
-	// Todo: 추후 Data 폴더 속 모든 obj 로드
-	const TArray<FString> ObjList =
+	TArray<FString> ObjList;
+	const FString DataDirectory = "Data/"; // 검색할 기본 디렉토리
+
+	// recursive_directory_iterator를 사용하여 지정된 디렉토리와 모든 하위 디렉토리를 순회합니다.
+	for (const auto& Entry : std::filesystem::recursive_directory_iterator(DataDirectory))
 	{
-		"Data/fruits/fruits.obj",
-	};
+		// 현재 항목이 일반 파일이고, 확장자가 ".obj"인지 확인합니다.
+		if (Entry.is_regular_file() && Entry.path().extension() == ".obj")
+		{
+			// 파일 경로를 FString으로 변환합니다.
+			FString PathString = Entry.path().string();
+
+			// (선택 사항) Windows 환경에서는 경로 구분자가 '\'일 수 있으므로, 일관성을 위해 '/'로 변경합니다.
+			std::replace(PathString.begin(), PathString.end(), '\\', '/');
+
+			// 찾은 파일 경로를 ObjList에 추가합니다. (FString이 const char*로 생성 가능하다고 가정)
+			ObjList.push_back(FString(PathString.c_str()));
+		}
+	}
 
 	// Enable winding order flip for this OBJ file
 	FObjImporter::Configuration Config;
