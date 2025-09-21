@@ -291,6 +291,9 @@
     <ClCompile Include="Source\Editor\Private\SplitterWindow.cpp">
       <Filter>Source\Editor\Private</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Core\Private\ObjectIterator.cpp">
+      <Filter>Source\Core\Private</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -628,8 +631,8 @@
     <ClInclude Include="Source\Factory\Actor\Public\StaticMeshActorFactory.h">
       <Filter>Source\Factory\Actor\Public</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\Public\SplitterWindow.h">
-      <Filter>Source\Editor\Public</Filter>
+    <ClInclude Include="Source\Core\Public\ObjectIterator.h">
+      <Filter>Source\Core\Public</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
