@@ -151,19 +151,28 @@ bool FObjImporter::LoadObj(const std::filesystem::path& FilePath, FObjInfo* OutO
 				return false;
 			}
 
-			/** @todo: Support other types of meshes in later */
-			if (FaceBuffers.size() > 3)
+			/** @todo: 오목 다각형에 대한 지원 필요, 현재는 볼록 다각형만 지원 */
+			for (size_t i = 2; i < FaceBuffers.size(); ++i)
 			{
-				UE_LOG_ERROR("삼각형 메쉬만 지원합니다");
-				return false;
-			}
-
-			for (size_t i = 0; i < FaceBuffers.size(); ++i)
-			{
-				if (!ParseFaceBuffer(FaceBuffers[i], &(*OptObjectInfo)))
+				if (!ParseFaceBuffer(FaceBuffers[0], &(*OptObjectInfo)))
 				{
+					UE_LOG_ERROR("면 파싱에 실패했습니다");
 					return false;
 				}
+
+				if (!ParseFaceBuffer(FaceBuffers[1], &(*OptObjectInfo)))
+				{
+					UE_LOG_ERROR("면 파싱에 실패했습니다");
+					return false;
+				}
+
+				if (!ParseFaceBuffer(FaceBuffers[i], &(*OptObjectInfo)))
+				{
+					UE_LOG_ERROR("면 파싱에 실패했습니다");
+					return false;
+				}
+
+				++FaceCount;
 			}
 
 			++FaceCount;
