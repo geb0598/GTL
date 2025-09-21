@@ -174,8 +174,6 @@ bool FObjImporter::LoadObj(const std::filesystem::path& FilePath, FObjInfo* OutO
 
 				++FaceCount;
 			}
-
-			++FaceCount;
 		}
 
 		// ============================ Material Information ============================ //

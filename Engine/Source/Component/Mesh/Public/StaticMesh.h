@@ -59,7 +59,6 @@ public:
 	FStaticMesh* GetStaticMeshAsset() { return StaticMeshAsset; }
 	void SetStaticMeshAsset(FStaticMesh* InStaticMeshAsset);
 
-
 	// --- 데이터 접근자 (Getters) ---
 	// 이 UStaticMesh가 감싸고 있는 FStaticMesh의 데이터에 대한 접근을 제공합니다.
 	// 렌더러나 컴포넌트는 이 함수들을 통해 실제 데이터에 접근합니다.
