@@ -85,6 +85,11 @@ bool FObjImporter::LoadObj(const std::filesystem::path& FilePath, FObjInfo* OutO
 		/** Object Information */
 		else if (Prefix == "o")
 		{
+			if (!Config.bIsObjectEnabled)
+			{
+				continue; // Ignore 'o' prefix
+			}
+
 			if (OptObjectInfo)
 			{
 				OutObjInfo->ObjectInfoList.emplace_back(std::move(*OptObjectInfo));
@@ -108,7 +113,7 @@ bool FObjImporter::LoadObj(const std::filesystem::path& FilePath, FObjInfo* OutO
 			if (!OptObjectInfo)
 			{
 				OptObjectInfo.emplace();
-				OptObjectInfo->Name = "DefaultObject";
+				OptObjectInfo->Name = Config.DefaultName;
 			}
 
 			FString GroupName;
@@ -130,7 +135,7 @@ bool FObjImporter::LoadObj(const std::filesystem::path& FilePath, FObjInfo* OutO
 			if (!OptObjectInfo)
 			{
 				OptObjectInfo.emplace();
-				OptObjectInfo->Name = "DefaultObject";
+				OptObjectInfo->Name = Config.DefaultName;
 			}
 
 			TArray<FString> FaceBuffers;
@@ -146,22 +151,51 @@ bool FObjImporter::LoadObj(const std::filesystem::path& FilePath, FObjInfo* OutO
 				return false;
 			}
 
-			/** @todo: Support other types of meshes in later */
-			if (FaceBuffers.size() > 3)
+			/** @todo: 오목 다각형에 대한 지원 필요, 현재는 볼록 다각형만 지원 */
+			for (size_t i = 1; i + 1 < FaceBuffers.size(); ++i)
 			{
-				UE_LOG_ERROR("삼각형 메쉬만 지원합니다");
-				return false;
-			}
-
-			for (size_t i = 0; i < FaceBuffers.size(); ++i)
-			{
-				if (!ParseFaceBuffer(FaceBuffers[i], &(*OptObjectInfo)))
+				if (Config.bFlipWindingOrder)
 				{
-					return false;
-				}
-			}
+					if (!ParseFaceBuffer(FaceBuffers[0], &(*OptObjectInfo)))
+					{
+						UE_LOG_ERROR("면 파싱에 실패했습니다");
+						return false;
+					}
 
-			++FaceCount;
+					if (!ParseFaceBuffer(FaceBuffers[i + 1], &(*OptObjectInfo)))
+					{
+						UE_LOG_ERROR("면 파싱에 실패했습니다");
+						return false;
+					}
+
+					if (!ParseFaceBuffer(FaceBuffers[i], &(*OptObjectInfo)))
+					{
+						UE_LOG_ERROR("면 파싱에 실패했습니다");
+						return false;
+					}
+				}
+				else
+				{
+					if (!ParseFaceBuffer(FaceBuffers[0], &(*OptObjectInfo)))
+					{
+						UE_LOG_ERROR("면 파싱에 실패했습니다");
+						return false;
+					}
+
+					if (!ParseFaceBuffer(FaceBuffers[i], &(*OptObjectInfo)))
+					{
+						UE_LOG_ERROR("면 파싱에 실패했습니다");
+						return false;
+					}
+
+					if (!ParseFaceBuffer(FaceBuffers[i + 1], &(*OptObjectInfo)))
+					{
+						UE_LOG_ERROR("면 파싱에 실패했습니다");
+						return false;
+					}
+				}
+				++FaceCount;
+			}
 		}
 
 		// ============================ Material Information ============================ //
@@ -192,7 +226,7 @@ bool FObjImporter::LoadObj(const std::filesystem::path& FilePath, FObjInfo* OutO
 			if (!OptObjectInfo)
 			{
 				OptObjectInfo.emplace();
-				OptObjectInfo->Name = "DefaultObject";
+				OptObjectInfo->Name = Config.DefaultName;
 			}
 
 			OptObjectInfo->MaterialNameList.emplace_back(std::move(MaterialName));
@@ -234,7 +268,241 @@ bool FObjImporter::LoadMaterial(const std::filesystem::path& FilePath, FObjInfo*
 		return false;
 	}
 
-	// TODO
+	TOptional<FObjectMaterialInfo> OptMaterialInfo;
+
+	FString Buffer;
+	while (std::getline(File, Buffer))
+	{
+		std::istringstream Tokenizer(Buffer);
+		FString Prefix;
+
+		Tokenizer >> Prefix;
+
+		if (Prefix == "newmtl")
+		{
+			if (OptMaterialInfo)
+			{
+				OutObjInfo->ObjectMaterialInfoList.emplace_back(std::move(*OptMaterialInfo));
+			}
+
+			OptMaterialInfo.emplace();
+			if (!(Tokenizer >> OptMaterialInfo->Name))
+			{
+				UE_LOG_ERROR("머티리얼 이름 형식이 잘못되었습니다");
+				return false;
+			}
+		}
+		else if (Prefix == "Ns")
+		{
+			if (!OptMaterialInfo)
+			{
+				UE_LOG_ERROR("머티리얼이 정의되지 않았습니다");
+				return false;
+			}
+
+			if (!(Tokenizer >> OptMaterialInfo->Ns))
+			{
+				UE_LOG_ERROR("Ns(광택) 속성 형식이 잘못되었습니다");
+				return false;
+			}
+		}
+		else if (Prefix == "Ka")
+		{
+			if (!OptMaterialInfo)
+			{
+				UE_LOG_ERROR("머티리얼이 정의되지 않았습니다");
+				return false;
+			}
+
+			if (!(Tokenizer >> OptMaterialInfo->Ka.X >> OptMaterialInfo->Ka.Y >> OptMaterialInfo->Ka.Z))
+			{
+				UE_LOG_ERROR("Ka(주변) 속성 형식이 잘못되었습니다");
+				return false;
+			}
+		}
+		else if (Prefix == "Kd")
+		{
+			if (!OptMaterialInfo)
+			{
+				UE_LOG_ERROR("머티리얼이 정의되지 않았습니다");
+				return false;
+			}
+
+			if (!(Tokenizer >> OptMaterialInfo->Kd.X >> OptMaterialInfo->Kd.Y >> OptMaterialInfo->Kd.Z))
+			{
+				UE_LOG_ERROR("Kd(분산) 속성 형식이 잘못되었습니다");
+				return false;
+			}
+		}
+		else if (Prefix == "Ks")
+		{
+			if (!OptMaterialInfo)
+			{
+				UE_LOG_ERROR("머티리얼이 정의되지 않았습니다");
+				return false;
+			}
+
+			if (!(Tokenizer >> OptMaterialInfo->Ks.X >> OptMaterialInfo->Ks.Y >> OptMaterialInfo->Ks.Z))
+			{
+				UE_LOG_ERROR("Ks(반사) 속성 형식이 잘못되었습니다");
+				return false;
+			}
+		}
+		else if (Prefix == "Ke")
+		{
+			// Ke is not in FObjectMaterialInfo, skipping
+		}
+		else if (Prefix == "Ni")
+		{
+			if (!OptMaterialInfo)
+			{
+				UE_LOG_ERROR("머티리얼이 정의되지 않았습니다");
+				return false;
+			}
+
+			if (!(Tokenizer >> OptMaterialInfo->Ni))
+			{
+				UE_LOG_ERROR("Ni(굴절률) 속성 형식이 잘못되었습니다");
+				return false;
+			}
+		}
+		else if (Prefix == "d")
+		{
+			if (!OptMaterialInfo)
+			{
+				UE_LOG_ERROR("머티리얼이 정의되지 않았습니다");
+				return false;
+			}
+
+			if (!(Tokenizer >> OptMaterialInfo->D))
+			{
+				UE_LOG_ERROR("d(투명도) 속성 형식이 잘못되었습니다");
+				return false;
+			}
+		}
+		else if (Prefix == "Tr")
+		{
+			if (!OptMaterialInfo)
+			{
+				UE_LOG_ERROR("머티리얼이 정의되지 않았습니다");
+				return false;
+			}
+			float Tr;
+			if (!(Tokenizer >> Tr))
+			{
+				UE_LOG_ERROR("Tr(투명도) 속성 형식이 잘못되었습니다");
+				return false;
+			}
+			OptMaterialInfo->D = 1.0f - Tr;
+		}
+		else if (Prefix == "Tf")
+		{
+			// Tf is not in FObjectMaterialInfo, skipping
+		}
+		else if (Prefix == "illum")
+		{
+			if (!OptMaterialInfo)
+			{
+				UE_LOG_ERROR("머티리얼이 정의되지 않았습니다");
+				return false;
+			}
+
+			if (!(Tokenizer >> OptMaterialInfo->Illumination))
+			{
+				UE_LOG_ERROR("illum(조명 모델) 속성 형식이 잘못되었습니다");
+				return false;
+			}
+		}
+		else if (Prefix == "map_Ka")
+		{
+			if (!OptMaterialInfo)
+			{
+				UE_LOG_ERROR("머티리얼이 정의되지 않았습니다");
+				return false;
+			}
+
+			if (!(Tokenizer >> OptMaterialInfo->KaMap))
+			{
+				UE_LOG_ERROR("map_Ka(주변 텍스처) 속성 형식이 잘못되었습니다");
+				return false;
+			}
+		}
+		else if (Prefix == "map_Kd")
+		{
+			if (!OptMaterialInfo)
+			{
+				UE_LOG_ERROR("머티리얼이 정의되지 않았습니다");
+				return false;
+			}
+
+			if (!(Tokenizer >> OptMaterialInfo->KdMap))
+			{
+				UE_LOG_ERROR("map_Kd(분산 텍스처) 속성 형식이 잘못되었습니다");
+				return false;
+			}
+		}
+		else if (Prefix == "map_Ks")
+		{
+			if (!OptMaterialInfo)
+			{
+				UE_LOG_ERROR("머티리얼이 정의되지 않았습니다");
+				return false;
+			}
+
+			if (!(Tokenizer >> OptMaterialInfo->KsMap))
+			{
+				UE_LOG_ERROR("map_Ks(반사 텍스처) 속성 형식이 잘못되었습니다");
+				return false;
+			}
+		}
+		else if (Prefix == "map_Ns")
+		{
+			if (!OptMaterialInfo)
+			{
+				UE_LOG_ERROR("머티리얼이 정의되지 않았습니다");
+				return false;
+			}
+
+			if (!(Tokenizer >> OptMaterialInfo->NsMap))
+			{
+				UE_LOG_ERROR("map_Ns(광택 텍스처) 속성 형식이 잘못되었습니다");
+				return false;
+			}
+		}
+		else if (Prefix == "map_d")
+		{
+			if (!OptMaterialInfo)
+			{
+				UE_LOG_ERROR("머티리얼이 정의되지 않았습니다");
+				return false;
+			}
+
+			if (!(Tokenizer >> OptMaterialInfo->DMap))
+			{
+				UE_LOG_ERROR("map_d(투명도 텍스처) 속성 형식이 잘못되었습니다");
+				return false;
+			}
+		}
+		else if (Prefix == "map_bump" || Prefix == "bump")
+		{
+			if (!OptMaterialInfo)
+			{
+				UE_LOG_ERROR("머티리얼이 정의되지 않았습니다");
+				return false;
+			}
+
+			if (!(Tokenizer >> OptMaterialInfo->BumpMap))
+			{
+				UE_LOG_ERROR("map_bump(범프 텍스처) 속성 형식이 잘못되었습니다");
+				return false;
+			}
+		}
+	}
+
+	if (OptMaterialInfo)
+	{
+		OutObjInfo->ObjectMaterialInfoList.emplace_back(std::move(*OptMaterialInfo));
+	}
 
 	return true;
 }

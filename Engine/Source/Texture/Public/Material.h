@@ -20,6 +20,9 @@ struct FMaterial
 	/** Specular color (Ks). */
 	FVector Ks;
 
+	/** Emissive color (Ke) */
+	FVector Ke;
+
 	/** Specular exponent (Ns). Defines the size of the specular highlight. */
 	float Ns;
 
@@ -64,8 +67,26 @@ public:
 	
 	// Texture access functions
 	UTexture* GetDiffuseTexture() const { return DiffuseTexture; }
+	UTexture* GetAmbientTexture() const { return AmbientTexture; }
+	UTexture* GetSpecularTexture() const { return SpecularTexture; }
+	UTexture* GetNormalTexture() const { return NormalTexture; }
+	UTexture* GetAlphaTexture() const { return AlphaTexture; }
+	UTexture* GetBumpTexture() const { return BumpTexture; }
+
 	void SetDiffuseTexture(UTexture* InTexture) { DiffuseTexture = InTexture; }
+	void SetAmbientTexture(UTexture* InTexture) { AmbientTexture = InTexture; }
+	void SetSpecularTexture(UTexture* InTexture) { SpecularTexture = InTexture; }
+	void SetNormalTexture(UTexture* InTexture) { NormalTexture = InTexture; }
+	void SetAlphaTexture(UTexture* InTexture) { AlphaTexture = InTexture; }
+	void SetBumpTexture(UTexture* InTexture) { BumpTexture = InTexture; }
 
 private:
 	UTexture* DiffuseTexture = nullptr;
+	UTexture* AmbientTexture = nullptr;
+	UTexture* SpecularTexture = nullptr;
+	UTexture* NormalTexture = nullptr;
+	UTexture* AlphaTexture = nullptr;
+	UTexture* BumpTexture = nullptr;
+
+	FMaterial MaterialData;
 };

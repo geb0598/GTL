@@ -32,7 +32,7 @@ SamplerState BaseColorSampler : register(s0);
 PS_INPUT mainVS(VS_INPUT Input)
 {
 	PS_INPUT Output;
-	float4 Tmp = Input.Position;
+	float4 Tmp = float4(Input.Position, 1.0f);
 	Tmp = mul(Tmp, WorldMatrix);
 	Tmp = mul(Tmp, View);
 	Tmp = mul(Tmp, Projection);

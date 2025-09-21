@@ -154,9 +154,10 @@ void URenderer::CreateTextureShader()
 
 	D3D11_INPUT_ELEMENT_DESC TextureLayout[] =
 	{
-		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 16, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 32, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(FNormalVertex, Position), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(FNormalVertex, Normal), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(FNormalVertex, Color), D3D11_INPUT_PER_VERTEX_DATA, 0	},
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(FNormalVertex, TexCoord), D3D11_INPUT_PER_VERTEX_DATA, 0	}
 	};
 	GetDevice()->CreateInputLayout(TextureLayout, ARRAYSIZE(TextureLayout), TextureVSBlob->GetBufferPointer(),
 		TextureVSBlob->GetBufferSize(), &TextureInputLayout);
@@ -325,6 +326,16 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera)
 				FStaticMesh* MeshAsset = MeshComp->GetStaticMesh()->GetStaticMeshAsset();
 				if (!MeshAsset)	continue;
 
+				FPipelineInfo PipelineInfo = {
+					TextureInputLayout,
+					TextureVertexShader,
+					LoadedRasterizerState,
+					DefaultDepthStencilState,
+					TexturePixelShader,
+					nullptr,
+				};
+				Pipeline->UpdatePipeline(PipelineInfo);
+
 				Pipeline->SetConstantBuffer(0, true, ConstantBufferModels);
 				UpdateConstant(
 					MeshComp->GetRelativeLocation(),
@@ -335,32 +346,39 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera)
 				Pipeline->SetVertexBuffer(MeshComp->GetVertexBuffer(), sizeof(FNormalVertex));
 				Pipeline->SetIndexBuffer(MeshComp->GetIndexBuffer(), 0);
 
-				Pipeline->DrawIndexed(MeshAsset->Indices.size(), 0, 0);
-				continue;	// 아직 머티리얼 적용이 안돼서 그냥 바로 draw 후 continue
+				// 재질이 없는 경우 전체 메시를 기본 셰이더로 렌더링
+				if (MeshAsset->MaterialInfo.empty() || MeshComp->GetStaticMesh()->GetNumMaterials() == 0)
+				{
+					Pipeline->DrawIndexed(MeshAsset->Indices.size(), 0, 0);
+					continue;
+				}
 
 				for (const FMeshSection& Section : MeshAsset->Sections)
 				{
 					UMaterial* Material = MeshComp->GetStaticMesh()->GetMaterial(Section.MaterialSlot);
-					if (Material && Material->GetDiffuseTexture())
+					if (Material)
 					{
-						FPipelineInfo PipelineInfo = {
-							TextureInputLayout,
-							TextureVertexShader,
-							LoadedRasterizerState,
-							DefaultDepthStencilState,
-							TexturePixelShader,
-							nullptr,
-						};
-						Pipeline->UpdatePipeline(PipelineInfo);
-						if (auto* Proxy = Material->GetDiffuseTexture()->GetRenderProxy())
+						if (Material->GetDiffuseTexture())
 						{
+							auto* Proxy = Material->GetDiffuseTexture()->GetRenderProxy();
 							Pipeline->SetTexture(0, false, Proxy->GetSRV());
 							Pipeline->SetSamplerState(0, false, Proxy->GetSampler());
 						}
-					}
-					else
-					{
-						// ...
+						if (Material->GetAmbientTexture())
+						{
+							auto* Proxy = Material->GetAmbientTexture()->GetRenderProxy();
+							Pipeline->SetTexture(1, false, Proxy->GetSRV());
+						}
+						if (Material->GetSpecularTexture())
+						{
+							auto* Proxy = Material->GetSpecularTexture()->GetRenderProxy();
+							Pipeline->SetTexture(2, false, Proxy->GetSRV());
+						}
+						if (Material->GetAlphaTexture())
+						{
+							auto* Proxy = Material->GetAlphaTexture()->GetRenderProxy();
+							Pipeline->SetTexture(4, false, Proxy->GetSRV());
+						}
 					}
 					Pipeline->DrawIndexed(Section.IndexCount, Section.StartIndex, 0);
 				}

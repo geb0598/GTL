@@ -180,6 +180,7 @@
     <ClInclude Include="Source\Component\Mesh\Public\SquareComponent.h" />
     <ClInclude Include="Source\Component\Mesh\Public\TriangleComponent.h" />
     <ClInclude Include="Source\Component\Mesh\Public\VertexDatas.h" />
+    <ClInclude Include="Source\Core\Public\ObjectIterator.h" />
     <ClInclude Include="Source\Editor\Public\SplitterWindow.h" />
     <ClInclude Include="Source\Editor\Public\Viewport.h" />
     <ClInclude Include="Source\Editor\Public\ViewportClient.h" />
@@ -314,6 +315,7 @@
     <ClCompile Include="Source\Component\Mesh\Private\SquareComponent.cpp" />
     <ClCompile Include="Source\Component\Mesh\Private\TriangleComponent.cpp" />
     <ClCompile Include="Source\Component\Mesh\Private\VertexDatas.cpp" />
+    <ClCompile Include="Source\Core\Private\ObjectIterator.cpp" />
     <ClCompile Include="Source\Editor\Private\SplitterWindow.cpp" />
     <ClCompile Include="Source\Editor\Private\Viewport.cpp" />
     <ClCompile Include="Source\Editor\Private\ViewportClient.cpp" />
@@ -396,6 +398,9 @@
     <ClCompile Include="Source\Render\UI\Window\Private\OutlinerWindow.cpp" />
     <ClCompile Include="Source\Render\UI\Window\Private\DetailWindow.cpp" />
     <ClCompile Include="Source\Render\UI\Window\Private\UIWindow.cpp" />
+    <ClCompile Include="Source\Texture\Private\Material.cpp">
+      <DeploymentContent>false</DeploymentContent>
+    </ClCompile>
     <ClCompile Include="Source\Texture\Private\Texture.cpp" />
     <ClCompile Include="Source\Utility\Private\JsonSerializer.cpp" />
     <ClCompile Include="Source\Utility\Private\UELogParser.cpp" />

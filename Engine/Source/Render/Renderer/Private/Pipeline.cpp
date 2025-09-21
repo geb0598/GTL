@@ -16,19 +16,33 @@ UPipeline::~UPipeline()
 /// @brief 파이프라인 상태를 업데이트
 void UPipeline::UpdatePipeline(FPipelineInfo Info)
 {
-	DeviceContext->IASetPrimitiveTopology(Info.Topology);
-	if (Info.InputLayout)
+	if (LastPipelineInfo.Topology != Info.Topology) {
+		DeviceContext->IASetPrimitiveTopology(Info.Topology);
+		LastPipelineInfo.Topology = Info.Topology;
+	}
+	if (LastPipelineInfo.InputLayout != Info.InputLayout) {
 		DeviceContext->IASetInputLayout(Info.InputLayout);
-	if (Info.VertexShader)
+		LastPipelineInfo.InputLayout = Info.InputLayout;
+	}
+	if (LastPipelineInfo.VertexShader != Info.VertexShader) {
 		DeviceContext->VSSetShader(Info.VertexShader, nullptr, 0);
-	if (Info.RasterizerState)
+		LastPipelineInfo.VertexShader = Info.VertexShader;
+	}
+	if (LastPipelineInfo.RasterizerState != Info.RasterizerState) {
 		DeviceContext->RSSetState(Info.RasterizerState);
-	if (Info.DepthStencilState)
+		LastPipelineInfo.RasterizerState = Info.RasterizerState;
+	}
+	if (Info.DepthStencilState) {
 		DeviceContext->OMSetDepthStencilState(Info.DepthStencilState, 0);
-	if (Info.PixelShader)
+	}
+	if (LastPipelineInfo.PixelShader != Info.PixelShader) {
 		DeviceContext->PSSetShader(Info.PixelShader, nullptr, 0);
-	if (Info.BlendState)
+		LastPipelineInfo.PixelShader = Info.PixelShader;
+	}
+	if (LastPipelineInfo.BlendState != Info.BlendState) {
 		DeviceContext->OMSetBlendState(Info.BlendState, nullptr, 0xffffffff);
+		LastPipelineInfo.BlendState = Info.BlendState;
+	}
 }
 
 void UPipeline::SetIndexBuffer(ID3D11Buffer* indexBuffer, uint32 stride)
