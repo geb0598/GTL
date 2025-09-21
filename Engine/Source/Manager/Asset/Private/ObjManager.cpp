@@ -7,7 +7,6 @@
 
 // static 멤버 변수의 실체를 정의(메모리 할당)합니다.
 TMap<FString, std::unique_ptr<FStaticMesh>> FObjManager::ObjFStaticMeshMap;
-TMap<FString, std::unique_ptr<UStaticMesh>> FObjManager::ObjUStaticMeshMap;
 
 /** @brief: Vertex Key for creating index buffer */
 using VertexKey = std::tuple<size_t, size_t, size_t>;

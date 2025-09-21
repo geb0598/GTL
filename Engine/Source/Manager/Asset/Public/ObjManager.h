@@ -14,5 +14,4 @@ public:
 
 private:
 	static TMap<FString, std::unique_ptr<FStaticMesh>> ObjFStaticMeshMap;
-	static TMap<FString, std::unique_ptr<UStaticMesh>> ObjUStaticMeshMap; // 추후 UObject 관리 시스템이 생기면 이 맵은 제거하는 것을 권장
 };
