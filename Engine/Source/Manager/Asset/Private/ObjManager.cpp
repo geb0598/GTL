@@ -115,6 +115,7 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FString& PathFileName)
 				StaticMesh->MaterialInfo[i].Ka				= std::move(ObjInfo.ObjectMaterialInfoList[j].Ka);
 				StaticMesh->MaterialInfo[i].Kd				= std::move(ObjInfo.ObjectMaterialInfoList[j].Kd);
 				StaticMesh->MaterialInfo[i].Ks				= std::move(ObjInfo.ObjectMaterialInfoList[j].Ks);
+				StaticMesh->MaterialInfo[i].Ke				= std::move(ObjInfo.ObjectMaterialInfoList[j].Ke);
 				StaticMesh->MaterialInfo[i].Ns				= std::move(ObjInfo.ObjectMaterialInfoList[j].Ns);
 				StaticMesh->MaterialInfo[i].Ni				= std::move(ObjInfo.ObjectMaterialInfoList[j].Ni);
 				StaticMesh->MaterialInfo[i].D				= std::move(ObjInfo.ObjectMaterialInfoList[j].D);
@@ -133,31 +134,21 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FString& PathFileName)
 
 	/** #4. 오브젝트의 서브메쉬 정보를 저장 */
 
-	/** @note: 그룹 하나당 하나의 머티리얼을 사용한다고 가정 */
-	StaticMesh->Sections.resize(ObjectInfo.GroupIndexList.size());
-	for (size_t i = 0; i < ObjectInfo.GroupIndexList.size(); ++i)
+	StaticMesh->Sections.resize(ObjectInfo.MaterialIndexList.size());
+	for (size_t i = 0; i < ObjectInfo.MaterialIndexList.size(); ++i)
 	{
-		StaticMesh->Sections[i].StartIndex = ObjectInfo.GroupIndexList[i] * 3;
+		StaticMesh->Sections[i].StartIndex = ObjectInfo.MaterialIndexList[i] * 3;
 
-		/** @note: GroupIndexList는 Face의 인덱스를 저장하므로, 인덱스를 다시 계산해야 함 */
-		if (i < ObjectInfo.GroupIndexList.size() - 1)
+		if (i < ObjectInfo.MaterialIndexList.size() - 1)
 		{
-			StaticMesh->Sections[i].IndexCount = (ObjectInfo.GroupIndexList[i + 1] - ObjectInfo.GroupIndexList[i]) * 3;
+			StaticMesh->Sections[i].IndexCount = (ObjectInfo.MaterialIndexList[i + 1] - ObjectInfo.MaterialIndexList[i]) * 3;
 		}
 		else
 		{
-			StaticMesh->Sections[i].IndexCount = (StaticMesh->Indices.size() - ObjectInfo.GroupIndexList[i] * 3);
+			StaticMesh->Sections[i].IndexCount = (StaticMesh->Indices.size() / 3 - ObjectInfo.MaterialIndexList[i]) * 3;
 		}
 
-		/** @note: 머티리얼을 사용하지 않을 경우 INVALID_INDEX로 초기화 */
-		if (StaticMesh->MaterialInfo.empty())
-		{
-			StaticMesh->Sections[i].MaterialSlot = INVALID_INDEX;
-		}
-		else
-		{
-			StaticMesh->Sections[i].MaterialSlot = i;
-		}
+		StaticMesh->Sections[i].MaterialSlot = i;
 	}
 
 	ObjFStaticMeshMap.emplace(PathFileName, std::move(StaticMesh));
