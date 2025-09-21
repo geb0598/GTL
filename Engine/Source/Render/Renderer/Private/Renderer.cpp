@@ -304,135 +304,33 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera)
 			continue;
 		}
 
-		if (PrimitiveComponent->GetPrimitiveType() == EPrimitiveType::BillBoard)
+		// Get view mode from editor
+		FRenderState RenderState = PrimitiveComponent->GetRenderState();
+		const EViewModeIndex ViewMode = ULevelManager::GetInstance().GetEditor()->GetViewMode();
+		if (ViewMode == EViewModeIndex::VMI_Wireframe)
 		{
-			BillBoard = Cast<UBillBoardComponent>(PrimitiveComponent);
+			RenderState.CullMode = ECullMode::None;
+			RenderState.FillMode = EFillMode::WireFrame;
 		}
-		else
+		ID3D11RasterizerState* LoadedRasterizerState = GetRasterizerState(RenderState);
+
+		switch (PrimitiveComponent->GetPrimitiveType())
 		{
-			FRenderState RenderState = PrimitiveComponent->GetRenderState();
-
-			// Get view mode from editor
-			const EViewModeIndex ViewMode = ULevelManager::GetInstance().GetEditor()->GetViewMode();
-			if (ViewMode == EViewModeIndex::VMI_Wireframe)
-			{
-				RenderState.CullMode = ECullMode::None;
-				RenderState.FillMode = EFillMode::WireFrame;
-			}
-			ID3D11RasterizerState* LoadedRasterizerState = GetRasterizerState(RenderState);
-
-			if (auto MeshComp = Cast<UStaticMeshComponent>(PrimitiveComponent))
-			{
-				FStaticMesh* MeshAsset = MeshComp->GetStaticMesh()->GetStaticMeshAsset();
-				if (!MeshAsset)	continue;
-
-				FPipelineInfo PipelineInfo = {
-					TextureInputLayout,
-					TextureVertexShader,
-					LoadedRasterizerState,
-					DefaultDepthStencilState,
-					TexturePixelShader,
-					nullptr,
-				};
-				Pipeline->UpdatePipeline(PipelineInfo);
-
-				Pipeline->SetConstantBuffer(0, true, ConstantBufferModels);
-				UpdateConstant(
-					MeshComp->GetRelativeLocation(),
-					MeshComp->GetRelativeRotation(),
-					MeshComp->GetRelativeScale3D()
-				);
-
-				Pipeline->SetVertexBuffer(MeshComp->GetVertexBuffer(), sizeof(FNormalVertex));
-				Pipeline->SetIndexBuffer(MeshComp->GetIndexBuffer(), 0);
-
-				// 재질이 없는 경우 전체 메시를 기본 셰이더로 렌더링
-				if (MeshAsset->MaterialInfo.empty() || MeshComp->GetStaticMesh()->GetNumMaterials() == 0)
-				{
-					Pipeline->DrawIndexed(MeshAsset->Indices.size(), 0, 0);
-					continue;
-				}
-
-				for (const FMeshSection& Section : MeshAsset->Sections)
-				{
-					UMaterial* Material = MeshComp->GetStaticMesh()->GetMaterial(Section.MaterialSlot);
-					if (Material)
-					{
-						if (Material->GetDiffuseTexture())
-						{
-							auto* Proxy = Material->GetDiffuseTexture()->GetRenderProxy();
-							Pipeline->SetTexture(0, false, Proxy->GetSRV());
-							Pipeline->SetSamplerState(0, false, Proxy->GetSampler());
-						}
-						if (Material->GetAmbientTexture())
-						{
-							auto* Proxy = Material->GetAmbientTexture()->GetRenderProxy();
-							Pipeline->SetTexture(1, false, Proxy->GetSRV());
-						}
-						if (Material->GetSpecularTexture())
-						{
-							auto* Proxy = Material->GetSpecularTexture()->GetRenderProxy();
-							Pipeline->SetTexture(2, false, Proxy->GetSRV());
-						}
-						if (Material->GetAlphaTexture())
-						{
-							auto* Proxy = Material->GetAlphaTexture()->GetRenderProxy();
-							Pipeline->SetTexture(4, false, Proxy->GetSRV());
-						}
-					}
-					Pipeline->DrawIndexed(Section.IndexCount, Section.StartIndex, 0);
-				}
-			}
-			else
-			{
-				// Update pipeline info
-				FPipelineInfo PipelineInfo = {
-					DefaultInputLayout,
-					DefaultVertexShader,
-					LoadedRasterizerState,
-					DefaultDepthStencilState, 
-					DefaultPixelShader,
-					nullptr,
-				};
-				Pipeline->UpdatePipeline(PipelineInfo);
-
-				// Update pipeline buffers
-				Pipeline->SetConstantBuffer(0, true, ConstantBufferModels);
-				UpdateConstant(
-					PrimitiveComponent->GetRelativeLocation(),
-					PrimitiveComponent->GetRelativeRotation(),
-					PrimitiveComponent->GetRelativeScale3D()
-				);
-				Pipeline->SetConstantBuffer(2, true, ConstantBufferColor);
-				UpdateConstant(PrimitiveComponent->GetColor());
-
-				Pipeline->SetVertexBuffer(PrimitiveComponent->GetVertexBuffer(), Stride);
-				// 버텍스 + 인덱스 그리기
-				if (PrimitiveComponent->GetIndexBuffer() && PrimitiveComponent->GetIndicesData())
-				{
-					Pipeline->SetIndexBuffer(PrimitiveComponent->GetIndexBuffer(), 0);
-					Pipeline->DrawIndexed(PrimitiveComponent->GetNumIndices(), 0, 0);
-				}
-				// 버텍스 그리기
-				else
-				{
-					Pipeline->Draw(static_cast<uint32>(PrimitiveComponent->GetNumVertices()), 0);
-				}
-			}
+		case EPrimitiveType::BillBoard:
+			BillBoard = Cast<UBillBoardComponent>(PrimitiveComponent);
+			break;
+		case EPrimitiveType::StaticMesh:
+			RenderStaticMesh(Cast<UStaticMeshComponent>(PrimitiveComponent), LoadedRasterizerState);
+			break;
+		default:
+			RenderPrimitiveDefault(PrimitiveComponent, LoadedRasterizerState);
+			break;
 		}
 	}
 
 	if (BillBoard)
 	{
-		// 이제 올바른 카메라 위치를 전달하여 빌보드 회전 업데이트
-		BillBoard->UpdateRotationMatrix(InCurrentCamera->GetLocation());
-
-		FString UUIDString = "UID: " + std::to_string(BillBoard->GetUUID());
-		FMatrix RT = BillBoard->GetRTMatrix();
-
-		// UEditor에서 가져오는 대신, 인자로 받은 카메라의 ViewProj 행렬을 사용
-		const FViewProjConstants& viewProjConstData = InCurrentCamera->GetFViewProjConstants();
-		FontRenderer->RenderText(UUIDString.c_str(), RT, viewProjConstData);
+		RenderBillboard(BillBoard, InCurrentCamera);
 	}
 }
 
@@ -531,6 +429,125 @@ void URenderer::RenderPrimitiveIndexed(const FEditorPrimitive& InPrimitive, cons
 void URenderer::RenderEnd() const
 {
 	GetSwapChain()->Present(0, 0); // 1: VSync 활성화
+}
+
+void URenderer::RenderStaticMesh(UStaticMeshComponent* InMeshComp, ID3D11RasterizerState* InRasterizerState)
+{
+	FStaticMesh* MeshAsset = InMeshComp->GetStaticMesh()->GetStaticMeshAsset();
+	if (!MeshAsset)	return;
+
+	// Pipeline setting
+	FPipelineInfo PipelineInfo = {
+		TextureInputLayout,
+		TextureVertexShader,
+		InRasterizerState,
+		DefaultDepthStencilState,
+		TexturePixelShader,
+		nullptr,
+	};
+	Pipeline->UpdatePipeline(PipelineInfo);
+
+	// Constant buffer & transform
+	Pipeline->SetConstantBuffer(0, true, ConstantBufferModels);
+	UpdateConstant(
+		InMeshComp->GetRelativeLocation(),
+		InMeshComp->GetRelativeRotation(),
+		InMeshComp->GetRelativeScale3D()
+	);
+
+	Pipeline->SetVertexBuffer(InMeshComp->GetVertexBuffer(), sizeof(FNormalVertex));
+	Pipeline->SetIndexBuffer(InMeshComp->GetIndexBuffer(), 0);
+
+	// If no material is assigned, render the entire mesh using the default shader
+	if (MeshAsset->MaterialInfo.empty() || InMeshComp->GetStaticMesh()->GetNumMaterials() == 0)
+	{
+		Pipeline->DrawIndexed(MeshAsset->Indices.size(), 0, 0);
+		return;
+	}
+
+	for (const FMeshSection& Section : MeshAsset->Sections)
+	{
+		UMaterial* Material = InMeshComp->GetStaticMesh()->GetMaterial(Section.MaterialSlot);
+		if (Material)
+		{
+			if (Material->GetDiffuseTexture())
+			{
+				auto* Proxy = Material->GetDiffuseTexture()->GetRenderProxy();
+				Pipeline->SetTexture(0, false, Proxy->GetSRV());
+				Pipeline->SetSamplerState(0, false, Proxy->GetSampler());
+			}
+			if (Material->GetAmbientTexture())
+			{
+				auto* Proxy = Material->GetAmbientTexture()->GetRenderProxy();
+				Pipeline->SetTexture(1, false, Proxy->GetSRV());
+			}
+			if (Material->GetSpecularTexture())
+			{
+				auto* Proxy = Material->GetSpecularTexture()->GetRenderProxy();
+				Pipeline->SetTexture(2, false, Proxy->GetSRV());
+			}
+			if (Material->GetAlphaTexture())
+			{
+				auto* Proxy = Material->GetAlphaTexture()->GetRenderProxy();
+				Pipeline->SetTexture(4, false, Proxy->GetSRV());
+			}
+		}
+		Pipeline->DrawIndexed(Section.IndexCount, Section.StartIndex, 0);
+	}
+}
+
+void URenderer::RenderBillboard(UBillBoardComponent* InBillBoardComp, UCamera* InCurrentCamera)
+{
+	if (!InCurrentCamera)	return;
+
+	// 이제 올바른 카메라 위치를 전달하여 빌보드 회전 업데이트
+	InBillBoardComp->UpdateRotationMatrix(InCurrentCamera->GetLocation());
+
+	FString UUIDString = "UID: " + std::to_string(InBillBoardComp->GetUUID());
+	FMatrix RT = InBillBoardComp->GetRTMatrix();
+
+	// UEditor에서 가져오는 대신, 인자로 받은 카메라의 ViewProj 행렬을 사용
+	const FViewProjConstants& viewProjConstData = InCurrentCamera->GetFViewProjConstants();
+	FontRenderer->RenderText(UUIDString.c_str(), RT, viewProjConstData);
+}
+
+void URenderer::RenderPrimitiveDefault(UPrimitiveComponent* InPrimitiveComp, ID3D11RasterizerState* InRasterizerState)
+{
+	// Update pipeline info
+	FPipelineInfo PipelineInfo = {
+		DefaultInputLayout,
+		DefaultVertexShader,
+		InRasterizerState,
+		DefaultDepthStencilState,
+		DefaultPixelShader,
+		nullptr,
+	};
+	Pipeline->UpdatePipeline(PipelineInfo);
+
+	// Update pipeline buffers
+	Pipeline->SetConstantBuffer(0, true, ConstantBufferModels);
+	UpdateConstant(
+		InPrimitiveComp->GetRelativeLocation(),
+		InPrimitiveComp->GetRelativeRotation(),
+		InPrimitiveComp->GetRelativeScale3D()
+	);
+	Pipeline->SetConstantBuffer(2, true, ConstantBufferColor);
+	UpdateConstant(InPrimitiveComp->GetColor());
+
+	// Bind vertex buffer
+	Pipeline->SetVertexBuffer(InPrimitiveComp->GetVertexBuffer(), Stride);
+
+	// Draw vertex + index
+	if (InPrimitiveComp->GetIndexBuffer() && InPrimitiveComp->GetIndicesData())
+	{
+		Pipeline->SetIndexBuffer(InPrimitiveComp->GetIndexBuffer(), 0);
+		Pipeline->DrawIndexed(InPrimitiveComp->GetNumIndices(), 0, 0);
+	}
+	// Draw vertex
+	else
+	{
+		Pipeline->Draw(static_cast<uint32>(InPrimitiveComp->GetNumVertices()), 0);
+	}
 }
 
 /**

@@ -109,7 +109,7 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FString& PathFileName, co
 
 	/** #3. 오브젝트가 사용하는 머티리얼의 목록을 저장 */
 	TSet<FString> UniqueMaterialNames;
-	for(const auto& MaterialName : ObjectInfo.MaterialNameList)
+	for (const auto& MaterialName : ObjectInfo.MaterialNameList)
 	{
 		UniqueMaterialNames.insert(MaterialName);
 	}
@@ -146,14 +146,11 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FString& PathFileName, co
 			}
 		}
 	}
-
 	/** #4. 오브젝트의 서브메쉬 정보를 저장 */
-
 	StaticMesh->Sections.resize(ObjectInfo.MaterialIndexList.size());
 	for (size_t i = 0; i < ObjectInfo.MaterialIndexList.size(); ++i)
 	{
 		StaticMesh->Sections[i].StartIndex = ObjectInfo.MaterialIndexList[i] * 3;
-
 		if (i < ObjectInfo.MaterialIndexList.size() - 1)
 		{
 			StaticMesh->Sections[i].IndexCount = (ObjectInfo.MaterialIndexList[i + 1] - ObjectInfo.MaterialIndexList[i]) * 3;

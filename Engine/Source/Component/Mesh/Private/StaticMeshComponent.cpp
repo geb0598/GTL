@@ -15,9 +15,6 @@ UStaticMeshComponent::UStaticMeshComponent()
 	FString DefaultObjPath = "Data/fruits/fruits.obj";
 
 	StaticMesh = FObjManager::LoadObjStaticMesh(DefaultObjPath);
-	// Enable winding order flip for this OBJ file
-	FObjImporter::Configuration Config;
-	Config.bFlipWindingOrder = true;
 	
 	// Material = FObjManager::LoadObjMaterial("");
 	Type = EPrimitiveType::StaticMesh;

@@ -154,11 +154,15 @@ void UAssetManager::LoadAllObjStaticMesh()
 		"Data/fruits/fruits.obj",
 	};
 
+	// Enable winding order flip for this OBJ file
+	FObjImporter::Configuration Config;
+	Config.bFlipWindingOrder = true;
+
 	// 범위 기반 for문을 사용하여 배열의 모든 요소를 안전하고 간결하게 순회합니다.
 	for (const FString& ObjPath : ObjList)
 	{
 		// FObjManager가 UStaticMesh 포인터를 반환한다고 가정합니다.
-		UStaticMesh* LoadedMesh = FObjManager::LoadObjStaticMesh(ObjPath);
+		UStaticMesh* LoadedMesh = FObjManager::LoadObjStaticMesh(ObjPath, Config);
 
 		// 로드에 성공했는지 항상 확인하는 것이 안전합니다.
 		if (LoadedMesh)
