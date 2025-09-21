@@ -11,6 +11,7 @@ class UPrimitiveComponent;
 class FViewport;
 class UCamera;
 class ULevel;
+class USplitterWidget;
 struct FRay;
 
 enum class EViewModeIndex : uint32

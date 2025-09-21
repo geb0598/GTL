@@ -6,6 +6,7 @@
 #include "Render/UI/Widget/Public/CameraControlWidget.h"
 #include "Render/UI/Widget/Public/FPSWidget.h"
 #include "Render/UI/Widget/Public/SceneHierarchyWidget.h"
+#include "Render/UI/Widget/Public/USplitterDebugWidget.h"
 #include "Manager/Level/Public/LevelManager.h"
 #include "Manager/UI/Public/UIManager.h"
 #include "Manager/Input/Public/InputManager.h"
@@ -23,15 +24,23 @@ UEditor::UEditor()
 	// auto* CameraControlWidget = reinterpret_cast<UCameraControlWidget*>(UIManager.FindWidget("Camera Control Widget"));
 	// auto* SceneHierarchyWidget = reinterpret_cast<USceneHierarchyWidget*>(UIManager.FindWidget("Scene Hierarchy Widget"));
 
-	auto& UIManager = UUIManager::GetInstance();
-	auto* FPSWidget =
-		reinterpret_cast<UFPSWidget*>(UIManager.FindWidget("FPS Widget"));
-	FPSWidget->SetBatchLine(&BatchLines);
-
-	TArray<float> SplitterRatio = UConfigManager::GetInstance().GetSplitterRatio();
+	const TArray<float>& SplitterRatio = UConfigManager::GetInstance().GetSplitterRatio();
 	RootSplitter.SetRatio(SplitterRatio[0]);
 	LeftSplitter.SetRatio(SplitterRatio[1]);
 	RightSplitter.SetRatio(SplitterRatio[2]);
+
+	auto& UIManager = UUIManager::GetInstance();
+
+	if (auto* FPSWidget = reinterpret_cast<UFPSWidget*>(UIManager.FindWidget("FPS Widget")))
+	{
+		FPSWidget->SetBatchLine(&BatchLines);
+	}
+
+	// Splitter UI에게 Splitter 정보를 전달합니다.
+	if (auto* SplitterWidget = reinterpret_cast<USplitterDebugWidget*>(UIManager.FindWidget("Splitter Widget")))
+	{
+		SplitterWidget->SetSplitters(&RootSplitter, &LeftSplitter, &RightSplitter);
+	}
 
 	InitializeLayout();
 }
@@ -202,9 +211,9 @@ void UEditor::UpdateLayout()
 	}
 
 	// 4. 매 프레임 현재 비율에 맞게 전체 레이아웃 크기를 다시 계산하고, 그 결과를 실제 FViewport에 반영합니다.
-	const D3D11_VIEWPORT& ViewportInfo = URenderer::GetInstance().GetDeviceResources()->GetViewportInfo();
-	FRect FullScreenRect = { ViewportInfo.TopLeftX, ViewportInfo.TopLeftY, ViewportInfo.Width, ViewportInfo.Height };
-	RootSplitter.Resize(FullScreenRect);
+	const ImGuiViewport* Viewport = ImGui::GetMainViewport(); // 사용자에게만 보이는 영역의 정보를 가져옵니다. 
+	FRect WorkableRect = { Viewport->WorkPos.x, Viewport->WorkPos.y, Viewport->WorkSize.x, Viewport->WorkSize.y };
+	RootSplitter.Resize(WorkableRect);
 
 	if (FViewportClient* ViewportClient = URenderer::GetInstance().GetViewportClient())
 	{
@@ -239,8 +248,8 @@ void UEditor::ProcessMouseInput(ULevel* InLevel)
 	if (CurrentViewport == nullptr) { return; }
 
 	CurrentCamera = &CurrentViewport->Camera;
-	const UInputManager& Input = UInputManager::GetInstance();
-	const FVector& MousePos = Input.GetMousePosition();
+	const UInputManager& InputManager = UInputManager::GetInstance();
+	const FVector& MousePos = InputManager.GetMousePosition();
 	const D3D11_VIEWPORT& ViewportInfo = CurrentViewport->GetViewport();
 
 	const float NdcX = ((MousePos.X - ViewportInfo.TopLeftX) / ViewportInfo.Width) * 2.0f - 1.0f;
@@ -253,15 +262,15 @@ void UEditor::ProcessMouseInput(ULevel* InLevel)
 	FVector CollisionPoint;
 	float ActorDistance = -1;
 
-	if (Input.IsKeyPressed(EKeyInput::Tab))
+	if (InputManager.IsKeyPressed(EKeyInput::Tab))
 	{
 		Gizmo.IsWorldMode() ? Gizmo.SetLocal() : Gizmo.SetWorld();
 	}
-	if (Input.IsKeyPressed(EKeyInput::Space))
+	if (InputManager.IsKeyPressed(EKeyInput::Space))
 	{
 		Gizmo.ChangeGizmoMode();
 	}
-	if (Input.IsKeyReleased(EKeyInput::MouseLeft))
+	if (InputManager.IsKeyReleased(EKeyInput::MouseLeft))
 	{
 		Gizmo.EndDrag();
 		// 드래그가 끝나면 선택된 뷰포트를 비활성화 합니다.
@@ -302,7 +311,7 @@ void UEditor::ProcessMouseInput(ULevel* InLevel)
 			Gizmo.SetGizmoDirection(EGizmoDirection::None);
 		}
 
-		if (!ImGui::GetIO().WantCaptureMouse && Input.IsKeyPressed(EKeyInput::MouseLeft))
+		if (!ImGui::GetIO().WantCaptureMouse && InputManager.IsKeyPressed(EKeyInput::MouseLeft))
 		{
 			if (ULevelManager::GetInstance().GetCurrentLevel()->GetShowFlags() & EEngineShowFlags::SF_Primitives)
 			{
@@ -323,7 +332,7 @@ void UEditor::ProcessMouseInput(ULevel* InLevel)
 		else
 		{
 			PreviousGizmoDirection = Gizmo.GetGizmoDirection();
-			if (Input.IsKeyPressed(EKeyInput::MouseLeft))
+			if (InputManager.IsKeyPressed(EKeyInput::MouseLeft))
 			{
 				Gizmo.OnMouseDragStart(CollisionPoint);
 				// 드래그가 활성화하면 뷰포트를 고정합니다.

@@ -291,6 +291,12 @@
     <ClCompile Include="Source\Editor\Private\SplitterWindow.cpp">
       <Filter>Source\Editor\Private</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Render\UI\Widget\Private\USplitterDebugWidget.cpp">
+      <Filter>Source\Render\UI\Widget\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Render\UI\Window\Private\EditorWindow.cpp">
+      <Filter>Source\Render\UI\Window\Private</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -628,8 +634,14 @@
     <ClInclude Include="Source\Factory\Actor\Public\StaticMeshActorFactory.h">
       <Filter>Source\Factory\Actor\Public</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Render\UI\Widget\Public\USplitterDebugWidget.h">
+      <Filter>Source\Render\UI\Widget\Public</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Editor\Public\SplitterWindow.h">
       <Filter>Source\Editor\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Render\UI\Window\Public\EditorWindow.h">
+      <Filter>Source\Render\UI\Window\Public</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
