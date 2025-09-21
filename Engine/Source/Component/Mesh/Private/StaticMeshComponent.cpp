@@ -12,7 +12,7 @@ UStaticMeshComponent::UStaticMeshComponent()
 {
 	UAssetManager& AssetManager = UAssetManager::GetInstance();
 
-	StaticMesh = FObjManager::LoadObjStaticMesh("Data/Cube.obj");
+	StaticMesh = FObjManager::LoadObjStaticMesh("Data/fruits/fruits.obj");
 	// Material = FObjManager::LoadObjMaterial("");
 	Type = EPrimitiveType::StaticMesh;
 
