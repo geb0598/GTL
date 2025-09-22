@@ -70,29 +70,29 @@ void UAssetManager::Initialize()
 	NumVertices.emplace(EPrimitiveType::Line, static_cast<uint32>(VerticesLine.size()));
 
 	// Calculate AABB for all primitive types (excluding StaticMesh)
-	for (const auto& pair : VertexDatas)
+	for (const auto& Pair : VertexDatas)
 	{
-		EPrimitiveType type = pair.first;
-		const auto* vertices = pair.second;
-		if (!vertices || vertices->empty())
+		EPrimitiveType Type = Pair.first;
+		const auto* Vertices = Pair.second;
+		if (!Vertices || Vertices->empty())
 			continue;
 
-		AABBs[type] = CalculateAABB(*vertices);
+		AABBs[Type] = CalculateAABB(*Vertices);
 	}
 
 	// Calculate AABB for each StaticMesh
-	for (const auto& meshPair : StaticMeshCache)
+	for (const auto& MeshPair : StaticMeshCache)
 	{
-		const FString& objPath = meshPair.first;
-		const auto& mesh = meshPair.second;
-		if (!mesh || !mesh->IsValid())
+		const FString& ObjPath = MeshPair.first;
+		const auto& Mesh = MeshPair.second;
+		if (!Mesh || !Mesh->IsValid())
 			continue;
 
-		const auto& vertices = mesh->GetVertices();
-		if (vertices.empty())
+		const auto& Vertices = Mesh->GetVertices();
+		if (Vertices.empty())
 			continue;
 
-		StaticMeshAABBs[objPath] = CalculateAABB(vertices);
+		StaticMeshAABBs[ObjPath] = CalculateAABB(Vertices);
 	}
 
 	// Initialize Shaders
@@ -550,15 +550,15 @@ FAABB UAssetManager::CalculateAABB(const TArray<FNormalVertex>& Vertices)
 	FVector MinPoint(+FLT_MAX, +FLT_MAX, +FLT_MAX);
 	FVector MaxPoint(-FLT_MAX, -FLT_MAX, -FLT_MAX);
 
-	for (const auto& vertex : Vertices)
+	for (const auto& Vertex : Vertices)
 	{
-		MinPoint.X = std::min(MinPoint.X, vertex.Position.X);
-		MinPoint.Y = std::min(MinPoint.Y, vertex.Position.Y);
-		MinPoint.Z = std::min(MinPoint.Z, vertex.Position.Z);
+		MinPoint.X = std::min(MinPoint.X, Vertex.Position.X);
+		MinPoint.Y = std::min(MinPoint.Y, Vertex.Position.Y);
+		MinPoint.Z = std::min(MinPoint.Z, Vertex.Position.Z);
 
-		MaxPoint.X = std::max(MaxPoint.X, vertex.Position.X);
-		MaxPoint.Y = std::max(MaxPoint.Y, vertex.Position.Y);
-		MaxPoint.Z = std::max(MaxPoint.Z, vertex.Position.Z);
+		MaxPoint.X = std::max(MaxPoint.X, Vertex.Position.X);
+		MaxPoint.Y = std::max(MaxPoint.Y, Vertex.Position.Y);
+		MaxPoint.Z = std::max(MaxPoint.Z, Vertex.Position.Z);
 	}
 
 	return FAABB(MinPoint, MaxPoint);
