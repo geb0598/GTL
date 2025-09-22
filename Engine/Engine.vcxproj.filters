@@ -315,6 +315,12 @@
     <ClCompile Include="Source\Core\Private\Archive.cpp">
       <Filter>Source\Core\Private</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Core\Private\WindowsBinWriter.cpp">
+      <Filter>Source\Core\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\Public\WindowsBinReader.cpp">
+      <Filter>Source\Core\Private</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -674,6 +680,12 @@
       <Filter>Source\Utility\Public</Filter>
     </ClInclude>
     <ClInclude Include="Source\Core\Public\Archive.h">
+      <Filter>Source\Core\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\Public\WindowsBinWriter.h">
+      <Filter>Source\Core\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\Public\WindowsBinReader.h">
       <Filter>Source\Core\Public</Filter>
     </ClInclude>
   </ItemGroup>
