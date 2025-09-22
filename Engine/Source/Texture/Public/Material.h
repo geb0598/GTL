@@ -63,7 +63,7 @@ class UMaterial : public UObject
 public:
 	UMaterial() {};
 	UMaterial(const FName& InName) {};
-	~UMaterial() override {};
+	~UMaterial() override;
 	
 	// Texture access functions
 	UTexture* GetDiffuseTexture() const { return DiffuseTexture; }
