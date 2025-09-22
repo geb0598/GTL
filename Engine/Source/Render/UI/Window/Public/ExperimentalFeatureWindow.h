@@ -9,5 +9,7 @@ class UExperimentalFeatureWindow : public UUIWindow
 {
 public:
 	UExperimentalFeatureWindow();
+	virtual ~UExperimentalFeatureWindow() override {}
+
 	void Initialize() override;
 };
