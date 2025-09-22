@@ -1,6 +1,6 @@
 #pragma once
 #include "Core/Public/Object.h"
-#include "Manager/Config/Public/ConfigManager.h"
+class UConfigManager;
 
 enum class ECameraType
 {
@@ -17,18 +17,8 @@ public:
 	static constexpr float DEFAULT_SPEED = 20.0f;
 	static constexpr float SPEED_ADJUST_STEP = 1.0f;
 
-	UCamera() :
-		ViewProjConstants(FViewProjConstants()),
-		RelativeLocation(FVector(-15.0f, 0.f, 10.0f)), RelativeRotation(FVector(0, 0, 0)),
-		FovY(90.f), Aspect(float(Render::INIT_SCREEN_WIDTH) / Render::INIT_SCREEN_HEIGHT),
-		NearZ(0.1f), FarZ(1000.0f), OrthoWidth(90.0f), CameraType(ECameraType::ECT_Perspective)
-	{
-		CurrentMoveSpeed = UConfigManager::GetInstance().GetCameraSensitivity();
-	}
-	~UCamera() override
-	{
-		UConfigManager::GetInstance().SetCameraSensitivity(CurrentMoveSpeed);
-	}
+	UCamera();
+	~UCamera() override;
 
 	/* *
 	* @brief Update 관련 함수
