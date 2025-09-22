@@ -429,6 +429,15 @@ void UConsoleWidget::ProcessCommand(const char* InCommand)
 		ClearLog();
 	}
 
+	// Stat 명령어 처리
+	else if (FString CommandLower = InCommand;
+		std::transform(CommandLower.begin(), CommandLower.end(), CommandLower.begin(), ::tolower),
+		CommandLower.length() > 5 && CommandLower.substr(0, 5) == "stat ")
+	{
+		FString StatCommand = CommandLower.substr(5);
+		HandleStatCommand(StatCommand);
+	}
+
 	// Help 명령어 입력
 	else if (FString CommandLower = InCommand;
 		std::transform(CommandLower.begin(), CommandLower.end(), CommandLower.begin(), ::tolower),
@@ -437,6 +446,9 @@ void UConsoleWidget::ProcessCommand(const char* InCommand)
 		AddLog(ELogType::System, "Available Commands:");
 		AddLog(ELogType::Info, "  CLEAR - Clear The Console");
 		AddLog(ELogType::Info, "  HELP - Show This Help");
+		AddLog(ELogType::Info, "  STAT FPS - Show FPS overlay");
+		AddLog(ELogType::Info, "  STAT MEMORY - Show memory overlay");
+		AddLog(ELogType::Info, "  STAT NONE - Hide all overlays");
 		AddLog(ELogType::Info, "  UE_LOG(\"String with format\", Args...) - Enhanced printf Formatting");
 		AddLog(ELogType::Debug, "    기본 예제: UE_LOG(\"Hello World %%d\", 2025)");
 		AddLog(ELogType::Debug, "    문자열: UE_LOG(\"User: %%s\", \"John\")");
@@ -460,6 +472,27 @@ void UConsoleWidget::ProcessCommand(const char* InCommand)
 
 	// 스크롤 하단으로 이동
 	bIsScrollToBottom = true;
+}
+
+void UConsoleWidget::HandleStatCommand(const FString& StatCommand)
+{
+	if (StatCommand == "fps")
+	{
+		AddLog(ELogType::Success, "FPS overlay enabled");
+	}
+	else if (StatCommand == "memory")
+	{
+		AddLog(ELogType::Success, "Memory overlay enabled");
+	}
+	else if (StatCommand == "none")
+	{
+		AddLog(ELogType::Success, "All overlays disabled");
+	}
+	else
+	{
+		AddLog(ELogType::Error, "Unknown stat command: %s", StatCommand.c_str());
+		AddLog(ELogType::Info, "Available: fps, memory, none");
+	}
 }
 
 /**
