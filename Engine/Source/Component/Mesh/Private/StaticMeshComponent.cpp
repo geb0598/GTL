@@ -5,6 +5,7 @@
 #include "Component/Mesh/Public/MeshComponent.h"
 #include "Manager/Asset/Public/ObjManager.h"
 #include "Manager/Asset/Public/AssetManager.h"
+#include "Physics/Public/AABB.h"
 
 IMPLEMENT_CLASS(UStaticMeshComponent, UMeshComponent)
 
@@ -29,7 +30,7 @@ UStaticMeshComponent::UStaticMeshComponent()
 
 	RenderState.CullMode = ECullMode::Back;
 	RenderState.FillMode = EFillMode::Solid;
-	//BoundingBox = &ResourceManager.GetAABB();
+	BoundingBox = &AssetManager.GetStaticMeshAABB(DefaultObjPath);
 }
 
 UStaticMeshComponent::~UStaticMeshComponent()

@@ -55,6 +55,16 @@ const TArray<FNormalVertex>& UStaticMesh::GetVertices() const
 	return EmptyVertices;
 }
 
+TArray<FNormalVertex>& UStaticMesh::GetVertices()
+{
+	if (StaticMeshAsset)
+	{
+		return StaticMeshAsset->Vertices;
+	}
+	static TArray<FNormalVertex> EmptyVertices;
+	return EmptyVertices;
+}
+
 const TArray<uint32>& UStaticMesh::GetIndices() const
 {
 	if (StaticMeshAsset)
