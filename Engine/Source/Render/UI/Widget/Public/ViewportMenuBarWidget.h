@@ -16,6 +16,8 @@ public:
 	void SetViewportClient(FViewportClient* InViewportClient) { ViewportClient = InViewportClient; }
 
 private:
+	void RenderCameraControls(UCamera& InCamera); // 특정 카메라의 제어 UI를 렌더링하는 헬퍼 함수
+
 	FViewportClient* ViewportClient = nullptr; // 참조할 뷰포트 클라이언트 대상
 };
 
