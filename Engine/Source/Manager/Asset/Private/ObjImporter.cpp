@@ -52,7 +52,15 @@ bool FObjImporter::LoadObj(const std::filesystem::path& FilePath, FObjInfo* OutO
 				return false;
 			}
 
-			OutObjInfo->VertexList.emplace_back(Position);
+			if (Config.bPositionToUEBasis)
+			{
+				OutObjInfo->VertexList.emplace_back(PositionToUEBasis(Position));
+			}
+			else
+			{
+				OutObjInfo->VertexList.emplace_back(Position);
+			}
+
 		}
 		/** Vertex Normal */
 		else if (Prefix == "vn")
@@ -77,7 +85,14 @@ bool FObjImporter::LoadObj(const std::filesystem::path& FilePath, FObjInfo* OutO
 				return false;
 			}
 
-			OutObjInfo->TexCoordList.emplace_back(TexCoord);
+			if (Config.bUVToUEBasis)
+			{
+				OutObjInfo->TexCoordList.emplace_back(UVToUEBasis(TexCoord));
+			}
+			else
+			{
+				OutObjInfo->TexCoordList.emplace_back(TexCoord);
+			}
 		}
 
 		// =========================== Group Information ============================ //

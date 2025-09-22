@@ -104,6 +104,8 @@ struct FObjImporter
 		FString DefaultName = "DefaultObject";
 		bool bIsObjectEnabled = false;
 		bool bFlipWindingOrder = false;
+		bool bPositionToUEBasis = false;
+		bool bUVToUEBasis = false;
 		// ...
 	};
 
@@ -134,4 +136,14 @@ private:
 	 *       Mixing formats (e.g., 'f 1/1' and 'f 1//1') may lead to incorrect parsing.
 	 */
 	static bool ParseFaceBuffer(const FString& FaceBuffer, FObjectInfo* OutObjectInfo);
+
+	static FVector PositionToUEBasis(const FVector& InVector)
+	{
+		return FVector(InVector.X, -InVector.Y, InVector.Z);
+	}
+
+	static FVector2 UVToUEBasis(const FVector2& InVector)
+	{
+		return FVector2(InVector.X, 1.0f - InVector.Y);
+	}
 };
