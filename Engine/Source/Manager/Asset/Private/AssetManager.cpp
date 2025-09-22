@@ -114,6 +114,9 @@ void UAssetManager::Initialize()
 
 void UAssetManager::Release()
 {
+	// Texture Resource 해제
+	ReleaseAllTextures();
+
 	// TMap.Value()
 	for (auto& Pair : VertexBuffers)
 	{
@@ -140,9 +143,6 @@ void UAssetManager::Release()
 	// TMap.Empty()
 	VertexBuffers.clear();
 	IndexBuffers.clear();
-
-	// Texture Resource 해제
-	ReleaseAllTextures();
 }
 
 /**
