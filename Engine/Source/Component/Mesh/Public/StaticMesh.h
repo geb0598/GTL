@@ -63,6 +63,7 @@ public:
 
 	// Geometry Data
 	const TArray<FNormalVertex>& GetVertices() const;
+	TArray<FNormalVertex>& GetVertices();
 	const TArray<uint32>& GetIndices() const;
 
 	// Material Data

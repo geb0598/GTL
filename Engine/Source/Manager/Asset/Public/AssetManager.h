@@ -54,6 +54,7 @@ public:
 
 	// Bounding Box
 	const FAABB& GetAABB(EPrimitiveType InType);
+	const FAABB& GetStaticMeshAABB(FString InName);
 
 private:
 	// Vertex Resource
@@ -82,6 +83,10 @@ private:
 	// Release Functions
 	void ReleaseAllTextures();
 
+	// Helper Functions
+	FAABB CalculateAABB(const TArray<FNormalVertex>& Vertices);
+
 	// AABB Resource
-	TMap<EPrimitiveType, FAABB> AABBs; // 각 타입별 AABB 저장
+	TMap<EPrimitiveType, FAABB> AABBs;		// 각 타입별 AABB 저장
+	TMap<FString, FAABB> StaticMeshAABBs;	// 스태틱 메시용 AABB 저장
 };

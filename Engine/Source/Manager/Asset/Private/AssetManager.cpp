@@ -69,29 +69,30 @@ void UAssetManager::Initialize()
 	NumVertices.emplace(EPrimitiveType::Ring, static_cast<uint32>(VerticesRing.size()));
 	NumVertices.emplace(EPrimitiveType::Line, static_cast<uint32>(VerticesLine.size()));
 
-	// Calculate Cube AABB
-	for (const auto& pair : VertexDatas)
+	// Calculate AABB for all primitive types (excluding StaticMesh)
+	for (const auto& Pair : VertexDatas)
 	{
-		EPrimitiveType type = pair.first;
-		const auto* vertices = pair.second;
-		if (!vertices || vertices->empty())
+		EPrimitiveType Type = Pair.first;
+		const auto* Vertices = Pair.second;
+		if (!Vertices || Vertices->empty())
 			continue;
 
-		FVector minPoint(+FLT_MAX, +FLT_MAX, +FLT_MAX);
-		FVector maxPoint(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+		AABBs[Type] = CalculateAABB(*Vertices);
+	}
 
-		for (const auto& vertex : *vertices)
-		{
-			minPoint.X = std::min(minPoint.X, vertex.Position.X);
-			minPoint.Y = std::min(minPoint.Y, vertex.Position.Y);
-			minPoint.Z = std::min(minPoint.Z, vertex.Position.Z);
+	// Calculate AABB for each StaticMesh
+	for (const auto& MeshPair : StaticMeshCache)
+	{
+		const FString& ObjPath = MeshPair.first;
+		const auto& Mesh = MeshPair.second;
+		if (!Mesh || !Mesh->IsValid())
+			continue;
 
-			maxPoint.X = std::max(maxPoint.X, vertex.Position.X);
-			maxPoint.Y = std::max(maxPoint.Y, vertex.Position.Y);
-			maxPoint.Z = std::max(maxPoint.Z, vertex.Position.Z);
-		}
+		const auto& Vertices = Mesh->GetVertices();
+		if (Vertices.empty())
+			continue;
 
-		AABBs[type] = FAABB(minPoint, maxPoint);
+		StaticMeshAABBs[ObjPath] = CalculateAABB(Vertices);
 	}
 
 	// Initialize Shaders
@@ -249,6 +250,11 @@ ID3D11InputLayout* UAssetManager::GetIputLayout(EShaderType Type)
 const FAABB& UAssetManager::GetAABB(EPrimitiveType InType)
 {
 	return AABBs[InType];
+}
+
+const FAABB& UAssetManager::GetStaticMeshAABB(FString InName)
+{
+	return StaticMeshAABBs[InName];
 }
 
 /**
@@ -532,4 +538,28 @@ ID3D11ShaderResourceView* UAssetManager::CreateTextureFromMemory(const void* InD
 	}
 
 	return SUCCEEDED(ResultHandle) ? TextureSRV : nullptr;
+}
+
+/**
+ * @brief Vertex 배열로부터 AABB(Axis-Aligned Bounding Box)를 계산하는 헬퍼 함수
+ * @param vertices 정점 데이터 배열
+ * @return 계산된 FAABB 객체
+ */
+FAABB UAssetManager::CalculateAABB(const TArray<FNormalVertex>& Vertices)
+{
+	FVector MinPoint(+FLT_MAX, +FLT_MAX, +FLT_MAX);
+	FVector MaxPoint(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+
+	for (const auto& Vertex : Vertices)
+	{
+		MinPoint.X = std::min(MinPoint.X, Vertex.Position.X);
+		MinPoint.Y = std::min(MinPoint.Y, Vertex.Position.Y);
+		MinPoint.Z = std::min(MinPoint.Z, Vertex.Position.Z);
+
+		MaxPoint.X = std::max(MaxPoint.X, Vertex.Position.X);
+		MaxPoint.Y = std::max(MaxPoint.Y, Vertex.Position.Y);
+		MaxPoint.Z = std::max(MaxPoint.Z, Vertex.Position.Z);
+	}
+
+	return FAABB(MinPoint, MaxPoint);
 }
