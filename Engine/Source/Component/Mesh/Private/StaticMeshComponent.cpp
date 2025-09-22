@@ -12,12 +12,16 @@ IMPLEMENT_CLASS(UStaticMeshComponent, UMeshComponent)
 
 UStaticMeshComponent::UStaticMeshComponent()
 {
+	FString DefaultObjPath = "Data/fruits/fruits.obj";
+	SetStaticMesh(DefaultObjPath);
+}
+
+void UStaticMeshComponent::SetStaticMesh(const FString& DefaultObjPath)
+{
 	UAssetManager& AssetManager = UAssetManager::GetInstance();
 
-	FString DefaultObjPath = "Data/fruits/fruits.obj";
-
 	StaticMesh = FObjManager::LoadObjStaticMesh(DefaultObjPath);
-	
+
 	// Material = FObjManager::LoadObjMaterial("");
 	Type = EPrimitiveType::StaticMesh;
 

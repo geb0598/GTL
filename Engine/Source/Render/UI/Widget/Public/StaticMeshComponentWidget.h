@@ -13,5 +13,5 @@ public:
 	void RenderWidget() override;
 
 private:
-	UStaticMeshComponent* Component{};
+	UStaticMeshComponent* StaticMeshComponent{};
 };
