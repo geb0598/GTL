@@ -47,11 +47,15 @@ void UCamera::UpdateInput()
 
 		/**
 		* @brief 마우스 위치 변화량을 감지하여 카메라의 회전을 담당합니다.
+		* 원근 투영 모드를 적용한 카메라만 회전이 가능합니다.
 		*/
-		const FVector MouseDelta = UInputManager::GetInstance().GetMouseDelta();
-		RelativeRotation.Z += MouseDelta.X * KeySensitivityDegPerPixel;
-		RelativeRotation.Y += MouseDelta.Y * KeySensitivityDegPerPixel;
-		//UE_LOG("mouse_delta: %.2f, %.2f", MouseDelta.X * KeySensitivityDegPerPixel, MouseDelta.Y * KeySensitivityDegPerPixel);
+		if (CameraType == ECameraType::ECT_Perspective)
+		{
+			const FVector MouseDelta = UInputManager::GetInstance().GetMouseDelta();
+			RelativeRotation.Z += MouseDelta.X * KeySensitivityDegPerPixel;
+			RelativeRotation.Y += MouseDelta.Y * KeySensitivityDegPerPixel;
+		}
+
 
 		// Yaw 래핑(값이 무한히 커지지 않도록)
 		if (RelativeRotation.Z > 180.0f) RelativeRotation.Z -= 360.0f;
@@ -131,7 +135,6 @@ void UCamera::UpdateMatrixByOrth()
 	/**
 	 * @brief Projection 행렬 연산
 	 */
-	OrthoWidth = 2.0f * std::tanf(FVector::GetDegreeToRadian(FovY) * 0.5f);
 	const float OrthoHeight = OrthoWidth / Aspect;
 	const float Left = -OrthoWidth * 0.5f;
 	const float Right = OrthoWidth * 0.5f;
