@@ -28,9 +28,7 @@ struct FViewportCameraData
 
 	FViewportCameraData()
 		:Location(-15, 0, 0), Rotation(0, 0, 0), FocusLocation(0, 0, 0), FovY(90.f),
-		NearClip(0.1f), FarClip(100.0f), OrthoWidth(90.0f), ViewportCameraType(EViewportCameraType::Perspective)
-	{
-	}
+		NearClip(0.1f), FarClip(100.0f), OrthoWidth(90.0f), ViewportCameraType(EViewportCameraType::Perspective) {}
 };
 
 UCLASS()
