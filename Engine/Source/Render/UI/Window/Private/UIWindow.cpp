@@ -64,7 +64,6 @@ void UUIWindow::OnMainWindowResized() const
 
 	const ImGuiViewport* Viewport = ImGui::GetMainViewport();
 	const ImVec2 CurrentViewportSize = Viewport->WorkSize;
-	float MenuBarOffset = GetMenuBarOffset();
 
 	const ImVec2 Anchor = PositionRatio;
 	const ImVec2 Pivot = {0.f, 0.f};
@@ -76,7 +75,7 @@ void UUIWindow::OnMainWindowResized() const
 
 	ImVec2 TargetPosition(
 		Viewport->WorkPos.x + CurrentViewportSize.x * Anchor.x,
-		Viewport->WorkPos.y + CurrentViewportSize.y * Anchor.y + MenuBarOffset
+		Viewport->WorkPos.y + CurrentViewportSize.y * Anchor.y
 	);
 
 	ImVec2 FinalPosition(
