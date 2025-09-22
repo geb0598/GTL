@@ -60,12 +60,8 @@ void UStatOverlay::Render()
 
 	D2DRenderTarget->BeginDraw();
 
-	if (IsStatEnabled(EStatType::FPS)) {
-		RenderFPS();
-	}
-	if (IsStatEnabled(EStatType::Memory)) {
-		RenderMemory();
-	}
+	if (IsStatEnabled(EStatType::FPS))		{ RenderFPS(); }
+	if (IsStatEnabled(EStatType::Memory))	{ RenderMemory(); }
 
 	D2DRenderTarget->EndDraw();
 }
