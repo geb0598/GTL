@@ -22,7 +22,7 @@ struct FArchive
 		}
 		else
 		{
-			T::Serialize(*this, Value);
+			UE_LOG_ERROR("직렬화 할 수 없는 형식입니다.");
 		}
 		return *this;
 	}

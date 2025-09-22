@@ -6,6 +6,7 @@
 #include <sstream>
 
 // GTL Headers
+#include "Core/Public/Archive.h"
 #include "Global/Macro.h"
 #include "Global/Types.h"
 #include "Global/Vector.h"
@@ -24,6 +25,18 @@ struct FObjInfo
 	TArray<FVector> NormalList;
 	TArray<FVector2> TexCoordList;
 };
+
+inline FArchive& operator<<(FArchive& Ar, FObjInfo& ObjInfo)
+{
+	Ar << ObjInfo.ObjectInfoList;
+	Ar << ObjInfo.ObjectMaterialInfoList;
+
+	Ar << ObjInfo.VertexList;
+	Ar << ObjInfo.NormalList;
+	Ar << ObjInfo.TexCoordList;
+
+	return Ar;
+}
 
 /**
  * @brief Represents a single object within a .obj file, defined by the 'o' tag.
@@ -48,6 +61,23 @@ struct FObjectInfo
 	/** Stores the starting face index for each material defined by the 'usemtl' tag. */
 	TArray<size_t> MaterialIndexList; 
 };
+
+inline FArchive& operator<<(FArchive& Ar, FObjectInfo& ObjectInfo)
+{
+	Ar << ObjectInfo.Name;
+
+	Ar << ObjectInfo.VertexIndexList;
+	Ar << ObjectInfo.NormalIndexList;
+	Ar << ObjectInfo.TexCoordIndexList;
+
+	Ar << ObjectInfo.GroupNameList;
+	Ar << ObjectInfo.GroupIndexList;
+
+	Ar << ObjectInfo.MaterialNameList;
+	Ar << ObjectInfo.MaterialIndexList;
+
+	return Ar;
+}
 
 struct FObjectMaterialInfo
 {
@@ -95,6 +125,26 @@ struct FObjectMaterialInfo
 	/** Bump map (map_bump or bump). */
 	FString BumpMap;
 };
+
+inline FArchive& operator<<(FArchive& Ar, FObjectMaterialInfo& ObjectMaterialInfo)
+{
+	Ar << ObjectMaterialInfo.Name;
+	Ar << ObjectMaterialInfo.Ka;
+	Ar << ObjectMaterialInfo.Kd;
+	Ar << ObjectMaterialInfo.Ks;
+	Ar << ObjectMaterialInfo.Ke;
+	Ar << ObjectMaterialInfo.Ns;
+	Ar << ObjectMaterialInfo.Ni;
+	Ar << ObjectMaterialInfo.D;
+	Ar << ObjectMaterialInfo.Illumination;
+	Ar << ObjectMaterialInfo.KaMap;
+	Ar << ObjectMaterialInfo.KdMap;
+	Ar << ObjectMaterialInfo.KsMap;
+	Ar << ObjectMaterialInfo.NsMap;
+	Ar << ObjectMaterialInfo.DMap;
+	Ar << ObjectMaterialInfo.BumpMap;
+	return Ar;
+}
 
 struct FObjImporter
 {
