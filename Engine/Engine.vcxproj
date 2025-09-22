@@ -266,6 +266,7 @@
     <ClInclude Include="Source\Render\UI\Widget\Public\SceneHierarchyWidget.h" />
     <ClInclude Include="Source\Render\UI\Widget\Public\SceneIOWidget.h" />
     <ClInclude Include="Source\Render\UI\Widget\Public\SplitterDebugWidget.h" />
+    <ClInclude Include="Source\Render\UI\Widget\Public\StaticMeshComponentWidget.h" />
     <ClInclude Include="Source\Render\UI\Widget\Public\TargetActorTransformWidget.h" />
     <ClInclude Include="Source\Render\UI\Widget\Public\ViewportMenuBarWidget.h" />
     <ClInclude Include="Source\Render\UI\Widget\Public\Widget.h" />
@@ -390,6 +391,7 @@
     <ClCompile Include="Source\Render\UI\Widget\Private\SceneHierarchyWidget.cpp" />
     <ClCompile Include="Source\Render\UI\Widget\Private\SceneIOWidget.cpp" />
     <ClCompile Include="Source\Render\UI\Widget\Private\SplitterDebugWidget.cpp" />
+    <ClCompile Include="Source\Render\UI\Widget\Private\StaticMeshComponentWidget.cpp" />
     <ClCompile Include="Source\Render\UI\Widget\Private\TargetActorTransformWidget.cpp" />
     <ClCompile Include="Source\Render\UI\Widget\Private\ViewportMenuBarWidget.cpp" />
     <ClCompile Include="Source\Render\UI\Widget\Private\Widget.cpp" />

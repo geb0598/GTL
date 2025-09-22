@@ -5,6 +5,7 @@
 #include "Component/Public/BillBoardComponent.h"
 #include "Component/Public/PrimitiveComponent.h"
 #include "Manager/Level/Public/LevelManager.h"
+#include "Manager/UI/Public/UIManager.h"
 
 ULevel::ULevel() = default;
 
@@ -154,7 +155,12 @@ void ULevel::SetSelectedActor(AActor* InActor)
 		}
 	}
 
+	if (InActor != SelectedActor)
+	{
+		UUIManager::GetInstance().OnSelectedActorChanged(InActor);
+	}
 	SelectedActor = InActor;
+
 	if (SelectedActor)
 	{
 		for (auto& Component : SelectedActor->GetOwnedComponents())
@@ -169,7 +175,6 @@ void ULevel::SetSelectedActor(AActor* InActor)
 			}
 		}
 	}
-	//Gizmo->SetTargetActor(SelectedActor);
 }
 
 /**

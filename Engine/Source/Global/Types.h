@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <functional>
 
 template<typename T, typename Alloc = std::allocator<T>>
 using TArray = std::vector<T, Alloc>;
@@ -27,6 +28,8 @@ template<typename T, typename Container = std::deque<T>>
 using TQueue = std::queue<T, Container>;
 template<typename T>
 using TOptional = std::optional<T>;
+template<typename T>
+using TFunction = std::function<T>;
 
 using FString = std::string;
 using uint8 = std::uint8_t;

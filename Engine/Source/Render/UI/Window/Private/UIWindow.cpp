@@ -42,6 +42,18 @@ UUIWindow::~UUIWindow()
 	}
 }
 
+void UUIWindow::ClearWidget()
+{
+	for (UWidget* Widget : Widgets)
+	{
+		if (!Widget->IsSingleton())
+		{
+			SafeDelete(Widget);
+		}
+	}
+	Widgets.clear(); // 배열 비우기
+}
+
 /**
  * @brief 뷰포트가 리사이징 되었을 때 앵커/좌상단 기준 상대 위치 비율을 고정하는 로직
  */

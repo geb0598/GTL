@@ -13,6 +13,7 @@ class UStaticMeshComponent : public UMeshComponent
 public:
 	UStaticMeshComponent();
 	~UStaticMeshComponent();
+
 	//void Serialize(bool bIsLoading, Json Handle)
 	//{
 	//	Super::Serialize(IsLoading, Handle);
@@ -32,6 +33,9 @@ public:
 
 public:
 	UStaticMesh* GetStaticMesh() { return StaticMesh; }
+	void SetStaticMesh(const FString& InObjPath);
+
+	TObjectPtr<UClass> GetSpecificWidgetClass() const override;
 
 private:
 	TObjectPtr<UStaticMesh> StaticMesh;
