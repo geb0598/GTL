@@ -25,7 +25,7 @@ public:
 	EComponentType GetComponentType() { return ComponentType; }
 
 	void SetOwner(AActor* InOwner) { Owner = InOwner; }
-	AActor* GetOwner() const {return Owner;}
+	AActor* GetOwner() const { return Owner; }
 
 	EComponentType GetComponentType() const { return ComponentType; }
 

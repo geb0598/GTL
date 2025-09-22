@@ -16,26 +16,26 @@ UStaticMeshComponent::UStaticMeshComponent()
 	SetStaticMesh(DefaultObjPath);
 }
 
-void UStaticMeshComponent::SetStaticMesh(const FString& DefaultObjPath)
+void UStaticMeshComponent::SetStaticMesh(const FString& InObjPath)
 {
 	UAssetManager& AssetManager = UAssetManager::GetInstance();
 
-	StaticMesh = FObjManager::LoadObjStaticMesh(DefaultObjPath);
+	StaticMesh = FObjManager::LoadObjStaticMesh(InObjPath);
 
 	// Material = FObjManager::LoadObjMaterial("");
 	Type = EPrimitiveType::StaticMesh;
 
 	Vertices = &(StaticMesh.Get()->GetVertices());
-	VertexBuffer = AssetManager.GetVertexBuffer(DefaultObjPath);
+	VertexBuffer = AssetManager.GetVertexBuffer(InObjPath);
 	NumVertices = Vertices->size();
 
 	Indices = &(StaticMesh.Get()->GetIndices());
-	IndexBuffer = AssetManager.GetIndexBuffer(DefaultObjPath);
+	IndexBuffer = AssetManager.GetIndexBuffer(InObjPath);
 	NumIndices = Indices->size();
 
 	RenderState.CullMode = ECullMode::Back;
 	RenderState.FillMode = EFillMode::Solid;
-	BoundingBox = &AssetManager.GetStaticMeshAABB(DefaultObjPath);
+	BoundingBox = &AssetManager.GetStaticMeshAABB(InObjPath);
 }
 
 UStaticMeshComponent::~UStaticMeshComponent()
