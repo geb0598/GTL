@@ -6,33 +6,43 @@
 #include "Manager/Asset/Public/ObjManager.h"
 #include "Manager/Asset/Public/AssetManager.h"
 #include "Physics/Public/AABB.h"
+#include "Render/UI/Widget/Public/StaticMeshComponentWidget.h"
 
 IMPLEMENT_CLASS(UStaticMeshComponent, UMeshComponent)
 
 UStaticMeshComponent::UStaticMeshComponent()
 {
+	FName DefaultObjPath = "Data/fruits/fruits.obj";
+	SetStaticMesh(DefaultObjPath);
+}
+
+void UStaticMeshComponent::SetStaticMesh(const FName& InObjPath)
+{
 	UAssetManager& AssetManager = UAssetManager::GetInstance();
 
-	FString DefaultObjPath = "Data/fruits/fruits.obj";
+	StaticMesh = FObjManager::LoadObjStaticMesh(InObjPath);
 
-	StaticMesh = FObjManager::LoadObjStaticMesh(DefaultObjPath);
-	
 	// Material = FObjManager::LoadObjMaterial("");
 	Type = EPrimitiveType::StaticMesh;
 
 	Vertices = &(StaticMesh.Get()->GetVertices());
-	VertexBuffer = AssetManager.GetVertexBuffer(DefaultObjPath);
+	VertexBuffer = AssetManager.GetVertexBuffer(InObjPath);
 	NumVertices = Vertices->size();
 
 	Indices = &(StaticMesh.Get()->GetIndices());
-	IndexBuffer = AssetManager.GetIndexBuffer(DefaultObjPath);
+	IndexBuffer = AssetManager.GetIndexBuffer(InObjPath);
 	NumIndices = Indices->size();
 
 	RenderState.CullMode = ECullMode::Back;
 	RenderState.FillMode = EFillMode::Solid;
-	BoundingBox = &AssetManager.GetStaticMeshAABB(DefaultObjPath);
+	BoundingBox = &AssetManager.GetStaticMeshAABB(InObjPath);
 }
 
 UStaticMeshComponent::~UStaticMeshComponent()
 {
+}
+
+TObjectPtr<UClass> UStaticMeshComponent::GetSpecificWidgetClass() const
+{
+	return UStaticMeshComponentWidget::StaticClass();
 }

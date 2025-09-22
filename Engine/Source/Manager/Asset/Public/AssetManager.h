@@ -35,18 +35,18 @@ public:
 	ID3D11InputLayout* GetIputLayout(EShaderType Type);
 
 	// Texture 관련 함수들
-	ComPtr<ID3D11ShaderResourceView> LoadTexture(const FString& InFilePath, const FName& InName = FName::None);
-	UTexture* CreateTexture(const FString& InFilePath, const FName& InName = FName::None);
-	ComPtr<ID3D11ShaderResourceView> GetTexture(const FString& InFilePath);
-	void ReleaseTexture(const FString& InFilePath);
-	bool HasTexture(const FString& InFilePath) const;
+	ComPtr<ID3D11ShaderResourceView> LoadTexture(const FName& InFilePath, const FName& InName = FName::None);
+	UTexture* CreateTexture(const FName& InFilePath, const FName& InName = FName::None);
+	ComPtr<ID3D11ShaderResourceView> GetTexture(const FName& InFilePath);
+	void ReleaseTexture(const FName& InFilePath);
+	bool HasTexture(const FName& InFilePath) const;
 
 	// StaticMesh 관련 함수
 	void LoadAllObjStaticMesh();
 	ID3D11Buffer* CreateVertexBuffer(TArray<FNormalVertex> InVertices);
-	ID3D11Buffer* GetVertexBuffer(FString InObjPath);
+	ID3D11Buffer* GetVertexBuffer(FName InObjPath);
 	ID3D11Buffer* CreateIndexBuffer(TArray<uint32> InIndices);
-	ID3D11Buffer* GetIndexBuffer(FString InObjPath);
+	ID3D11Buffer* GetIndexBuffer(FName InObjPath);
 
 	// Create Texture
 	static ID3D11ShaderResourceView* CreateTextureFromFile(const path& InFilePath);
@@ -54,7 +54,7 @@ public:
 
 	// Bounding Box
 	const FAABB& GetAABB(EPrimitiveType InType);
-	const FAABB& GetStaticMeshAABB(FString InName);
+	const FAABB& GetStaticMeshAABB(FName InName);
 
 private:
 	// Vertex Resource
@@ -73,12 +73,12 @@ private:
 	TMap<EShaderType, ID3D11PixelShader*> PixelShaders;
 
 	// Texture Resource
-	TMap<FString, ID3D11ShaderResourceView*> TextureCache;
+	TMap<FName, ID3D11ShaderResourceView*> TextureCache;
 
 	// StaticMesh Resource
-	TMap<FString, std::unique_ptr<UStaticMesh>> StaticMeshCache;
-	TMap<FString, ID3D11Buffer*> StaticMeshVertexBuffers;
-	TMap<FString, ID3D11Buffer*> StaticMeshIndexBuffers;
+	TMap<FName, std::unique_ptr<UStaticMesh>> StaticMeshCache;
+	TMap<FName, ID3D11Buffer*> StaticMeshVertexBuffers;
+	TMap<FName, ID3D11Buffer*> StaticMeshIndexBuffers;
 
 	// Release Functions
 	void ReleaseAllTextures();
@@ -88,5 +88,5 @@ private:
 
 	// AABB Resource
 	TMap<EPrimitiveType, FAABB> AABBs;		// 각 타입별 AABB 저장
-	TMap<FString, FAABB> StaticMeshAABBs;	// 스태틱 메시용 AABB 저장
+	TMap<FName, FAABB> StaticMeshAABBs;	// 스태틱 메시용 AABB 저장
 };

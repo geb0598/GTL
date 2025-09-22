@@ -40,6 +40,10 @@ FName::FName(const FString& InString)
 	}
 }
 
+FName::FName() : FName(FString(""))
+{
+}
+
 /**
  * @brief c-style 문자열을 인자로 받는 FName 생성자
  * @param InStringPtr c-style 문자열

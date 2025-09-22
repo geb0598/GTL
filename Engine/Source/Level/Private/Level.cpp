@@ -5,6 +5,7 @@
 #include "Component/Public/BillBoardComponent.h"
 #include "Component/Public/PrimitiveComponent.h"
 #include "Manager/Level/Public/LevelManager.h"
+#include "Manager/UI/Public/UIManager.h"
 
 ULevel::ULevel() = default;
 
@@ -19,14 +20,6 @@ ULevel::~ULevel()
 	{
 		SafeDelete(Actor);
 	}
-
-	// Deprecated : EditorPrimitive는 에디터에서 처리
-	// for (auto Actor : EditorActors)
-	// {
-	// 	SafeDelete(Actor);
-	// }
-
-	SafeDelete(CameraPtr);
 }
 
 void ULevel::Init()
@@ -51,33 +44,10 @@ void ULevel::Update()
 	{
 		if (Actor)
 		{
-			/*if (pOldActor != nullptr)
-			{
-				if (Actor->IsA(pOldActor->GetClass()))
-				{
-					UE_LOG("두개 같은 클래스");
-				}
-				else
-				{
-					UE_LOG("두개 다른 클래스");
-				}
-			}
-			pOldActor = Actor;*/
 			Actor->Tick();
 			AddLevelPrimitiveComponent(Actor);
 		}
 	}
-
-	//Deprecated : EditorPrimitive는 에디터에서 처리
-	/*for (auto& Actor : EditorActors)
-	{
-		if (Actor)
-		{
-			Actor->Tick();
-			AddEditorPrimitiveComponent(Actor);
-		}
-	}*/
-
 }
 
 void ULevel::Render()
@@ -118,23 +88,6 @@ void ULevel::AddLevelPrimitiveComponent(AActor* Actor)
 		}
 	}
 }
-//Deprecated : EditorPrimitive는 에디터에서 처리
-//void ULevel::AddEditorPrimitiveComponent(AActor* Actor)
-//{
-//	if (!Actor) return;
-//
-//	for (auto& Component : Actor->GetOwnedComponents())
-//	{
-//		if (Component->GetComponentType() >= EComponentType::Primitive)
-//		{
-//			UPrimitiveComponent* PrimitiveComponent = static_cast<UPrimitiveComponent*>(Component);
-//			if (PrimitiveComponent->IsVisible())
-//			{
-//				EditorPrimitiveComponents.push_back(PrimitiveComponent);
-//			}
-//		}
-//	}
-//}
 
 void ULevel::SetSelectedActor(AActor* InActor)
 {
@@ -154,7 +107,12 @@ void ULevel::SetSelectedActor(AActor* InActor)
 		}
 	}
 
+	if (InActor != SelectedActor)
+	{
+		UUIManager::GetInstance().OnSelectedActorChanged(InActor);
+	}
 	SelectedActor = InActor;
+
 	if (SelectedActor)
 	{
 		for (auto& Component : SelectedActor->GetOwnedComponents())
@@ -169,7 +127,6 @@ void ULevel::SetSelectedActor(AActor* InActor)
 			}
 		}
 	}
-	//Gizmo->SetTargetActor(SelectedActor);
 }
 
 /**
@@ -191,17 +148,6 @@ bool ULevel::DestroyActor(AActor* InActor)
 			break;
 		}
 	}
-
-	//Deprecated : EditorPrimitive는 에디터에서 처리
-	// 필요하다면 EditorActors 리스트에서도 제거
-	/*for (auto Iterator = EditorActors.begin(); Iterator != EditorActors.end(); ++Iterator)
-	{
-		if (*Iterator == InActor)
-		{
-			EditorActors.erase(Iterator);
-			break;
-		}
-	}*/
 
 	// Remove Actor Selection
 	if (SelectedActor == InActor)

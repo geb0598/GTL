@@ -132,7 +132,7 @@ private:
 	float HoveringFactor = 0.8f;
 	const float ScaleFactor = 0.2f;
 	const float MinScaleFactor = 7.0f;
-	const float OrthoScaleFactor = 30.0f;
+	const float OrthoScaleFactor = 7.0f;
 	bool bIsDragging = false;
 	bool bIsWorld = true;	// Gizmo coordinate mode (true; world)
 

@@ -7,7 +7,7 @@ class FViewportClient
 {
 public:
 	FViewportClient() = default;
-	~FViewportClient() = default;
+	~FViewportClient();
 
 	/**
 	* @brief ViewportClient가 보유한 Viewport들의 정보를 갱신합니다.

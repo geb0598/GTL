@@ -54,6 +54,8 @@ public:
 	void RegisterMainMenuWindow(UMainMenuWindow* InMainMenuWindow);
 	float GetMainMenuBarHeight() const;
 
+	void OnSelectedActorChanged(AActor* InSelectedActor) const;
+
 private:
 	TArray<UUIWindow*> UIWindows;
 	UUIWindow* FocusedWindow = nullptr;

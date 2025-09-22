@@ -32,7 +32,7 @@ void UStaticMesh::SetStaticMeshAsset(FStaticMesh* InStaticMeshAsset)
 	this->StaticMeshAsset = InStaticMeshAsset;
 }
 
-const FString& UStaticMesh::GetAssetPathFileName() const
+const FName& UStaticMesh::GetAssetPathFileName() const
 {
 	// 항상 포인터가 유효한지 확인 후 접근해야 합니다.
 	if (StaticMeshAsset)
@@ -41,7 +41,7 @@ const FString& UStaticMesh::GetAssetPathFileName() const
 	}
 
 	// 포인터가 null일 경우, 안전하게 비어있는 static 객체를 반환합니다.
-	static const FString EmptyString = "";
+	static const FName EmptyString = "";
 	return EmptyString;
 }
 

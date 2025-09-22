@@ -14,7 +14,7 @@ UTexture::UTexture()
 	SetName(FName::None);
 }
 
-UTexture::UTexture(const FString& InFilePath, FName InName)
+UTexture::UTexture(const FName& InFilePath, FName InName)
 	: TextureFilePath(InFilePath)
 {
 	SetName(InName);
