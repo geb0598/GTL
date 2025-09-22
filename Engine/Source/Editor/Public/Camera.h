@@ -35,7 +35,7 @@ public:
 	* UpdateInput 함수는 사용자 입력으로 비롯된 변화의 갱신를 담당합니다.
 	* Update, UpdateMatrix 함수들은 카메라의 변환 행렬의 갱신을 담당합니다.
 	*/
-	void UpdateInput();
+	FVector UpdateInput();
 	void Update(const D3D11_VIEWPORT& InViewport);
 	void UpdateMatrixByPers();
 	void UpdateMatrixByOrth();
@@ -49,6 +49,7 @@ public:
 	void SetAspect(const float InOtherAspect) { Aspect = InOtherAspect; }
 	void SetNearZ(const float InOtherNearZ) { NearZ = InOtherNearZ; }
 	void SetFarZ(const float InOtherFarZ) { FarZ = InOtherFarZ; }
+	void SetOrthoWidth(const float InOrthoWidth) { OrthoWidth = InOrthoWidth; }
 	void SetCameraType(const ECameraType InCameraType) { CameraType = InCameraType; }
 
 	/**
@@ -70,6 +71,7 @@ public:
 	float GetAspect() const { return Aspect; }
 	float GetNearZ() const { return NearZ; }
 	float GetFarZ() const { return FarZ; }
+	float GetOrthoWidth() const { return OrthoWidth; }
 	ECameraType GetCameraType() const { return CameraType; }
 
 	// Camera Movement Speed Control

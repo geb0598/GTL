@@ -50,12 +50,5 @@ void FViewportClient::UpdateOrthoFocusPointByDelta(const FVector& InDelta)
 {
 	FocusPoint += InDelta;
 
-	for (FViewport& Viewport : Viewports)
-	{
-		// 현재 활성화되어 조작 중인 뷰포트와 Perspective 뷰포트는 제외합니다.
-		if (&Viewport != ActiveViewport && Viewport.GetViewportCameraType() != EViewportCameraType::Perspective)
-		{
-			Viewport.SnapCameraToView(FocusPoint);
-		}
-	}
+	UpdateAllViewportCameras();
 }

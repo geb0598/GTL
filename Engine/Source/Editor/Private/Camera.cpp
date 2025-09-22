@@ -3,8 +3,9 @@
 #include "Manager/Input/Public/InputManager.h"
 #include "Manager/Time/Public/TimeManager.h"
 
-void UCamera::UpdateInput()
+FVector UCamera::UpdateInput()
 {
+	FVector MovementDelta = FVector::Zero(); // 마우스의 변화량을 반환할 객체
 	const UInputManager& Input = UInputManager::GetInstance();
 	const FMatrix RotationMatrix = FMatrix::RotationMatrix(FVector::GetDegreeToRadian(RelativeRotation));
 	const FVector4 Forward4 = FVector4::ForwardVector() * RotationMatrix;
@@ -36,6 +37,7 @@ void UCamera::UpdateInput()
 		if (Input.IsKeyDown(EKeyInput::E)) { Direction += Up; }
 		Direction.Normalize();
 		RelativeLocation += Direction * CurrentMoveSpeed * DT;
+		MovementDelta = Direction * CurrentMoveSpeed * DT;
 
 		// 오른쪽 마우스 버튼 + 마우스 휠로 카메라 이동속도 조절
 		float WheelDelta = Input.GetMouseWheelDelta();
@@ -54,6 +56,7 @@ void UCamera::UpdateInput()
 			const FVector MouseDelta = UInputManager::GetInstance().GetMouseDelta();
 			RelativeRotation.Z += MouseDelta.X * KeySensitivityDegPerPixel;
 			RelativeRotation.Y += MouseDelta.Y * KeySensitivityDegPerPixel;
+			MovementDelta = FVector::Zero(); // 원근 투영 모드는 반환할 필요가 없음
 		}
 
 
@@ -65,6 +68,8 @@ void UCamera::UpdateInput()
 		if (RelativeRotation.Y > 89.0f)  RelativeRotation.Y = 89.0f;
 		if (RelativeRotation.Y < -89.0f) RelativeRotation.Y = -89.0f;
 	}
+
+	return MovementDelta;
 }
 
 void UCamera::Update(const D3D11_VIEWPORT& InViewport)
