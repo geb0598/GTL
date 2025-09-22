@@ -20,6 +20,8 @@ public:
 	uint32 GetWidth() const { return Width; }
 	uint32 GetHeight() const { return Height; }
 
+	FString GetFilePath() const { return TextureFilePath.ToString();  }
+
 	const FTextureRenderProxy* GetRenderProxy() const { return RenderProxy; }
 	void SetRenderProxy(FTextureRenderProxy* InProxy) { RenderProxy = InProxy; }
 
