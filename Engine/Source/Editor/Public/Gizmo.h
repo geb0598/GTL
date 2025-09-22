@@ -4,6 +4,7 @@
 #include "Actor/Public/Actor.h"
 
 class UObjectPicker;
+class UCamera;
 
 enum class EGizmoMode
 {
@@ -42,12 +43,15 @@ struct FGizmoRotateCollisionConfig
 	float Scale = {2.0f};
 };
 
+class UCamera;
+
 class UGizmo : public UObject
 {
 public:
 	UGizmo();
 	~UGizmo() override;
-	void RenderGizmo(AActor* Actor, const FVector& CameraLocation);
+	void UpdateScale(UCamera* InCamera);
+	void RenderGizmo(AActor* Actor, UCamera* InCamera);
 	void ChangeGizmoMode();
 
 	/* *
@@ -65,6 +69,8 @@ public:
 	/* *
 	* @brief Getter
 	*/
+	const float GetTranslateScale() const { return TranslateCollisionConfig.Scale; }
+	const float GetRotateScale() const { return RotateCollisionConfig.Scale; }
 	const EGizmoDirection GetGizmoDirection() { return GizmoDirection; }
 	const FVector& GetGizmoLocation() { return Primitives[(int)GizmoMode].Location; }
 	const FVector& GetActorRotation() { return TargetActor->GetActorRotation(); }
@@ -126,6 +132,7 @@ private:
 	float HoveringFactor = 0.8f;
 	const float ScaleFactor = 0.2f;
 	const float MinScaleFactor = 7.0f;
+	const float OrthoScaleFactor = 30.0f;
 	bool bIsDragging = false;
 	bool bIsWorld = true;	// Gizmo coordinate mode (true; world)
 
