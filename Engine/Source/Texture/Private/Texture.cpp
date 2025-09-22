@@ -20,4 +20,10 @@ UTexture::UTexture(const FName& InFilePath, FName InName)
 	SetName(InName);
 }
 
-UTexture::~UTexture() = default;
+UTexture::~UTexture()
+{
+	if (RenderProxy)
+	{
+		delete RenderProxy;
+	}
+}
