@@ -1,6 +1,34 @@
 #pragma once
 #include "Editor/Public/Camera.h"
 
+// 뷰포트의 카메라 모드를 정의하는 열거형
+enum class EViewportCameraType : uint8_t
+{
+	Perspective,
+	Ortho_Top,
+	Ortho_Bottom,
+	Ortho_Front,
+	Ortho_Back,
+	Ortho_Left,
+	Ortho_Right
+};
+
+// EViewportType을 문자열로 변환하는 헬퍼 함수
+inline const char* ViewportTypeToString(EViewportCameraType InType)
+{
+	switch (InType)
+	{
+	case EViewportCameraType::Perspective:   return "Perspective";
+	case EViewportCameraType::Ortho_Top:     return "Top";
+	case EViewportCameraType::Ortho_Bottom:  return "Bottom";
+	case EViewportCameraType::Ortho_Front:   return "Front";
+	case EViewportCameraType::Ortho_Back:    return "Back";
+	case EViewportCameraType::Ortho_Left:    return "Left";
+	case EViewportCameraType::Ortho_Right:   return "Right";
+	default:                                 return "Unknown";
+	}
+}
+
 class FViewport
 {
 public:
@@ -17,14 +45,24 @@ public:
 	*/
 	void ClearDepth(ID3D11DeviceContext* InContext, ID3D11DepthStencilView* InStencilView) const;
 
+	/* *
+	* @brief 카메라 상태를 업데이트합니다.
+	*/
+	void SnapCameraToView(const FVector& InFocusPoint);
+
+	bool IsOrthographic() const { return CameraType != EViewportCameraType::Perspective; }
+
 	// Getter
-	D3D11_VIEWPORT GetViewport() { return ViewportInfo; }
+	D3D11_VIEWPORT GetViewport() const { return ViewportInfo; }
+	EViewportCameraType GetViewportCameraType() const { return CameraType; }
 
 	// Setter
 	void SetViewport(const D3D11_VIEWPORT& InViewport) { ViewportInfo = InViewport; }
+	void SetViewportCameraType(EViewportCameraType InViewportCameraType);
 
 	D3D11_VIEWPORT ViewportInfo = {};
 	UCamera Camera;
 	bool bIsActive = false;
+	EViewportCameraType CameraType = EViewportCameraType::Perspective;
 };
 

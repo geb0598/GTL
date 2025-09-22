@@ -267,6 +267,7 @@
     <ClInclude Include="Source\Render\UI\Widget\Public\SceneIOWidget.h" />
     <ClInclude Include="Source\Render\UI\Widget\Public\SplitterDebugWidget.h" />
     <ClInclude Include="Source\Render\UI\Widget\Public\TargetActorTransformWidget.h" />
+    <ClInclude Include="Source\Render\UI\Widget\Public\ViewportMenuBarWidget.h" />
     <ClInclude Include="Source\Render\UI\Widget\Public\Widget.h" />
     <ClInclude Include="Source\Render\UI\Window\Public\ConsoleWindow.h" />
     <ClInclude Include="Source\Render\UI\Window\Public\ControlPanelWindow.h" />
@@ -276,6 +277,7 @@
     <ClInclude Include="Source\Render\UI\Window\Public\OutlinerWindow.h" />
     <ClInclude Include="Source\Render\UI\Window\Public\DetailWindow.h" />
     <ClInclude Include="Source\Render\UI\Window\Public\UIWindow.h" />
+    <ClInclude Include="Source\Render\UI\Window\Public\ViewportClientWindow.h" />
     <ClInclude Include="Source\Texture\Public\Material.h" />
     <ClInclude Include="Source\Texture\Public\Texture.h" />
     <ClInclude Include="Source\Texture\Public\TextureRenderProxy.h" />
@@ -389,6 +391,7 @@
     <ClCompile Include="Source\Render\UI\Widget\Private\SceneIOWidget.cpp" />
     <ClCompile Include="Source\Render\UI\Widget\Private\SplitterDebugWidget.cpp" />
     <ClCompile Include="Source\Render\UI\Widget\Private\TargetActorTransformWidget.cpp" />
+    <ClCompile Include="Source\Render\UI\Widget\Private\ViewportMenuBarWidget.cpp" />
     <ClCompile Include="Source\Render\UI\Widget\Private\Widget.cpp" />
     <ClCompile Include="Source\Render\UI\Window\Private\ConsoleWindow.cpp" />
     <ClCompile Include="Source\Render\UI\Window\Private\ControlPanelWindow.cpp" />
@@ -398,6 +401,7 @@
     <ClCompile Include="Source\Render\UI\Window\Private\OutlinerWindow.cpp" />
     <ClCompile Include="Source\Render\UI\Window\Private\DetailWindow.cpp" />
     <ClCompile Include="Source\Render\UI\Window\Private\UIWindow.cpp" />
+    <ClCompile Include="Source\Render\UI\Window\Private\ViewportClientWindow.cpp" />
     <ClCompile Include="Source\Texture\Private\Material.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>

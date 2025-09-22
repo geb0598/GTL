@@ -13,5 +13,7 @@ class UControlPanelWindow : public UUIWindow
 {
 public:
 	UControlPanelWindow();
+	virtual ~UControlPanelWindow() override {}
+
 	void Initialize() override;
 };

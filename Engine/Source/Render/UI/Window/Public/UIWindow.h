@@ -77,7 +77,7 @@ class UUIWindow :
 
 public:
 	UUIWindow(const FUIWindowConfig& InConfig = FUIWindowConfig());
-	~UUIWindow() override;
+	virtual ~UUIWindow() override;
 
 	virtual void Initialize() = 0;
 
