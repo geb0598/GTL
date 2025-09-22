@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "Render/UI/Widget/Public/ConsoleWidget.h"
-
+#include "Render/UI/Overlay/Public/StatOverlay.h"
 #include "Utility/Public/UELogParser.h"
 
 IMPLEMENT_SINGLETON_CLASS(UConsoleWidget, UWidget)
@@ -476,16 +476,21 @@ void UConsoleWidget::ProcessCommand(const char* InCommand)
 
 void UConsoleWidget::HandleStatCommand(const FString& StatCommand)
 {
+	auto& StatOverlay = UStatOverlay::GetInstance();
+
 	if (StatCommand == "fps")
 	{
+		StatOverlay.ShowFPS(true);
 		AddLog(ELogType::Success, "FPS overlay enabled");
 	}
 	else if (StatCommand == "memory")
 	{
+		StatOverlay.ShowMemory(true);
 		AddLog(ELogType::Success, "Memory overlay enabled");
 	}
 	else if (StatCommand == "none")
 	{
+		StatOverlay.ShowAll(false);
 		AddLog(ELogType::Success, "All overlays disabled");
 	}
 	else
