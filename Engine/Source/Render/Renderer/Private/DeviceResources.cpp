@@ -21,10 +21,12 @@ void UDeviceResources::Create(HWND InWindowHandle)
 	CreateDeviceAndSwapChain(InWindowHandle);
 	CreateFrameBuffer();
 	CreateDepthBuffer();
+	CreateFactories();
 }
 
 void UDeviceResources::Release()
 {
+	ReleaseFactories();
 	ReleaseFrameBuffer();
 	ReleaseDepthBuffer();
 	ReleaseDeviceAndSwapChain();
@@ -200,4 +202,29 @@ void UDeviceResources::UpdateViewport(float InMenuBarHeight)
 
 	Width = SwapChainDescription.BufferDesc.Width;
 	Height = SwapChainDescription.BufferDesc.Height;
+}
+
+void UDeviceResources::CreateFactories()
+{
+	// Direct2D 팩토리 생성
+	D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &D2DFactory);
+
+	// DirectWrite 팩토리 생성
+	DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory),
+	                    reinterpret_cast<IUnknown**>(&DWriteFactory));
+}
+
+void UDeviceResources::ReleaseFactories()
+{
+	if (DWriteFactory)
+	{
+		DWriteFactory->Release();
+		DWriteFactory = nullptr;
+	}
+
+	if (D2DFactory)
+	{
+		D2DFactory->Release();
+		D2DFactory = nullptr;
+	}
 }

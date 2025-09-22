@@ -255,6 +255,7 @@
     <ClInclude Include="Source\Render\Renderer\Public\Renderer.h" />
     <ClInclude Include="Source\Render\UI\Factory\Public\UIWindowFactory.h" />
     <ClInclude Include="Source\Render\UI\ImGui\Public\ImGuiHelper.h" />
+    <ClInclude Include="Source\Render\UI\Overlay\Public\StatOverlay.h" />
     <ClInclude Include="Source\Render\UI\Widget\Public\ActorDetailWidget.h" />
     <ClInclude Include="Source\Render\UI\Widget\Public\ActorTerminationWidget.h" />
     <ClInclude Include="Source\Render\UI\Widget\Public\CameraControlWidget.h" />
@@ -380,6 +381,7 @@
     <ClCompile Include="Source\Render\FontRenderer\Private\FontRenderer.cpp" />
     <ClCompile Include="Source\Render\UI\Factory\Private\UIWindowFactory.cpp" />
     <ClCompile Include="Source\Render\UI\ImGui\Private\ImGuiHelper.cpp" />
+    <ClCompile Include="Source\Render\UI\Overlay\Private\StatOverlay.cpp" />
     <ClCompile Include="Source\Render\UI\Widget\Private\ActorDetailWidget.cpp" />
     <ClCompile Include="Source\Render\UI\Widget\Private\ActorTerminationWidget.cpp" />
     <ClCompile Include="Source\Render\UI\Widget\Private\CameraControlWIdget.cpp" />
