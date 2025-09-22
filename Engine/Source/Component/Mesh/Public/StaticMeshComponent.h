@@ -33,6 +33,8 @@ public:
 public:
 	UStaticMesh* GetStaticMesh() { return StaticMesh; }
 
+	TObjectPtr<UClass> GetSpecificWidgetClass() const override;
+
 private:
 	TObjectPtr<UStaticMesh> StaticMesh;
 

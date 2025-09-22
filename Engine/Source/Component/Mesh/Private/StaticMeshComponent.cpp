@@ -6,6 +6,7 @@
 #include "Manager/Asset/Public/ObjManager.h"
 #include "Manager/Asset/Public/AssetManager.h"
 #include "Physics/Public/AABB.h"
+#include "Render/UI/Widget/Public/StaticMeshComponentWidget.h"
 
 IMPLEMENT_CLASS(UStaticMeshComponent, UMeshComponent)
 
@@ -35,4 +36,9 @@ UStaticMeshComponent::UStaticMeshComponent()
 
 UStaticMeshComponent::~UStaticMeshComponent()
 {
+}
+
+TObjectPtr<UClass> UStaticMeshComponent::GetSpecificWidgetClass() const
+{
+	return UStaticMeshComponentWidget::StaticClass();
 }

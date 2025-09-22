@@ -2,6 +2,7 @@
 #include "Core/Public/Object.h"
 #include "ImGui/imgui.h"
 #include "Render/UI/Factory/Public/UIWindowFactory.h"
+#include "Actor/Public/Actor.h"
 
 class UWidget;
 /**
@@ -96,6 +97,8 @@ public:
 	virtual bool OnWindowClose() { return true; }
 	virtual bool IsSingleton() { return false; }
 
+	virtual void OnSelectedActorChanged(AActor* InSelectedActor) {};
+
 	// Getter & Setter
 	const FUIWindowConfig& GetConfig() const { return Config; }
 	FUIWindowConfig& GetMutableConfig() { return Config; }
@@ -138,6 +141,7 @@ public:
 	void SetConfig(const FUIWindowConfig& InConfig) { Config = InConfig; }
 	void ToggleVisibility() { SetWindowState(IsVisible() ? EUIWindowState::Hidden : EUIWindowState::Visible); }
 	void AddWidget(UWidget* Widget) { Widgets.push_back(Widget); }
+	void ClearWidget();
 
 	void OnMainWindowResized() const;
 	void ClampWindow() const;
@@ -169,8 +173,8 @@ private:
 
 	TArray<UWidget*> Widgets;
 
-	ImVec2 PositionRatio = {0.5f, 0.5f};
-	ImVec2 SizeRatio = {0.5f, 0.5f};
+	ImVec2 PositionRatio = { 0.5f, 0.5f };
+	ImVec2 SizeRatio = { 0.5f, 0.5f };
 	bool bIsResized = false;
 
 	// 최소화된 UI 복원 관련

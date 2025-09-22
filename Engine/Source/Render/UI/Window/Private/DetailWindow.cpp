@@ -4,6 +4,9 @@
 #include "Render/UI/Widget/Public/ActorDetailWidget.h"
 #include "Render/UI/Widget/Public/ActorTerminationWidget.h"
 #include "Render/UI/Widget/Public/TargetActorTransformWidget.h"
+#include "Manager/Level/Public/LevelManager.h"
+#include "Manager/UI/Public/UIManager.h"
+#include "Level/Public/Level.h"
 
 /**
  * @brief Detail Window Constructor
@@ -36,4 +39,30 @@ UDetailWindow::UDetailWindow()
 void UDetailWindow::Initialize()
 {
 	UE_LOG("DetailWindow: Initialized");
+}
+
+// @brief 새로운 Actor가 피킹된 경우 소유한 컴포넌트 전용 Widget을 표시한다
+void UDetailWindow::OnSelectedActorChanged(AActor* InActor)
+{
+	ClearWidget();
+
+	AddWidget(new UActorDetailWidget);
+	AddWidget(new UTargetActorTransformWidget);
+	AddWidget(new UActorTerminationWidget);
+
+	if (InActor)
+	{
+		for (const auto& Component : InActor->GetOwnedComponents())
+		{
+			TObjectPtr<UClass> WidgetClass = Component->GetSpecificWidgetClass();
+			if (WidgetClass)
+			{
+				UWidget* NewWidget = NewObject<UWidget>(nullptr, WidgetClass);
+				if (NewWidget)
+				{
+					AddWidget(NewWidget);
+				}
+			}
+		}
+	}
 }

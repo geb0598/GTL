@@ -2,6 +2,7 @@
 #include "Core/Public/Object.h"
 
 class AActor;
+class UWidget;
 
 UCLASS()
 class UActorComponent : public UObject
@@ -27,6 +28,9 @@ public:
 	AActor* GetOwner() const {return Owner;}
 
 	EComponentType GetComponentType() const { return ComponentType; }
+
+	virtual TObjectPtr<UClass> GetSpecificWidgetClass() const;
+
 protected:
 	EComponentType ComponentType;
 private:
