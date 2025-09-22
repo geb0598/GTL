@@ -2,7 +2,7 @@
 
 #include "Core/Public/Object.h"       // UObject 기반 클래스 및 매크로
 #include "Core/Public/ObjectPtr.h" // TObjectPtr 사용
-#include "Global/CoreTypes.h"        // FString, TArray 등
+#include "Global/CoreTypes.h"        // TArray 등
 
 // 전방 선언: FStaticMesh의 전체 정의를 포함할 필요 없이 포인터만 사용
 struct FMeshSection
@@ -15,7 +15,7 @@ struct FMeshSection
 // Cooked Data
 struct FStaticMesh
 {
-	FString PathFileName;
+	FName PathFileName;
 
 	TArray<FNormalVertex> Vertices;
 	TArray<uint32> Indices;
@@ -59,7 +59,7 @@ public:
 	// 이 UStaticMesh가 감싸고 있는 FStaticMesh의 데이터에 대한 접근을 제공합니다.
 	// 렌더러나 컴포넌트는 이 함수들을 통해 실제 데이터에 접근합니다.
 
-	const FString& GetAssetPathFileName() const;
+	const FName& GetAssetPathFileName() const;
 
 	// Geometry Data
 	const TArray<FNormalVertex>& GetVertices() const;

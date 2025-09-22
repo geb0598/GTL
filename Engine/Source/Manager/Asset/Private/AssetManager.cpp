@@ -83,7 +83,7 @@ void UAssetManager::Initialize()
 	// Calculate AABB for each StaticMesh
 	for (const auto& MeshPair : StaticMeshCache)
 	{
-		const FString& ObjPath = MeshPair.first;
+		const FName& ObjPath = MeshPair.first;
 		const auto& Mesh = MeshPair.second;
 		if (!Mesh || !Mesh->IsValid())
 			continue;
@@ -152,23 +152,20 @@ void UAssetManager::LoadAllObjStaticMesh()
 {
 	URenderer& Renderer = URenderer::GetInstance();
 
-	TArray<FString> ObjList;
+	TArray<FName> ObjList;
 	const FString DataDirectory = "Data/"; // 검색할 기본 디렉토리
 
-	// recursive_directory_iterator를 사용하여 지정된 디렉토리와 모든 하위 디렉토리를 순회합니다.
+	// recursive_directory_iterator를 사용하여 디렉토리와 모든 하위 디렉토리를 순회합니다.
 	for (const auto& Entry : std::filesystem::recursive_directory_iterator(DataDirectory))
 	{
 		// 현재 항목이 일반 파일이고, 확장자가 ".obj"인지 확인합니다.
 		if (Entry.is_regular_file() && Entry.path().extension() == ".obj")
 		{
-			// 파일 경로를 FString으로 변환합니다.
-			FString PathString = Entry.path().string();
+			// .generic_string()을 사용하여 OS에 상관없이 '/' 구분자를 사용하는 경로를 바로 얻습니다.
+			FString PathString = Entry.path().generic_string();
 
-			// (선택 사항) Windows 환경에서는 경로 구분자가 '\'일 수 있으므로, 일관성을 위해 '/'로 변경합니다.
-			std::replace(PathString.begin(), PathString.end(), '\\', '/');
-
-			// 찾은 파일 경로를 ObjList에 추가합니다. (FString이 const char*로 생성 가능하다고 가정)
-			ObjList.push_back(FString(PathString.c_str()));
+			// 찾은 파일 경로를 FName으로 변환하여 ObjList에 추가합니다.
+			ObjList.push_back(FName(PathString));
 		}
 	}
 
@@ -176,13 +173,13 @@ void UAssetManager::LoadAllObjStaticMesh()
 	FObjImporter::Configuration Config;
 	Config.bFlipWindingOrder = true;
 
-	// 범위 기반 for문을 사용하여 배열의 모든 요소를 안전하고 간결하게 순회합니다.
-	for (const FString& ObjPath : ObjList)
+	// 범위 기반 for문을 사용하여 배열의 모든 요소를 순회합니다.
+	for (const FName& ObjPath : ObjList)
 	{
 		// FObjManager가 UStaticMesh 포인터를 반환한다고 가정합니다.
 		UStaticMesh* LoadedMesh = FObjManager::LoadObjStaticMesh(ObjPath, Config);
 
-		// 로드에 성공했는지 항상 확인하는 것이 안전합니다.
+		// 로드에 성공했는지 확인합니다.
 		if (LoadedMesh)
 		{
 			StaticMeshCache.emplace(ObjPath, LoadedMesh);
@@ -193,7 +190,7 @@ void UAssetManager::LoadAllObjStaticMesh()
 	}
 }
 
-ID3D11Buffer* UAssetManager::GetVertexBuffer(FString InObjPath)
+ID3D11Buffer* UAssetManager::GetVertexBuffer(FName InObjPath)
 {
 	if (StaticMeshVertexBuffers.count(InObjPath))
 	{
@@ -201,7 +198,7 @@ ID3D11Buffer* UAssetManager::GetVertexBuffer(FString InObjPath)
 	}
 }
 
-ID3D11Buffer* UAssetManager::GetIndexBuffer(FString InObjPath)
+ID3D11Buffer* UAssetManager::GetIndexBuffer(FName InObjPath)
 {
 	if (StaticMeshIndexBuffers.count(InObjPath))
 	{
@@ -269,7 +266,7 @@ const FAABB& UAssetManager::GetAABB(EPrimitiveType InType)
 	return AABBs[InType];
 }
 
-const FAABB& UAssetManager::GetStaticMeshAABB(FString InName)
+const FAABB& UAssetManager::GetStaticMeshAABB(FName InName)
 {
 	return StaticMeshAABBs[InName];
 }
@@ -280,7 +277,7 @@ const FAABB& UAssetManager::GetStaticMeshAABB(FString InName)
  * @param InFilePath 로드할 텍스처 파일의 경로
  * @return 성공시 ID3D11ShaderResourceView 포인터, 실패시 nullptr
  */
-ComPtr<ID3D11ShaderResourceView> UAssetManager::LoadTexture(const FString& InFilePath, const FName& InName)
+ComPtr<ID3D11ShaderResourceView> UAssetManager::LoadTexture(const FName& InFilePath, const FName& InName)
 {
 	// 이미 로드된 텍스처가 있는지 확인
 	auto Iter = TextureCache.find(InFilePath);
@@ -290,7 +287,7 @@ ComPtr<ID3D11ShaderResourceView> UAssetManager::LoadTexture(const FString& InFil
 	}
 
 	// 새로운 텍스처 로드
-	ID3D11ShaderResourceView* TextureSRV = CreateTextureFromFile(InFilePath);
+	ID3D11ShaderResourceView* TextureSRV = CreateTextureFromFile(InFilePath.ToString());
 	if (TextureSRV)
 	{
 		TextureCache[InFilePath] = TextureSRV;
@@ -299,7 +296,7 @@ ComPtr<ID3D11ShaderResourceView> UAssetManager::LoadTexture(const FString& InFil
 	return TextureSRV;
 }
 
-UTexture* UAssetManager::CreateTexture(const FString& InFilePath, const FName& InName)
+UTexture* UAssetManager::CreateTexture(const FName& InFilePath, const FName& InName)
 {
 	auto SRV = LoadTexture(InFilePath);
 	if (!SRV)	return nullptr;
@@ -334,7 +331,7 @@ UTexture* UAssetManager::CreateTexture(const FString& InFilePath, const FName& I
  * @param InFilePath 가져올 텍스처 파일의 경로
  * @return 캐시에 있으면 ID3D11ShaderResourceView 포인터, 없으면 nullptr
  */
-ComPtr<ID3D11ShaderResourceView> UAssetManager::GetTexture(const FString& InFilePath)
+ComPtr<ID3D11ShaderResourceView> UAssetManager::GetTexture(const FName& InFilePath)
 {
 	auto Iter = TextureCache.find(InFilePath);
 	if (Iter != TextureCache.end())
@@ -350,7 +347,7 @@ ComPtr<ID3D11ShaderResourceView> UAssetManager::GetTexture(const FString& InFile
  * DirectX 리소스를 해제하고 캐시에서 제거
  * @param InFilePath 해제할 텍스처 파일의 경로
  */
-void UAssetManager::ReleaseTexture(const FString& InFilePath)
+void UAssetManager::ReleaseTexture(const FName& InFilePath)
 {
 	auto Iter = TextureCache.find(InFilePath);
 	if (Iter != TextureCache.end())
@@ -369,7 +366,7 @@ void UAssetManager::ReleaseTexture(const FString& InFilePath)
  * @param InFilePath 확인할 텍스처 파일의 경로
  * @return 캐시에 있으면 true, 없으면 false
  */
-bool UAssetManager::HasTexture(const FString& InFilePath) const
+bool UAssetManager::HasTexture(const FName& InFilePath) const
 {
 	return TextureCache.find(InFilePath) != TextureCache.end();
 }

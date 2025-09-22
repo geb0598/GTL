@@ -33,7 +33,7 @@ public:
 
 public:
 	UStaticMesh* GetStaticMesh() { return StaticMesh; }
-	void SetStaticMesh(const FString& InObjPath);
+	void SetStaticMesh(const FName& InObjPath);
 
 	TObjectPtr<UClass> GetSpecificWidgetClass() const override;
 

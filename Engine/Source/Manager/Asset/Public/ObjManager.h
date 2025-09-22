@@ -8,12 +8,12 @@
 class FObjManager
 {
 public:
-	static FStaticMesh* LoadObjStaticMeshAsset(const FString& PathFileName, const FObjImporter::Configuration& Config = {});
-	static UStaticMesh* LoadObjStaticMesh(const FString& PathFileName, const FObjImporter::Configuration& Config = {});
-	static void CreateMaterialsFromMTL(UStaticMesh* StaticMesh, FStaticMesh* StaticMeshAsset, const FString& ObjFilePath);
+	static FStaticMesh* LoadObjStaticMeshAsset(const FName& PathFileName, const FObjImporter::Configuration& Config = {});
+	static UStaticMesh* LoadObjStaticMesh(const FName& PathFileName, const FObjImporter::Configuration& Config = {});
+	static void CreateMaterialsFromMTL(UStaticMesh* StaticMesh, FStaticMesh* StaticMeshAsset, const FName& ObjFilePath);
 
 	static constexpr size_t INVALID_INDEX = SIZE_MAX;
 
 private:
-	static TMap<FString, std::unique_ptr<FStaticMesh>> ObjFStaticMeshMap;
+	static TMap<FName, std::unique_ptr<FStaticMesh>> ObjFStaticMeshMap;
 };

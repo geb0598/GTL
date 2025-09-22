@@ -44,11 +44,11 @@ void UStaticMeshComponentWidget::RenderWidget()
 
 	// 1. 현재 컴포넌트에 할당된 스태틱 메시를 가져옵니다.
 	UStaticMesh* CurrentStaticMesh = StaticMeshComponent->GetStaticMesh();
-	const FString PreviewName = CurrentStaticMesh ? CurrentStaticMesh->GetAssetPathFileName().data() : "None";
+	const FName PreviewName = CurrentStaticMesh ? CurrentStaticMesh->GetAssetPathFileName() : "None";
 
 	// 2. ImGui::BeginCombo를 사용하여 드롭다운 메뉴를 시작합니다.
 	// 첫 번째 인자는 라벨, 두 번째 인자는 닫혀 있을 때 표시될 텍스트입니다.
-	if (ImGui::BeginCombo("Static Mesh", PreviewName.c_str()))
+	if (ImGui::BeginCombo("Static Mesh", PreviewName.ToString().c_str()))
 	{
 		// 3. TObjectIterator로 모든 UStaticMesh 에셋을 순회합니다.
 		for (TObjectIterator<UStaticMesh> It; It; ++It)
@@ -61,7 +61,7 @@ void UStaticMeshComponentWidget::RenderWidget()
 
 			// 4. ImGui::Selectable로 각 항목을 만듭니다.
 			// 사용자가 이 항목을 클릭하면 if문이 true가 됩니다.
-			if (ImGui::Selectable(MeshInList->GetAssetPathFileName().data(), bIsSelected))
+			if (ImGui::Selectable(MeshInList->GetAssetPathFileName().ToString().c_str(), bIsSelected))
 			{
 				// 5. 항목이 선택되면, 컴포넌트의 스태틱 메시를 교체합니다.
 				StaticMeshComponent->SetStaticMesh(MeshInList->GetAssetPathFileName());

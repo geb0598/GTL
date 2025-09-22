@@ -19,6 +19,7 @@ public:
 
 	static const FName None;
 
+	FName();
 	FName(const char* InStringPtr);
 	FName(const FString& InString);
 
