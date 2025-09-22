@@ -12,6 +12,7 @@
 #include "Render/Renderer/Public/Renderer.h"
 
 #include "Render/UI/Window/Public/ConsoleWindow.h"
+#include "Render/UI/Overlay/Public/StatOverlay.h"
 
 FClientApp::FClientApp() = default;
 
@@ -78,6 +79,10 @@ int FClientApp::InitializeSystem() const
 
 	auto& Renderer = URenderer::GetInstance();
 	Renderer.Init(Window->GetWindowHandle());
+
+	// StatOverlay Initialize
+	auto& StatOverlay = UStatOverlay::GetInstance();
+	StatOverlay.Initialize();
 
 	// UIManager Initialize
 	auto& UIManger = UUIManager::GetInstance();
@@ -148,6 +153,7 @@ void FClientApp::MainLoop()
  */
 void FClientApp::ShutdownSystem() const
 {
+	UStatOverlay::GetInstance().Release();
 	URenderer::GetInstance().Release();
 	UUIManager::GetInstance().Shutdown();
 	ULevelManager::GetInstance().Shutdown();

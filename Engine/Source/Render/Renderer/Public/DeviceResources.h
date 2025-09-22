@@ -16,6 +16,10 @@ public:
 	void CreateDepthBuffer();
 	void ReleaseDepthBuffer();
 
+	// Direct2D/DirectWrite
+	void CreateFactories();
+	void ReleaseFactories();
+
 	ID3D11Device* GetDevice() const { return Device; }
 	ID3D11DeviceContext* GetDeviceContext() const { return DeviceContext; }
 	IDXGISwapChain* GetSwapChain() const { return SwapChain; }
@@ -23,6 +27,10 @@ public:
 	ID3D11DepthStencilView* GetDepthStencilView() const { return DepthStencilView; }
 	const D3D11_VIEWPORT& GetViewportInfo() const { return ViewportInfo; }
 	void UpdateViewport(float InMenuBarHeight = 0.f);
+
+	// Direct2D/DirectWrite factory getters
+	ID2D1Factory* GetD2DFactory() const { return D2DFactory; }
+	IDWriteFactory* GetDWriteFactory() const { return DWriteFactory; }
 
 private:
 	ID3D11Device* Device = nullptr;
@@ -39,4 +47,8 @@ private:
 
 	uint32 Width = 0;
 	uint32 Height = 0;
+
+	// Direct2D/DirectWrite factories
+	ID2D1Factory* D2DFactory = nullptr;
+	IDWriteFactory* DWriteFactory = nullptr;
 };

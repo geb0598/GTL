@@ -59,6 +59,7 @@ public:
 
 	// Console command
 	void ProcessCommand(const char* InCommand);
+	void HandleStatCommand(const FString& StatCommand);
 	void ExecuteTerminalCommand(const char* InCommand);
 
 	// Use external terminal
