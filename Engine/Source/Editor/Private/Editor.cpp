@@ -3,10 +3,10 @@
 #include "Editor/Public/Camera.h"
 #include "Editor/Public/ViewportClient.h"
 #include "Render/Renderer/Public/Renderer.h"
-#include "Render/UI/Widget/Public/CameraControlWidget.h"
 #include "Render/UI/Widget/Public/FPSWidget.h"
 #include "Render/UI/Widget/Public/SceneHierarchyWidget.h"
 #include "Render/UI/Widget/Public/SplitterDebugWidget.h"
+#include "Render/UI/Widget/Public/CameraControlWidget.h"
 #include "Manager/Level/Public/LevelManager.h"
 #include "Manager/UI/Public/UIManager.h"
 #include "Manager/Input/Public/InputManager.h"
@@ -21,7 +21,6 @@ UEditor::UEditor()
 	// 대신 매 프레임 ViewportClient->GetActiveCamera()를 통해
 	// 동적으로 활성 카메라 정보를 얻어와야 합니다.
 	// auto& UIManager = UUIManager::GetInstance();
-	// auto* CameraControlWidget = reinterpret_cast<UCameraControlWidget*>(UIManager.FindWidget("Camera Control Widget"));
 	// auto* SceneHierarchyWidget = reinterpret_cast<USceneHierarchyWidget*>(UIManager.FindWidget("Scene Hierarchy Widget"));
 
 	const TArray<float>& SplitterRatio = UConfigManager::GetInstance().GetSplitterRatio();

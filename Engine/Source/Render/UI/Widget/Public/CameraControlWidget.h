@@ -3,25 +3,24 @@
 
 class UCamera;
 
-class UCameraControlWidget
-	: public UWidget
+class UCameraControlWidget : public UWidget
 {
 public:
 	void Initialize() override;
 	void Update() override;
 	void RenderWidget() override;
-	void SyncFromCamera();
-	void PushToCamera();
+	void SyncFromCamera(UCamera* InCamera);
+	void PushToCamera(UCamera* InCamera);
 
 	// Setter
-	void SetCamera(UCamera* InCamera) { Camera = InCamera; }
+	void SetCamera(UCamera* InCamera, const int Index);
 
 	// Special Member Function
 	UCameraControlWidget();
 	~UCameraControlWidget() override;
 
 private:
-	UCamera* Camera = nullptr;
+	TArray<UCamera*> Cameras{};
 	float UiFovY = 80.f;
 	float UiNearZ = 0.1f;
 	float UiFarZ = 1000.f;
