@@ -110,7 +110,7 @@ void UEditor::RenderEditor(UCamera* InCamera)
 	if (InCamera)
 	{
 		AActor* SelectedActor = ULevelManager::GetInstance().GetCurrentLevel()->GetSelectedActor();
-		Gizmo.RenderGizmo(SelectedActor, InCamera->GetLocation());
+		Gizmo.RenderGizmo(SelectedActor, InCamera);
 	}
 }
 
@@ -248,6 +248,10 @@ void UEditor::ProcessMouseInput(ULevel* InLevel)
 	if (CurrentViewport == nullptr) { return; }
 
 	CurrentCamera = &CurrentViewport->Camera;
+
+	// 피킹 전 현재 카메라에 맞는 기즈모 스케일 업데이트
+	Gizmo.UpdateScale(CurrentCamera);
+
 	const UInputManager& InputManager = UInputManager::GetInstance();
 	const FVector& MousePos = InputManager.GetMousePosition();
 	const D3D11_VIEWPORT& ViewportInfo = CurrentViewport->GetViewport();
