@@ -1,6 +1,30 @@
 #include "pch.h"
 #include "Editor/Public/ViewportClient.h"
 #include "Render/Renderer/Public/Renderer.h"
+#include "Manager/Config/Public/ConfigManager.h"
+
+FViewportClient::~FViewportClient()
+{
+	auto& ConfigManager = UConfigManager::GetInstance();
+
+	for (int Index = 0; Index < 4; ++Index)
+	{
+		FViewportCameraData Data;
+		FViewport& Viewport = Viewports[Index];
+		UCamera& Camera = Viewport.Camera;
+
+		// 현재 뷰포트와 카메라의 상태를 FViewportCameraData 구조체에 담습니다.
+		Data.ViewportCameraType = Viewport.GetViewportCameraType();
+		Data.Location = Camera.GetLocation();
+		Data.Rotation = Camera.GetRotation();
+		Data.FovY = Camera.GetFovY();
+		Data.OrthoWidth = Camera.GetOrthoWidth(); // UCamera에 GetOrthoWidth 함수가 필요합니다.
+		Data.FocusLocation = this->FocusPoint; // 현재의 FocusPoint를 저장
+
+		// 완성된 데이터를 ConfigManager에 전달합니다.
+		ConfigManager.SetViewportCameraData(Index, Data);
+	}
+}
 
 void FViewportClient::InitializeLayout(const D3D11_VIEWPORT& InViewport)
 {
@@ -15,9 +39,35 @@ void FViewportClient::InitializeLayout(const D3D11_VIEWPORT& InViewport)
 	Viewports[2].SetViewport({ BaseX + 0.0f,     BaseY + HalfH,    HalfW, HalfH, 0.0f, 1.0f });
 	Viewports[3].SetViewport({ BaseX + HalfW,    BaseY + HalfH,    HalfW, HalfH, 0.0f, 1.0f });
 
-	Viewports[1].SetViewportCameraType(EViewportCameraType::Ortho_Back);
-	Viewports[2].SetViewportCameraType(EViewportCameraType::Ortho_Right);
-	Viewports[3].SetViewportCameraType(EViewportCameraType::Ortho_Top);
+	auto& ConfigManager = UConfigManager::GetInstance();
+	for (int Index = 0; Index < 4; ++Index)
+	{
+		// ConfigManager로부터 저장된 i번째 뷰포트 데이터를 가져옵니다.
+		const FViewportCameraData& CamData = ConfigManager.GetViewportCameraData(Index);
+
+		// 뷰포트의 카메라 타입을 먼저 설정합니다.
+		Viewports[Index].SetViewportCameraType(CamData.ViewportCameraType);
+		if (CamData.ViewportCameraType == EViewportCameraType::Perspective)
+		{
+			// 해당 뷰포트의 카메라에 저장된 값을 적용합니다.
+			UCamera& CurrentCamera = Viewports[Index].Camera;
+			CurrentCamera.SetLocation(CamData.Location);
+			CurrentCamera.SetRotation(CamData.Rotation);
+			CurrentCamera.SetFarZ(CamData.FarClip);
+			CurrentCamera.SetNearZ(CamData.NearClip);
+			CurrentCamera.SetFovY(CamData.FovY);
+		}
+		else
+		{
+			UCamera& CurrentCamera = Viewports[Index].Camera;
+			CurrentCamera.SetLocation(CamData.Location);
+			CurrentCamera.SetRotation(CamData.Rotation);
+			CurrentCamera.SetOrthoWidth(CamData.OrthoWidth);
+			FocusPoint = CamData.FocusLocation;
+		}
+	}
+
+	// 모든 직교 카메라가 새로운 FocusPoint를 바라보도록 위치를 즉시 갱신합니다.
 	UpdateAllViewportCameras();
 }
 
@@ -50,12 +100,5 @@ void FViewportClient::UpdateOrthoFocusPointByDelta(const FVector& InDelta)
 {
 	FocusPoint += InDelta;
 
-	for (FViewport& Viewport : Viewports)
-	{
-		// 현재 활성화되어 조작 중인 뷰포트와 Perspective 뷰포트는 제외합니다.
-		if (&Viewport != ActiveViewport && Viewport.GetViewportCameraType() != EViewportCameraType::Perspective)
-		{
-			Viewport.SnapCameraToView(FocusPoint);
-		}
-	}
+	UpdateAllViewportCameras();
 }

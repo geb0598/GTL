@@ -1,6 +1,6 @@
 #pragma once
 #include "Core/Public/Object.h"
-#include "Manager/Config/Public/ConfigManager.h"
+class UConfigManager;
 
 enum class ECameraType
 {
@@ -17,25 +17,15 @@ public:
 	static constexpr float DEFAULT_SPEED = 20.0f;
 	static constexpr float SPEED_ADJUST_STEP = 1.0f;
 
-	UCamera() :
-		ViewProjConstants(FViewProjConstants()),
-		RelativeLocation(FVector(-15.0f, 0.f, 10.0f)), RelativeRotation(FVector(0, 0, 0)),
-		FovY(90.f), Aspect(float(Render::INIT_SCREEN_WIDTH) / Render::INIT_SCREEN_HEIGHT),
-		NearZ(0.1f), FarZ(1000.f), CameraType(ECameraType::ECT_Perspective)
-	{
-		CurrentMoveSpeed = UConfigManager::GetInstance().GetCameraSensitivity();
-	}
-	~UCamera() override
-	{
-		UConfigManager::GetInstance().SetCameraSensitivity(CurrentMoveSpeed);
-	}
+	UCamera();
+	~UCamera() override;
 
 	/* *
 	* @brief Update 관련 함수
 	* UpdateInput 함수는 사용자 입력으로 비롯된 변화의 갱신를 담당합니다.
 	* Update, UpdateMatrix 함수들은 카메라의 변환 행렬의 갱신을 담당합니다.
 	*/
-	void UpdateInput();
+	FVector UpdateInput();
 	void Update(const D3D11_VIEWPORT& InViewport);
 	void UpdateMatrixByPers();
 	void UpdateMatrixByOrth();
@@ -49,6 +39,7 @@ public:
 	void SetAspect(const float InOtherAspect) { Aspect = InOtherAspect; }
 	void SetNearZ(const float InOtherNearZ) { NearZ = InOtherNearZ; }
 	void SetFarZ(const float InOtherFarZ) { FarZ = InOtherFarZ; }
+	void SetOrthoWidth(const float InOrthoWidth) { OrthoWidth = InOrthoWidth; }
 	void SetCameraType(const ECameraType InCameraType) { CameraType = InCameraType; }
 
 	/**
@@ -70,6 +61,7 @@ public:
 	float GetAspect() const { return Aspect; }
 	float GetNearZ() const { return NearZ; }
 	float GetFarZ() const { return FarZ; }
+	float GetOrthoWidth() const { return OrthoWidth; }
 	ECameraType GetCameraType() const { return CameraType; }
 
 	// Camera Movement Speed Control

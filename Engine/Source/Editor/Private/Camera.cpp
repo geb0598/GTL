@@ -2,21 +2,26 @@
 #include "Editor/Public/Camera.h"
 #include "Manager/Input/Public/InputManager.h"
 #include "Manager/Time/Public/TimeManager.h"
+#include "Manager/Config/Public/ConfigManager.h"
 
-void UCamera::UpdateInput()
+UCamera::UCamera() :
+	ViewProjConstants(FViewProjConstants()),
+	RelativeLocation(FVector(-15.0f, 0.f, 10.0f)), RelativeRotation(FVector(0, 0, 0)),
+	FovY(90.f), Aspect(float(Render::INIT_SCREEN_WIDTH) / Render::INIT_SCREEN_HEIGHT),
+	NearZ(0.1f), FarZ(1000.0f), OrthoWidth(90.0f), CameraType(ECameraType::ECT_Perspective)
 {
-	const UInputManager& Input = UInputManager::GetInstance();
-	const FMatrix RotationMatrix = FMatrix::RotationMatrix(FVector::GetDegreeToRadian(RelativeRotation));
-	const FVector4 Forward4 = FVector4::ForwardVector() * RotationMatrix;
-	const FVector4 WorldUp4 = FVector4::UpVector() * RotationMatrix;
-	const FVector WorldUp = { WorldUp4.X, WorldUp4.Y, WorldUp4.Z };
+	CurrentMoveSpeed = UConfigManager::GetInstance().GetCameraSensitivity();
+}
 
-	Forward = FVector(Forward4.X, Forward4.Y, Forward4.Z);
-	Forward.Normalize();
-	Right = Forward.Cross(WorldUp);
-	Right.Normalize();
-	Up = Right.Cross(Forward);
-	Up.Normalize();
+UCamera::~UCamera()
+{
+	UConfigManager::GetInstance().SetCameraSensitivity(CurrentMoveSpeed);
+}
+
+FVector UCamera::UpdateInput()
+{
+	FVector MovementDelta = FVector::Zero(); // 마우스의 변화량을 반환할 객체
+	const UInputManager& Input = UInputManager::GetInstance();
 
 	/**
 	 * @brief 마우스 우클릭을 하고 있는 동안 카메라 제어가 가능합니다.
@@ -36,6 +41,7 @@ void UCamera::UpdateInput()
 		if (Input.IsKeyDown(EKeyInput::E)) { Direction += Up; }
 		Direction.Normalize();
 		RelativeLocation += Direction * CurrentMoveSpeed * DT;
+		MovementDelta = Direction * CurrentMoveSpeed * DT;
 
 		// 오른쪽 마우스 버튼 + 마우스 휠로 카메라 이동속도 조절
 		float WheelDelta = Input.GetMouseWheelDelta();
@@ -47,11 +53,16 @@ void UCamera::UpdateInput()
 
 		/**
 		* @brief 마우스 위치 변화량을 감지하여 카메라의 회전을 담당합니다.
+		* 원근 투영 모드를 적용한 카메라만 회전이 가능합니다.
 		*/
-		const FVector MouseDelta = UInputManager::GetInstance().GetMouseDelta();
-		RelativeRotation.Z += MouseDelta.X * KeySensitivityDegPerPixel;
-		RelativeRotation.Y += MouseDelta.Y * KeySensitivityDegPerPixel;
-		//UE_LOG("mouse_delta: %.2f, %.2f", MouseDelta.X * KeySensitivityDegPerPixel, MouseDelta.Y * KeySensitivityDegPerPixel);
+		if (CameraType == ECameraType::ECT_Perspective)
+		{
+			const FVector MouseDelta = UInputManager::GetInstance().GetMouseDelta();
+			RelativeRotation.Z += MouseDelta.X * KeySensitivityDegPerPixel;
+			RelativeRotation.Y += MouseDelta.Y * KeySensitivityDegPerPixel;
+			MovementDelta = FVector::Zero(); // 원근 투영 모드는 반환할 필요가 없음
+		}
+
 
 		// Yaw 래핑(값이 무한히 커지지 않도록)
 		if (RelativeRotation.Z > 180.0f) RelativeRotation.Z -= 360.0f;
@@ -61,10 +72,24 @@ void UCamera::UpdateInput()
 		if (RelativeRotation.Y > 89.0f)  RelativeRotation.Y = 89.0f;
 		if (RelativeRotation.Y < -89.0f) RelativeRotation.Y = -89.0f;
 	}
+
+	return MovementDelta;
 }
 
 void UCamera::Update(const D3D11_VIEWPORT& InViewport)
 {
+	const FMatrix RotationMatrix = FMatrix::RotationMatrix(FVector::GetDegreeToRadian(RelativeRotation));
+	const FVector4 Forward4 = FVector4::ForwardVector() * RotationMatrix;
+	const FVector4 WorldUp4 = FVector4::UpVector() * RotationMatrix;
+	const FVector WorldUp = { WorldUp4.X, WorldUp4.Y, WorldUp4.Z };
+
+	Forward = FVector(Forward4.X, Forward4.Y, Forward4.Z);
+	Forward.Normalize();
+	Right = Forward.Cross(WorldUp);
+	Right.Normalize();
+	Up = Right.Cross(Forward);
+	Up.Normalize();
+
 	// 종횡비 갱신
 	if (InViewport.Width > 0.f && InViewport.Height > 0.f)
 	{
@@ -131,7 +156,6 @@ void UCamera::UpdateMatrixByOrth()
 	/**
 	 * @brief Projection 행렬 연산
 	 */
-	OrthoWidth = 2.0f * std::tanf(FVector::GetDegreeToRadian(FovY) * 0.5f);
 	const float OrthoHeight = OrthoWidth / Aspect;
 	const float Left = -OrthoWidth * 0.5f;
 	const float Right = OrthoWidth * 0.5f;
