@@ -7,17 +7,6 @@ FVector UCamera::UpdateInput()
 {
 	FVector MovementDelta = FVector::Zero(); // 마우스의 변화량을 반환할 객체
 	const UInputManager& Input = UInputManager::GetInstance();
-	const FMatrix RotationMatrix = FMatrix::RotationMatrix(FVector::GetDegreeToRadian(RelativeRotation));
-	const FVector4 Forward4 = FVector4::ForwardVector() * RotationMatrix;
-	const FVector4 WorldUp4 = FVector4::UpVector() * RotationMatrix;
-	const FVector WorldUp = { WorldUp4.X, WorldUp4.Y, WorldUp4.Z };
-
-	Forward = FVector(Forward4.X, Forward4.Y, Forward4.Z);
-	Forward.Normalize();
-	Right = Forward.Cross(WorldUp);
-	Right.Normalize();
-	Up = Right.Cross(Forward);
-	Up.Normalize();
 
 	/**
 	 * @brief 마우스 우클릭을 하고 있는 동안 카메라 제어가 가능합니다.
@@ -74,6 +63,18 @@ FVector UCamera::UpdateInput()
 
 void UCamera::Update(const D3D11_VIEWPORT& InViewport)
 {
+	const FMatrix RotationMatrix = FMatrix::RotationMatrix(FVector::GetDegreeToRadian(RelativeRotation));
+	const FVector4 Forward4 = FVector4::ForwardVector() * RotationMatrix;
+	const FVector4 WorldUp4 = FVector4::UpVector() * RotationMatrix;
+	const FVector WorldUp = { WorldUp4.X, WorldUp4.Y, WorldUp4.Z };
+
+	Forward = FVector(Forward4.X, Forward4.Y, Forward4.Z);
+	Forward.Normalize();
+	Right = Forward.Cross(WorldUp);
+	Right.Normalize();
+	Up = Right.Cross(Forward);
+	Up.Normalize();
+
 	// 종횡비 갱신
 	if (InViewport.Width > 0.f && InViewport.Height > 0.f)
 	{
