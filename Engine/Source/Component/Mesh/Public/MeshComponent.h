@@ -6,5 +6,5 @@ UCLASS();
 class UMeshComponent : public UPrimitiveComponent
 {
 	GENERATED_BODY()
-	DECLARE_CLASS(UMeshComponent, UObject)
+	DECLARE_CLASS(UMeshComponent, UPrimitiveComponent)
 };

@@ -1,11 +1,43 @@
 #include "pch.h"
 #include "Core/Public/Name.h"
+#include <algorithm> // for std::transform
+#include <cctype>    // for std::tolower
 
-TArray<FString> FName::DisplayNames = {"None"};
-TMap<FString, uint32> FName::NameMap = {{"none", 0}};
-uint32 FName::NextIndex = 1;
+// '최초 사용 시 생성(Construct on First Use)' 기법을 적용하기 위한 헬퍼 함수들입니다.
+// 익명 네임스페이스를 사용하여 이 파일 외부에서는 접근할 수 없도록 합니다.
+namespace
+{
+	// DisplayNames 배열에 대한 접근자
+	TArray<FString>& GetDisplayNames()
+	{
+		// 이 함수가 최초로 호출될 때 단 한 번만 안전하게 초기화됩니다.
+		static TArray<FString> DisplayNames = { "None" };
+		return DisplayNames;
+	}
 
-const FName FName::None(0);
+	// NameMap에 대한 접근자
+	TMap<FString, uint32>& GetNameMap()
+	{
+		static TMap<FString, uint32> NameMap = { {"none", 0} };
+		return NameMap;
+	}
+
+	// NextIndex 카운터에 대한 접근자
+	uint32& GetNextIndex()
+	{
+		static uint32 NextIndex = 1;
+		return NextIndex;
+	}
+}
+
+/**
+ * @brief 'None' 값을 나타내는 정적 FName 객체를 반환합니다.
+ */
+const FName& FName::GetNone()
+{
+	static const FName NoneInstance(0);
+	return NoneInstance;
+}
 
 /**
  * @brief FName 생성자
@@ -14,22 +46,24 @@ const FName FName::None(0);
 FName::FName(const FString& InString)
 {
 	// 비교는 Lower로 진행
-	FString LowerString(InString);
+	FString LowerString = InString;
 	std::transform(LowerString.begin(), LowerString.end(), LowerString.begin(),
-	               [](unsigned char InChar) { return std::tolower(InChar); });
+		[](unsigned char InChar) { return std::tolower(InChar); });
 
-	// 동일 이름 탐색
-	auto FindResult = NameMap.find(LowerString);
+	// 헬퍼 함수를 통해 안전하게 NameMap에 접근합니다.
+	auto& NameMapRef = GetNameMap();
+	auto FindResult = NameMapRef.find(LowerString);
 
 	// 동일 이름이 존재하지 않는 경우
-	if (FindResult == NameMap.end())
+	if (FindResult == NameMapRef.end())
 	{
-		// NameMap에 추가하고 이름 TArray에 각각 추가
-		NameMap.insert({LowerString, NextIndex});
-		DisplayNames.push_back(InString);
+		// 헬퍼 함수를 통해 안전하게 정적 데이터들을 수정합니다.
+		auto& NextIndexRef = GetNextIndex();
+		NameMapRef.insert({ LowerString, NextIndexRef });
+		GetDisplayNames().push_back(InString);
 
 		// 인덱스 제공
-		ComparisonIndex = NextIndex++;
+		ComparisonIndex = NextIndexRef++;
 		DisplayIndex = ComparisonIndex;
 	}
 	// 이미 존재하는 경우
@@ -52,6 +86,16 @@ FName::FName(const char* InStringPtr)
 	: FName(FString(InStringPtr))
 {
 }
+
+/**
+ * @brief 특정 인덱스로 FName을 생성하는 private 생성자
+ */
+FName::FName(int32 InComparisonIndex)
+{
+	this->ComparisonIndex = InComparisonIndex;
+	this->DisplayIndex = this->ComparisonIndex;
+}
+
 
 /**
  * @brief 두 FName을 비교하는 멤버 함수
@@ -89,5 +133,15 @@ bool FName::operator!=(const FName& InOther) const
  */
 const FString& FName::ToString() const
 {
-	return DisplayNames[DisplayIndex];
+	// 헬퍼 함수를 통해 안전하게 DisplayNames에 접근합니다.
+	return GetDisplayNames()[DisplayIndex];
+}
+
+/**
+ * @brief Display 이름을 변경하는 함수
+ * @param InDisplayName 변경할 새로운 이름
+ */
+void FName::SetDisplayName(const FString& InDisplayName) const
+{
+	GetDisplayNames()[this->DisplayIndex] = InDisplayName;
 }

@@ -3,6 +3,8 @@
 #include "Core/Public/EngineStatics.h"
 #include "Core/Public/Name.h"
 
+#include <json.hpp>
+
 uint32 UEngineStatics::NextUUID = 0;
 TArray<TObjectPtr<UObject>> GUObjectArray;
 
@@ -11,11 +13,20 @@ IMPLEMENT_CLASS_BASE(UObject)
 UObject::~UObject()
 {
 	/** @todo: 이후에 리뷰 필요 */
-	GUObjectArray[InternalIndex] = nullptr;
+
+	// std::vector에 맞는 올바른 인덱스 유효성 검사
+	if (InternalIndex < GUObjectArray.size())
+	{
+		GUObjectArray[InternalIndex] = nullptr;
+	}
+}
+
+void UObject::Serialize(const bool bInIsLoading, JSON& InOutHandle)
+{
 }
 
 UObject::UObject()
-	: Name(FName::None), Outer(nullptr)
+	: Name(FName::GetNone()), Outer(nullptr)
 {
 	UUID = UEngineStatics::GenUUID();
 	Name = FName("Object_" + to_string(UUID));
@@ -26,7 +37,7 @@ UObject::UObject()
 
 UObject::UObject(const FName& InName)
 	: Name(InName)
-	  , Outer(nullptr)
+	, Outer(nullptr)
 {
 	UUID = UEngineStatics::GenUUID();
 

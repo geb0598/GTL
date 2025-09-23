@@ -4,6 +4,9 @@
 #include "Component/Mesh/Public/MeshComponent.h"
 #include "Component/Mesh/Public/StaticMesh.h"
 
+namespace json { class JSON; }
+using JSON = json::JSON;
+
 UCLASS()
 class UStaticMeshComponent : public UMeshComponent
 {
@@ -14,22 +17,7 @@ public:
 	UStaticMeshComponent();
 	~UStaticMeshComponent();
 
-	//void Serialize(bool bIsLoading, Json Handle)
-	//{
-	//	Super::Serialize(IsLoading, Handle);
-
-	//	if (bIsLoading)
-	//	{
-	//		FString assetName;
-	//		Handle << "ObjStaticMeshAsset" << assetName;
-	//		StaticMesh = FObjManager::LoadObjStaticMesh(assetName);
-	//	}
-	//	else
-	//	{
-	//		FString assetName = StaticMesh->GetAssetPathFileName();
-	//		Handle << "ObjStaticMeshAsset" << assetName;
-	//	}
-	//}
+	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
 public:
 	UStaticMesh* GetStaticMesh() { return StaticMesh; }

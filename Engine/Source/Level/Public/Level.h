@@ -5,6 +5,9 @@
 
 #include "Editor/Public/Camera.h"
 
+namespace json { class JSON; }
+using JSON = json::JSON;
+
 class AAxis;
 class AGizmo;
 class AGrid;
@@ -44,6 +47,10 @@ public:
 	virtual void Render();
 	virtual void Cleanup();
 
+	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+
+	uint32 GetNextUUID();
+
 	const TArray<TObjectPtr<AActor>>& GetLevelActors() const { return LevelActors; }
 
 	const TArray<TObjectPtr<UPrimitiveComponent>>& GetLevelPrimitiveComponents() const
@@ -55,6 +62,7 @@ public:
 
 	template <typename T, typename... Args>
 	TObjectPtr<T> SpawnActor(const FName& InName = "");
+	AActor* SpawnActor(const UClass* InActorClass);
 
 	// Actor 삭제
 	bool DestroyActor(AActor* InActor);
@@ -80,8 +88,8 @@ private:
 	TObjectPtr<AGrid> Grid = nullptr;
 
 	uint64 ShowFlags = static_cast<uint64>(EEngineShowFlags::SF_Primitives) |
-					   static_cast<uint64>(EEngineShowFlags::SF_BillboardText) |
-					   static_cast<uint64>(EEngineShowFlags::SF_Bounds);
+		static_cast<uint64>(EEngineShowFlags::SF_BillboardText) |
+		static_cast<uint64>(EEngineShowFlags::SF_Bounds);
 
 	// 지연 삭제 처리 함수
 	void ProcessPendingDeletions();
@@ -90,23 +98,5 @@ private:
 template <typename T, typename... Args>
 TObjectPtr<T> ULevel::SpawnActor(const FName& InName)
 {
-	// Factory 시스템 초기화
-	static bool bFactorySystemInitialized = false;
-	if (!bFactorySystemInitialized)
-	{
-		FFactorySystem::Initialize();
-		bFactorySystemInitialized = true;
-	}
-
-	// NewObject.h에 정의된 전역 SpawnActor 함수 호출
-	TObjectPtr<T> RawActor = ::SpawnActor<T>(TObjectPtr<ULevel>(this), FTransform(), InName);
-	TObjectPtr<T> NewActor = TObjectPtr<T>(RawActor);
-
-	if (NewActor)
-	{
-		LevelActors.push_back(NewActor);
-		NewActor->BeginPlay();
-	}
-
-	return NewActor;
+	return TObjectPtr(Cast<T>(SpawnActor(T::StaticClass())));
 }

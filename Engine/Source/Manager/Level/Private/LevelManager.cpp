@@ -8,8 +8,11 @@
 #include "Actor/Public/SquareActor.h"
 #include "Manager/Path/Public/PathManager.h"
 #include "Utility/Public/JsonSerializer.h"
-#include "Utility/Public/Metadata.h"
 #include "Editor/Public/Editor.h"
+
+#include <json.hpp>
+
+using JSON = json::JSON;
 
 IMPLEMENT_SINGLETON_CLASS_BASE(ULevelManager)
 
@@ -93,9 +96,9 @@ bool ULevelManager::SaveCurrentLevel(const FString& InFilePath) const
 	if (FilePath.empty())
 	{
 		// 기본 파일명은 Level 이름으로 세팅
-		FilePath = GenerateLevelFilePath(CurrentLevel->GetName() == FName::None
-			                                 ? "Untitled"
-			                                 : CurrentLevel->GetName().ToString());
+		FilePath = GenerateLevelFilePath(CurrentLevel->GetName() == FName::GetNone()
+			? "Untitled"
+			: CurrentLevel->GetName().ToString());
 	}
 
 	UE_LOG("LevelManager: 현재 레벨을 다음 경로에 저장합니다: %s", FilePath.string().c_str());
@@ -103,10 +106,10 @@ bool ULevelManager::SaveCurrentLevel(const FString& InFilePath) const
 	// LevelSerializer를 사용하여 저장
 	try
 	{
-		// 현재 레벨의 메타데이터 생성
-		FLevelMetadata Metadata = ConvertLevelToMetadata(CurrentLevel);
+		JSON LevelJson;
+		CurrentLevel->Serialize(false, LevelJson);
 
-		bool bSuccess = FJsonSerializer::SaveLevelToFile(Metadata, FilePath.string());
+		bool bSuccess = FJsonSerializer::SaveJsonToFile(LevelJson, FilePath.string());
 
 		if (bSuccess)
 		{
@@ -139,9 +142,8 @@ bool ULevelManager::LoadLevel(const FString& InLevelName, const FString& InFileP
 	// 직접 LevelSerializer를 사용하여 로드
 	try
 	{
-		FLevelMetadata Metadata;
-
-		bool bLoadSuccess = FJsonSerializer::LoadLevelFromFile(Metadata, InFilePath);
+		JSON LevelJsonData;
+		bool bLoadSuccess = FJsonSerializer::LoadJsonFromFile(LevelJsonData, InFilePath);
 		if (!bLoadSuccess)
 		{
 			UE_LOG("LevelManager: Failed To Load Level From: %s", InFilePath.c_str());
@@ -149,24 +151,7 @@ bool ULevelManager::LoadLevel(const FString& InLevelName, const FString& InFileP
 			return false;
 		}
 
-		// 유효성 검사
-		FString ErrorMessage;
-		if (!FJsonSerializer::ValidateLevelData(Metadata, ErrorMessage))
-		{
-			UE_LOG("LevelManager: Level Validation Failed: %s", ErrorMessage.c_str());
-			delete NewLevel;
-			return false;
-		}
-
-		// 메타데이터로부터 Level 생성
-		bool bSuccess = LoadLevelFromMetadata(NewLevel, Metadata);
-
-		if (!bSuccess)
-		{
-			UE_LOG("LevelManager: Failed To Create Level From Metadata");
-			delete NewLevel;
-			return false;
-		}
+		NewLevel->Serialize(true, LevelJsonData);
 	}
 	catch (const exception& InException)
 	{
@@ -276,125 +261,4 @@ path ULevelManager::GenerateLevelFilePath(const FString& InLevelName)
 	path FileName = InLevelName + ".json";
 	path FullPath = LevelDirectory / FileName;
 	return FullPath;
-}
-
-/**
- * @brief ULevel을 FLevelMetadata로 변환
- */
-FLevelMetadata ULevelManager::ConvertLevelToMetadata(TObjectPtr<ULevel> InLevel)
-{
-	FLevelMetadata Metadata;
-	Metadata.Version = 1;
-	Metadata.NextUUID = 1;
-
-	if (!InLevel)
-	{
-		UE_LOG("LevelManager: ConvertLevelToMetadata: Level Is Null");
-		return Metadata;
-	}
-
-	// 레벨의 액터들을 순회하며 메타데이터로 변환
-	uint32 CurrentID = 1;
-	for (AActor* Actor : InLevel->GetLevelActors())
-	{
-		if (!Actor)
-			continue;
-
-		FPrimitiveMetadata PrimitiveMeta;
-		PrimitiveMeta.ID = CurrentID++;
-		PrimitiveMeta.Location = Actor->GetActorLocation();
-		PrimitiveMeta.Rotation = Actor->GetActorRotation();
-		PrimitiveMeta.Scale = Actor->GetActorScale3D();
-
-		// Actor 타입에 따라 EPrimitiveType 설정
-		if (dynamic_cast<ACubeActor*>(Actor))
-		{
-			PrimitiveMeta.Type = EPrimitiveType::Cube;
-		}
-		else if (dynamic_cast<ASphereActor*>(Actor))
-		{
-			PrimitiveMeta.Type = EPrimitiveType::Sphere;
-		}
-		else if (dynamic_cast<ATriangleActor*>(Actor))
-		{
-			PrimitiveMeta.Type = EPrimitiveType::Triangle;
-		}
-		else if (dynamic_cast<ASquareActor*>(Actor))
-		{
-			PrimitiveMeta.Type = EPrimitiveType::Square;
-		}
-		else
-		{
-			UE_LOG("LevelManager: Unknown Actor Type, Skipping...");
-			assert(!"고려하지 않은 Actor 타입");
-			continue;
-		}
-
-		Metadata.Primitives[PrimitiveMeta.ID] = PrimitiveMeta;
-	}
-
-	Metadata.NextUUID = CurrentID;
-
-	UE_LOG("LevelManager: Converted %zu Actors To Metadata", Metadata.Primitives.size());
-	return Metadata;
-}
-
-/**
- * @brief FLevelMetadata로부터 ULevel에 Actor Load
- */
-bool ULevelManager::LoadLevelFromMetadata(TObjectPtr<ULevel> InLevel, const FLevelMetadata& InMetadata)
-{
-	if (!InLevel)
-	{
-		UE_LOG("LevelManager: LoadLevelFromMetadata: InLevel Is Null");
-		return false;
-	}
-
-	UE_LOG("LevelManager: Loading %zu Primitives From Metadata", InMetadata.Primitives.size());
-
-	// Metadata의 각 Primitive를 Actor로 생성
-	for (const auto& [ID, PrimitiveMeta] : InMetadata.Primitives)
-	{
-		AActor* NewActor = nullptr;
-
-		// 타입에 따라 적절한 액터 생성
-		switch (PrimitiveMeta.Type)
-		{
-		case EPrimitiveType::Cube:
-			NewActor = InLevel->SpawnActor<ACubeActor>();
-			break;
-		case EPrimitiveType::Sphere:
-			NewActor = InLevel->SpawnActor<ASphereActor>();
-			break;
-		case EPrimitiveType::Triangle:
-			NewActor = InLevel->SpawnActor<ATriangleActor>();
-			break;
-		case EPrimitiveType::Square:
-			NewActor = InLevel->SpawnActor<ASquareActor>();
-			break;
-		default:
-			UE_LOG("LevelManager: Unknown Primitive Type: %d", static_cast<int32>(PrimitiveMeta.Type));
-			assert(!"고려하지 않은 Actor 타입");
-			continue;
-		}
-
-		if (NewActor)
-		{
-			// Transform 정보 적용
-			NewActor->SetActorLocation(PrimitiveMeta.Location);
-			NewActor->SetActorRotation(PrimitiveMeta.Rotation);
-			NewActor->SetActorScale3D(PrimitiveMeta.Scale);
-
-			UE_LOG("LevelManager: (%.2f, %.2f, %.2f) 지점에 %s (을)를 생성했습니다 ",
-			       PrimitiveMeta.Location.X, PrimitiveMeta.Location.Y, PrimitiveMeta.Location.Z,
-			       FJsonSerializer::PrimitiveTypeToWideString(PrimitiveMeta.Type).c_str());
-		}
-		else
-		{
-			UE_LOG("LevelManager: Actor 생성에 실패했습니다 (Primitive ID: %d)", ID);
-		}
-	}
-
-	UE_LOG("LevelManager: 레벨이 메타데이터로부터 성공적으로 로드되었습니다");
-	return true;
 }

@@ -329,9 +329,6 @@
     <ClCompile Include="Source\Texture\Private\Texture.cpp">
       <Filter>Source\Texture\Private</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Utility\Private\JsonSerializer.cpp">
-      <Filter>Source\Utility\Private</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Utility\Private\UELogParser.cpp">
       <Filter>Source\Utility\Private</Filter>
     </ClCompile>
@@ -696,9 +693,6 @@
       <Filter>Source\Texture\Public</Filter>
     </ClInclude>
     <ClInclude Include="Source\Utility\Public\JsonSerializer.h">
-      <Filter>Source\Utility\Public</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Utility\Public\Metadata.h">
       <Filter>Source\Utility\Public</Filter>
     </ClInclude>
     <ClInclude Include="Source\Utility\Public\UELogParser.h">

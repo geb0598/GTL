@@ -27,6 +27,16 @@ AActor::~AActor()
 	OwnedComponents.clear();
 }
 
+void AActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
+{
+	Super::Serialize(bInIsLoading, InOutHandle);
+
+	if (RootComponent)
+	{
+		RootComponent->Serialize(bInIsLoading, InOutHandle);
+	}
+}
+
 void AActor::SetActorLocation(const FVector& InLocation) const
 {
 	if (RootComponent)
