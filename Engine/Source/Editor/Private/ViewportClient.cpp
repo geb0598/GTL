@@ -99,6 +99,11 @@ void FViewportClient::UpdateAllViewportCameras()
 void FViewportClient::UpdateOrthoFocusPointByDelta(const FVector& InDelta)
 {
 	FocusPoint += InDelta;
+	UpdateAllViewportCameras();
+}
 
+void FViewportClient::SetFocusPoint(const FVector& NewFocusPoint)
+{
+	FocusPoint = NewFocusPoint;
 	UpdateAllViewportCameras();
 }

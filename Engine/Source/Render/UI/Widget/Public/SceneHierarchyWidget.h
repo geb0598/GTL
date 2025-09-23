@@ -17,9 +17,6 @@ public:
 	void Update() override;
 	void RenderWidget() override;
 
-	// Camera 설정을 위한 함수
-	void SetCamera(UCamera* InCamera) { Camera = InCamera; }
-
 	// Special Member Function
 	USceneHierarchyWidget();
 	~USceneHierarchyWidget() override;
@@ -41,19 +38,17 @@ private:
 	TObjectPtr<AActor> LastClickedActor = nullptr;
 	static constexpr float RENAME_CLICK_DELAY = 0.5f; // 두 번째 클릭 간격
 
-	// 카메라 참조
-	TObjectPtr<UCamera> Camera = nullptr;
-
 	// Camera focus animation
 	bool bIsCameraAnimating = false;
 	float CameraAnimationTime = 0.0f;
 	FVector CameraStartLocation;
+	FVector CameraStartRotation;
 	FVector CameraTargetLocation;
-	FVector CameraCurrentRotation;
+	FVector CameraTargetRotation;
 
 	// Heuristic constant
 	static constexpr float CAMERA_ANIMATION_DURATION = 0.8f;
-	static constexpr float FOCUS_DISTANCE = 5.0f;
+	static constexpr float FOCUS_DISTANCE = 10.0f;
 
 	// Camera movement
 	void RenderActorInfo(TObjectPtr<AActor> InActor, int32 InIndex);

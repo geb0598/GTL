@@ -45,6 +45,8 @@ public:
 
 	TArray<FViewport>& GetViewports() { return Viewports; }
 
+	void SetFocusPoint(const FVector& NewFocusPoint);
+
 private:
 	TArray<FViewport> Viewports = {};
 	FViewport* ActiveViewport = nullptr;
