@@ -35,6 +35,8 @@ void UConfigManager::SaveEditorSetting()
 			Ofs << Prefix + "_Location=" << VectorToString(Data.Location) << "\n";
 			Ofs << Prefix + "_Rotation=" << VectorToString(Data.Rotation) << "\n";
 			Ofs << Prefix + "_FocusLocation=" << VectorToString(Data.FocusLocation) << "\n";
+			Ofs << Prefix + "_FarClip=" << Data.FarClip << "\n";
+			Ofs << Prefix + "_NearClip=" << Data.NearClip << "\n";
 			Ofs << Prefix + "_FovY=" << Data.FovY << "\n";
 			Ofs << Prefix + "_OrthoWidth=" << Data.OrthoWidth << "\n";
 			Ofs << "\n";
@@ -82,6 +84,8 @@ void UConfigManager::LoadEditorSetting()
 				else if (Suffix == "_Location") ViewportCameraSettings[Index].Location = StringToVector(Value);
 				else if (Suffix == "_Rotation") ViewportCameraSettings[Index].Rotation = StringToVector(Value);
 				else if (Suffix == "_FocusLocation") ViewportCameraSettings[Index].FocusLocation = StringToVector(Value);
+				else if (Suffix == "_FarClip") ViewportCameraSettings[Index].FarClip = std::stof(Value);
+				else if (Suffix == "_NearClip") ViewportCameraSettings[Index].NearClip = std::stof(Value);
 				else if (Suffix == "_FovY") ViewportCameraSettings[Index].FovY = std::stof(Value);
 				else if (Suffix == "_OrthoWidth") ViewportCameraSettings[Index].OrthoWidth = std::stof(Value);
 			}

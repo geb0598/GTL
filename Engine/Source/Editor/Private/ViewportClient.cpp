@@ -18,8 +18,10 @@ FViewportClient::~FViewportClient()
 		Data.Location = Camera.GetLocation();
 		Data.Rotation = Camera.GetRotation();
 		Data.FovY = Camera.GetFovY();
-		Data.OrthoWidth = Camera.GetOrthoWidth(); // UCamera에 GetOrthoWidth 함수가 필요합니다.
-		Data.FocusLocation = this->FocusPoint; // 현재의 FocusPoint를 저장
+		Data.NearClip = Camera.GetNearZ();
+		Data.FarClip = Camera.GetFarZ();
+		Data.OrthoWidth = Camera.GetOrthoWidth(); 
+		Data.FocusLocation = this->FocusPoint;
 
 		// 완성된 데이터를 ConfigManager에 전달합니다.
 		ConfigManager.SetViewportCameraData(Index, Data);
@@ -62,6 +64,8 @@ void FViewportClient::InitializeLayout(const D3D11_VIEWPORT& InViewport)
 			UCamera& CurrentCamera = Viewports[Index].Camera;
 			CurrentCamera.SetLocation(CamData.Location);
 			CurrentCamera.SetRotation(CamData.Rotation);
+			CurrentCamera.SetFarZ(CamData.FarClip);
+			CurrentCamera.SetNearZ(CamData.NearClip);
 			CurrentCamera.SetOrthoWidth(CamData.OrthoWidth);
 			FocusPoint = CamData.FocusLocation;
 		}
