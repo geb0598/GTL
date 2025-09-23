@@ -14,6 +14,10 @@
 #include "Render/UI/Window/Public/ConsoleWindow.h"
 #include "Render/UI/Overlay/Public/StatOverlay.h"
 
+#ifdef IS_OBJ_VIEWER
+#include "Utility/Public/FileDialog.h"
+#endif
+
 FClientApp::FClientApp() = default;
 
 FClientApp::~FClientApp() = default;
@@ -122,6 +126,19 @@ void FClientApp::UpdateSystem() const
  */
 void FClientApp::MainLoop()
 {
+#ifdef IS_OBJ_VIEWER
+	if (!OpenObjFromFileDialog())
+	{
+		MessageBoxW(
+			nullptr,
+			L"파일을 열 수 없습니다",
+			L"오류",
+			MB_OK | MB_ICONERROR
+		);
+		std::exit(1);
+	}
+#endif
+
 	while (true)
 	{
 		// Async Message Process
