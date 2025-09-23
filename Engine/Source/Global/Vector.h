@@ -1,5 +1,6 @@
 #pragma once
 
+struct FArchive; // @note: 직렬화 지원용 헤더
 struct FMatrix;
 
 struct FVector
@@ -145,6 +146,8 @@ struct FVector
 	[[nodiscard]] static FVector UnitZ() { return ZAxisVector(); }
 };
 
+FArchive& operator<<(FArchive& Ar, FVector& Vector);
+
 struct FVector2
 {
 	float X;
@@ -192,6 +195,7 @@ struct FVector2
 	inline float LengthSquared() const { return (X * X) + (Y * Y); }
 };
 
+FArchive& operator<<(FArchive& Ar, FVector2& Vector);
 
 struct FVector4
 {
@@ -298,3 +302,5 @@ struct FVector4
 	[[nodiscard]] static FVector4 UnitY() { return YAxisVector(); }
 	[[nodiscard]] static FVector4 UnitZ() { return ZAxisVector(); }
 };
+
+FArchive& operator<<(FArchive& Ar, FVector4& Vector);
