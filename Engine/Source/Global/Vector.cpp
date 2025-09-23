@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "Vector.h"
 
+#include "Core/Public/Archive.h"
+
 /**
  * @brief FVector 기본 생성자
  */
@@ -101,6 +103,13 @@ bool FVector::operator==(const FVector& InOther) const
 	return false;
 }
 
+FArchive& operator<<(FArchive& Ar, FVector& Vector)
+{
+	Ar << Vector.X;
+	Ar << Vector.Y;
+	Ar << Vector.Z;
+	return Ar;
+}
 
 	/**
 	 * @brief FVector 기본 생성자
@@ -211,6 +220,15 @@ void FVector4::operator*=(const float Ratio)
 	W *= Ratio;
 }
 
+FArchive& operator<<(FArchive& Ar, FVector4& Vector)
+{
+	Ar << Vector.X;
+	Ar << Vector.Y;
+	Ar << Vector.Z;
+	Ar << Vector.W;
+	return Ar;
+}
+
 /**
  * @brief FVector2 기본 생성자
  */
@@ -259,4 +277,10 @@ FVector2 FVector2::operator*(const float Ratio) const
 	return { X * Ratio, Y * Ratio };
 }
 
+FArchive& operator<<(FArchive& Ar, FVector2& Vector)
+{
+	Ar << Vector.X;
+	Ar << Vector.Y;
+	return Ar;
+}
 
