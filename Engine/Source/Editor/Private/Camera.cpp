@@ -39,7 +39,7 @@ FVector UCamera::UpdateInput()
 		if (Input.IsKeyDown(EKeyInput::S)) { Direction += -Forward; }
 		if (Input.IsKeyDown(EKeyInput::Q)) { Direction += -Up; }
 		if (Input.IsKeyDown(EKeyInput::E)) { Direction += Up; }
-		if(Direction.LengthSquared() > 0.00000001f)
+		if (Direction.LengthSquared() > MATH_EPSILON)
 		{
 			Direction.Normalize();
 		}
@@ -98,7 +98,7 @@ void UCamera::Update(const D3D11_VIEWPORT& InViewport)
 	{
 		SetAspect(InViewport.Width / InViewport.Height);
 	}
-	
+
 	switch (CameraType)
 	{
 	case ECameraType::ECT_Perspective:
@@ -111,7 +111,7 @@ void UCamera::Update(const D3D11_VIEWPORT& InViewport)
 }
 
 void UCamera::UpdateMatrixByPers()
-{	
+{
 	/**
 	 * @brief View 행렬 연산
 	 */
@@ -183,7 +183,7 @@ const FViewProjConstants UCamera::GetFViewProjConstantsInverse() const
 	*/
 	FViewProjConstants Result = {};
 	//FMatrix R = FMatrix::RotationMatrix(FVector::GetDegreeToRadian(RelativeRotation));
-	FMatrix R = FMatrix(Right, Up, Forward);	
+	FMatrix R = FMatrix(Right, Up, Forward);
 	FMatrix T = FMatrix::TranslationMatrix(RelativeLocation);
 	Result.View = R * T;
 
