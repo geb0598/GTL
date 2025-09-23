@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Public/WindowsBinReader.h"
+#include "Core/Public/WindowsBinWriter.h"
 #include "Manager/Asset/Public/ObjImporter.h"
 
 bool FObjImporter::LoadObj(const std::filesystem::path& FilePath, FObjInfo* OutObjInfo, Configuration Config)
@@ -13,6 +15,18 @@ bool FObjImporter::LoadObj(const std::filesystem::path& FilePath, FObjInfo* OutO
 	{
 		UE_LOG_ERROR("파일을 찾지 못했습니다: %s", FilePath.string().c_str());
 		return false;
+	}
+
+	std::filesystem::path BinFilePath = FilePath;
+	BinFilePath.replace_extension(".objbin");
+
+	if (Config.bIsBinaryEnabled && std::filesystem::exists(BinFilePath))
+	{
+		UE_LOG("바이너리 파일이 존재합니다: %s", BinFilePath.string().c_str());
+		FWindowsBinReader WindowsBinReader(BinFilePath);
+		WindowsBinReader << *OutObjInfo;
+
+		return true;
 	}
 
 	if (FilePath.extension() != ".obj")
@@ -252,6 +266,12 @@ bool FObjImporter::LoadObj(const std::filesystem::path& FilePath, FObjInfo* OutO
 	if (OptObjectInfo)
 	{
 		OutObjInfo->ObjectInfoList.emplace_back(std::move(*OptObjectInfo));
+	}
+
+	if (Config.bIsBinaryEnabled)
+	{
+		FWindowsBinWriter WindowsBinWriter(BinFilePath);
+		WindowsBinWriter << *OutObjInfo;
 	}
 
 	return true;

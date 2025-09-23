@@ -22,6 +22,7 @@ struct FWindowsBinWriter : public FArchive
 		if (!Stream)
 		{
 			UE_LOG_ERROR("쓰기용 파일을 여는데 실패했습니다: %s", FilePath.string());
+			assert("쓰기용 파일을 여는데 실패했습니다" && false);
 		}
 	}
 
@@ -33,6 +34,7 @@ struct FWindowsBinWriter : public FArchive
 		if (!Stream)
 		{
 			UE_LOG_ERROR("파일 쓰기를 실패했습니다.");
+			assert("파일 쓰기를 실패했습니다." && false);
 		}
 	}
 
