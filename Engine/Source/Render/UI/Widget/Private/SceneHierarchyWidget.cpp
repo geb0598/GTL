@@ -298,71 +298,66 @@ void USceneHierarchyWidget::FocusOnActor(TObjectPtr<AActor> InActor)
 {
 	if (!InActor) { return; }
 
-	// 렌더러로부터 활성화된 카메라를 요청
 	FViewportClient* ViewportClient = URenderer::GetInstance().GetViewportClient();
-	UCamera* ActiveCamera = URenderer::GetInstance().GetViewportClient()->GetActiveCamera();
-	if (!ActiveCamera)
+	if (!ViewportClient) { return; }
+
+	TObjectPtr<UPrimitiveComponent> Prim = nullptr;
+	if (InActor->GetRootComponent() && InActor->GetRootComponent()->IsA(UPrimitiveComponent::StaticClass()))
 	{
-		UE_LOG_WARNING("SceneHierarchy: 포커싱할 활성 카메라를 찾을 수 없습니다.");
+		Prim = Cast<UPrimitiveComponent>(InActor->GetRootComponent());
+	}
+
+	if (!Prim)
+	{
+		UE_LOG_WARNING("SceneHierarchy: 액터에서 바운드를 계산할 프리미티브 컴포넌트를 찾을 수 없습니다.");
 		return;
 	}
 
-	TObjectPtr<UPrimitiveComponent> Prim = nullptr;
-	auto& Components = InActor->GetOwnedComponents();
-	for (const TObjectPtr<UActorComponent>& Component : Components)
-	{
-		if (Component->IsA(UPrimitiveComponent::StaticClass()))
-		{
-			Prim = Cast<UPrimitiveComponent>(Component);
-		}
-	}
-
-	if (!Prim) { return; }
+	const FMatrix& ActorWorldMatrix = InActor->GetRootComponent()->GetWorldTransformMatrix();
+	FVector ActorForward = { ActorWorldMatrix.Data[0][0], ActorWorldMatrix.Data[0][1], ActorWorldMatrix.Data[0][2] };
+	ActorForward.Normalize();
 
 	FVector ComponentMin, ComponentMax;
 	Prim->GetWorldAABB(ComponentMin, ComponentMax);
-	FVector ActorLocation = (ComponentMin + ComponentMax) * 0.5f;
-	const FVector BoxSize = ComponentMax - ComponentMin;
-
-	float FovY = FVector::GetDegreeToRadian(ActiveCamera->GetFovY());
-	float DistanceZ = BoxSize.Z * 0.5f / std::tan(FovY * 0.5f);
-	float Aspect = ActiveCamera->GetAspect();
-	float FovX = 2 * std::atan(std::tan(FovY * 0.5f) * Aspect);
-	float DistanceY = BoxSize.Y * 0.5f / std::tan(FovX * 0.5f); // Gemini한테 부탁하기
-	float Distance = std::max(DistanceY, DistanceZ);
+	const FVector Center = (ComponentMin + ComponentMax) * 0.5f;
+	const FVector Size = ComponentMax - ComponentMin;
+	const float BoundingRadius = Size.Length() * 0.5f;
 
 	auto& Viewports = ViewportClient->GetViewports();
 	const int32 ViewportCount = static_cast<int32>(Viewports.size());
 
-	// 각 뷰포트 카메라의 시작 위치와 회전값을 저장할 배열 크기 조정
 	CameraStartLocation.resize(ViewportCount);
 	CameraStartRotation.resize(ViewportCount);
+	CameraTargetLocation.resize(ViewportCount);
+	CameraTargetRotation.resize(ViewportCount);
 
-	// 모든 뷰포트를 순회하며 각 카메라의 시작 상태를 저장
 	for (int32 i = 0; i < ViewportCount; ++i)
 	{
-		CameraStartLocation[i] = Viewports[i].Camera.GetLocation();
-		CameraStartRotation[i] = Viewports[i].Camera.GetRotation();
+		UCamera& Camera = Viewports[i].Camera;
+		CameraStartLocation[i] = Camera.GetLocation();
+		CameraStartRotation[i] = Camera.GetRotation();
+
+		if (Camera.GetCameraType() == ECameraType::ECT_Perspective)
+		{
+			const float FovY = Camera.GetFovY();
+			const float HalfFovRadian = FVector::GetDegreeToRadian(FovY * 0.5f);
+			const float Distance = (BoundingRadius / sinf(HalfFovRadian)) * 1.2f;
+
+			CameraTargetLocation[i] = Center - ActorForward * Distance;
+
+			FVector LookAtDir = (Center - CameraTargetLocation[i]);
+			LookAtDir.Normalize();
+
+			float Yaw = FVector::GetRadianToDegree(atan2f(LookAtDir.Y, LookAtDir.X));
+			float Pitch = FVector::GetRadianToDegree(asinf(LookAtDir.Z));
+			CameraTargetRotation[i] = FVector(0.f, Pitch, Yaw);
+		}
+		else // Orthographic
+		{
+			CameraTargetLocation[i] = Center;
+		}
 	}
 
-	// 카메라의 정확한 Forward 벡터를 사용하여 화면 중앙 배치 보정
-	// Camera 클래스에서 이미 계산된 정확한 Forward 벡터 사용
-	FVector CameraForward = ActiveCamera->GetForward();
-	CameraForward.Z = 0.0f;
-	CameraForward.Normalize();
-
-	// Actor를 정확히 화면 중앙에 놓기 위해 Forward 방향의 반대로 거리를 둔 위치에 카메라 배치
-	CameraTargetLocation = ActorLocation - (FVector::ForwardVector() * Distance);
-
-	// 카메라가 Actor를 정확히 바라보도록 조정
-	FVector LookAtDir = ActorLocation - CameraTargetLocation;
-	LookAtDir.Normalize();
-	FVector Axis = CameraForward.Cross(LookAtDir);
-	float Angle = acosf(CameraForward.Dot(LookAtDir));
-
-	CameraTargetRotation = FQuaternion::FromAxisAngle(Axis, Angle).ToEuler();
-
-	// 카메라 애니메이션 시작
 	bIsCameraAnimating = true;
 	CameraAnimationTime = 0.0f;
 }
@@ -375,58 +370,45 @@ void USceneHierarchyWidget::UpdateCameraAnimation()
 {
 	if (!bIsCameraAnimating) { return; }
 
-	// 애니메이션 도중 활성 카메라가 사라지면 애니메이션을 즉시 중단
-	UCamera* ActiveCamera = URenderer::GetInstance().GetViewportClient()->GetActiveCamera();
-	const int CameraCount = URenderer::GetInstance().GetViewportClient()->GetViewports().size();
-
-	if (!ActiveCamera)
+	FViewportClient* ViewportClient = URenderer::GetInstance().GetViewportClient();
+	if (!ViewportClient)
 	{
 		bIsCameraAnimating = false;
 		return;
 	}
 
 	CameraAnimationTime += DT;
-
-	// 애니메이션 진행 비율 계산
 	float Progress = CameraAnimationTime / CAMERA_ANIMATION_DURATION;
 
 	if (Progress >= 1.0f)
 	{
-		// 애니메이션 완료
 		Progress = 1.0f;
 		bIsCameraAnimating = false;
 	}
 
-	// Easing 함수를 사용하여 부드러운 움직임 확보 (easeInOutQuart)
 	float SmoothProgress;
 	if (Progress < 0.5f)
 	{
-		// 움직인 전반에서는 아주 천천히 가속
 		SmoothProgress = 8.0f * Progress * Progress * Progress * Progress;
 	}
 	else
 	{
-		// 움직인 후반에서는 아주 천천히 감속
 		float ProgressFromEnd = Progress - 1.0f;
 		SmoothProgress = 1.0f - 8.0f * ProgressFromEnd * ProgressFromEnd * ProgressFromEnd * ProgressFromEnd;
 	}
 
-
-	for (int Index = 0; Index < 4; ++Index)
+	auto& Viewports = ViewportClient->GetViewports();
+	for (int Index = 0; Index < Viewports.size(); ++Index)
 	{
-		FViewportClient* ViewportClient = URenderer::GetInstance().GetViewportClient();
-		UCamera& Camera = ViewportClient->GetViewports()[Index].Camera;
+		UCamera& Camera = Viewports[Index].Camera;
 
-		// Linear interpolation으로 위치 및 회전 보간
-		FVector CurrentLocation = CameraStartLocation[Index] + (CameraTargetLocation - CameraStartLocation[Index]) * SmoothProgress;
-		FVector CurrentRotation = CameraStartRotation[Index] + (CameraTargetRotation - CameraStartRotation[Index]) * SmoothProgress; // 배열 인덱스 사용
-
+		FVector CurrentLocation = CameraStartLocation[Index] + (CameraTargetLocation[Index] - CameraStartLocation[Index]) * SmoothProgress;
 		Camera.SetLocation(CurrentLocation);
 		ViewportClient->SetFocusPoint(CurrentLocation);
 
-		// 원근 투영 카메라에만 회전 변환을 합니다.
 		if (Camera.GetCameraType() == ECameraType::ECT_Perspective)
 		{
+			FVector CurrentRotation = CameraStartRotation[Index] + (CameraTargetRotation[Index] - CameraStartRotation[Index]) * SmoothProgress;
 			Camera.SetRotation(CurrentRotation);
 		}
 	}

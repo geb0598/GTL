@@ -43,8 +43,8 @@ private:
 	float CameraAnimationTime = 0.0f;
 	TArray<FVector> CameraStartLocation;
 	TArray<FVector> CameraStartRotation;
-	FVector CameraTargetLocation;
-	FVector CameraTargetRotation;
+	TArray<FVector> CameraTargetLocation;
+	TArray<FVector> CameraTargetRotation;
 
 	// Heuristic constant
 	static constexpr float CAMERA_ANIMATION_DURATION = 0.8f;

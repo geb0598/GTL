@@ -39,7 +39,10 @@ FVector UCamera::UpdateInput()
 		if (Input.IsKeyDown(EKeyInput::S)) { Direction += -Forward; }
 		if (Input.IsKeyDown(EKeyInput::Q)) { Direction += -Up; }
 		if (Input.IsKeyDown(EKeyInput::E)) { Direction += Up; }
-		Direction.Normalize();
+		if(Direction.LengthSquared() > 0.00000001f)
+		{
+			Direction.Normalize();
+		}
 		RelativeLocation += Direction * CurrentMoveSpeed * DT;
 		MovementDelta = Direction * CurrentMoveSpeed * DT;
 
