@@ -12,7 +12,7 @@ IMPLEMENT_CLASS(UStaticMeshComponent, UMeshComponent)
 
 UStaticMeshComponent::UStaticMeshComponent()
 {
-	FName DefaultObjPath = "Data/fruits/fruits.obj";
+	FName DefaultObjPath = "Data/Cube/Cube.obj";
 	SetStaticMesh(DefaultObjPath);
 }
 
