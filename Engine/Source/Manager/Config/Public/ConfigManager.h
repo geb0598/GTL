@@ -40,6 +40,9 @@ class UConfigManager : public UObject
 public:
 	void SaveEditorSetting();
 	void LoadEditorSetting();
+	void LoadEditorSetting(FString InData);
+
+	FString GetEditorSettingAsString();
 
 	float GetCellSize() const
 	{
