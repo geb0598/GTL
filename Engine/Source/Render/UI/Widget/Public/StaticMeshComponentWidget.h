@@ -20,7 +20,4 @@ private:
 	void RenderStaticMeshSelector();
 	void RenderMaterialSections();
 	void RenderAvailableMaterials(int32 TargetSlotIndex);
-
-	// Material management functions
-	UMaterial* CopyMaterial(UMaterial* SourceMaterial);
 };

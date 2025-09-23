@@ -124,33 +124,19 @@ void UStaticMeshComponentWidget::RenderMaterialSections()
 
 void UStaticMeshComponentWidget::RenderAvailableMaterials(int32 TargetSlotIndex)
 {
-	// 모든 UMaterial을 직접 순회 - 훨씬 더 효율적
-	TMap<FString, UMaterial*> UniqueMaterials;
-
+	// 모든 UMaterial 순회
 	for (TObjectIterator<UMaterial> It; It; ++It)
 	{
 		UMaterial* Mat = *It;
-		if (Mat)
+		if (!Mat) continue;
+
+		std::string MatName = "Material_" + std::to_string(Mat->GetUUID());
+		bool bIsSelected = (StaticMeshComponent->GetMaterial(TargetSlotIndex) == Mat);
+
+		if (ImGui::Selectable(MatName.c_str(), bIsSelected))
 		{
-			// Material ID를 기반으로 고유 Key 생성
-			FString Key = "Material_" + std::to_string(Mat->GetUUID());
-			UniqueMaterials[Key] = Mat;
-		}
-	}
-
-	// Material 목록 표시
-	for (const auto& Pair : UniqueMaterials)
-	{
-		const FString& MaterialName = Pair.first;
-		UMaterial* Material = Pair.second;
-
-		bool bIsSelected = (StaticMeshComponent->GetStaticMesh()->GetMaterial(TargetSlotIndex) == Material);
-
-		if (ImGui::Selectable(MaterialName.c_str(), bIsSelected))
-		{
-			// Material 복사 (수정 가능한 복사본 생성)
-			UMaterial* CopiedMaterial = CopyMaterial(Material);
-			StaticMeshComponent->SetMaterial(TargetSlotIndex, CopiedMaterial);
+			// Material을 직접 참조
+			StaticMeshComponent->SetMaterial(TargetSlotIndex, Mat);
 		}
 
 		if (bIsSelected)
@@ -158,22 +144,4 @@ void UStaticMeshComponentWidget::RenderAvailableMaterials(int32 TargetSlotIndex)
 			ImGui::SetItemDefaultFocus();
 		}
 	}
-}
-
-UMaterial* UStaticMeshComponentWidget::CopyMaterial(UMaterial* SourceMaterial)
-{
-	if (!SourceMaterial) return nullptr;
-
-	// Material 복사본 생성
-	UMaterial* CopiedMaterial = new UMaterial();
-
-	// 텍스처 정보 복사 (포인터만 복사)
-	CopiedMaterial->SetDiffuseTexture(SourceMaterial->GetDiffuseTexture());
-	CopiedMaterial->SetAmbientTexture(SourceMaterial->GetAmbientTexture());
-	CopiedMaterial->SetSpecularTexture(SourceMaterial->GetSpecularTexture());
-	CopiedMaterial->SetNormalTexture(SourceMaterial->GetNormalTexture());
-	CopiedMaterial->SetAlphaTexture(SourceMaterial->GetAlphaTexture());
-	CopiedMaterial->SetBumpTexture(SourceMaterial->GetBumpTexture());
-
-	return CopiedMaterial;
 }
