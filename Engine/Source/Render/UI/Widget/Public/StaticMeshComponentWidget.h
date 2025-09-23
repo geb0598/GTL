@@ -20,4 +20,7 @@ private:
 	void RenderStaticMeshSelector();
 	void RenderMaterialSections();
 	void RenderAvailableMaterials(int32 TargetSlotIndex);
+
+	// Material utility functions
+	FString GetMaterialDisplayName(UMaterial* Material) const;
 };
