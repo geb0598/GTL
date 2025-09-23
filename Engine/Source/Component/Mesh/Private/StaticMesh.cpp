@@ -19,10 +19,7 @@ UStaticMesh::~UStaticMesh()
 	// 임시로 할당된 Material 해제 -> 이후 GUObject에서 관리 예정
 	for (UMaterial* Material : Materials)
 	{
-		if (Material)
-		{
-			delete Material;
-		}
+		SafeDelete(Material);
 	}
 	Materials.clear();
 }

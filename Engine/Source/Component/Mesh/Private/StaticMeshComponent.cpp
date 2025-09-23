@@ -74,3 +74,23 @@ void UStaticMeshComponent::SetStaticMesh(const FName& InObjPath)
 		BoundingBox = &AssetManager.GetStaticMeshAABB(InObjPath);
 	}
 }
+
+UMaterial* UStaticMeshComponent::GetMaterial(int32 Index) const
+{
+	if (Index >= 0 && Index < OverrideMaterials.size() && OverrideMaterials[Index])
+	{
+		return OverrideMaterials[Index];
+	}
+	return StaticMesh ? StaticMesh->GetMaterial(Index) : nullptr;
+}
+
+void UStaticMeshComponent::SetMaterial(int32 Index, UMaterial* InMaterial)
+{
+	if (Index < 0) return;
+
+	if (Index >= OverrideMaterials.size())
+	{
+		OverrideMaterials.resize(Index + 1, nullptr);
+	}
+	OverrideMaterials[Index] = InMaterial;
+}
