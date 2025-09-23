@@ -5,6 +5,8 @@
 #include "Manager/Level/Public/LevelManager.h"
 #include "Level/Public/Level.h"
 #include "Core/Public/ObjectIterator.h"
+#include "Texture/Public/Material.h"
+#include "Texture/Public/Texture.h"
 
 IMPLEMENT_CLASS(UStaticMeshComponentWidget, UWidget)
 
@@ -42,6 +44,13 @@ void UStaticMeshComponentWidget::RenderWidget()
 		return;
 	}
 
+	RenderStaticMeshSelector();
+	ImGui::Separator();
+	RenderMaterialSections();
+}
+
+void UStaticMeshComponentWidget::RenderStaticMeshSelector()
+{
 	// 1. 현재 컴포넌트에 할당된 스태틱 메시를 가져옵니다.
 	UStaticMesh* CurrentStaticMesh = StaticMeshComponent->GetStaticMesh();
 	const FName PreviewName = CurrentStaticMesh ? CurrentStaticMesh->GetAssetPathFileName() : "None";
@@ -77,4 +86,94 @@ void UStaticMeshComponentWidget::RenderWidget()
 		// 6. 드롭다운 메뉴를 닫습니다.
 		ImGui::EndCombo();
 	}
+}
+
+void UStaticMeshComponentWidget::RenderMaterialSections()
+{
+	UStaticMesh* CurrentMesh = StaticMeshComponent->GetStaticMesh();
+	FStaticMesh* MeshAsset = CurrentMesh->GetStaticMeshAsset();
+
+	ImGui::Text("Material Slots (%d)", static_cast<int>(MeshAsset->MaterialInfo.size()));
+
+	// 머티리얼 슬롯
+	for (int32 SlotIndex = 0; SlotIndex < MeshAsset->MaterialInfo.size(); ++SlotIndex)
+	{
+		// 현재 할당된 Material 가져오기
+		UMaterial* CurrentMaterial = StaticMeshComponent->GetStaticMesh()->GetMaterial(SlotIndex);
+		FString PreviewName = CurrentMaterial ? ("Material_" + std::to_string(CurrentMaterial->GetUUID())) : "None";
+
+		// Material 정보 표시
+		ImGui::PushID(SlotIndex);
+
+		std::string Label = "Element " + std::to_string(SlotIndex);
+		if (ImGui::BeginCombo(Label.c_str(), PreviewName.c_str()))
+		{
+			if (ImGui::Selectable("None", CurrentMaterial == nullptr))
+			{
+				StaticMeshComponent->SetMaterial(SlotIndex, nullptr);
+			}
+			ImGui::Separator();
+
+			RenderAvailableMaterials(SlotIndex);
+
+			ImGui::EndCombo();
+		}
+		ImGui::PopID();
+	}
+}
+
+void UStaticMeshComponentWidget::RenderAvailableMaterials(int32 TargetSlotIndex)
+{
+	// 모든 UMaterial을 직접 순회 - 훨씬 더 효율적
+	TMap<FString, UMaterial*> UniqueMaterials;
+
+	for (TObjectIterator<UMaterial> It; It; ++It)
+	{
+		UMaterial* Mat = *It;
+		if (Mat)
+		{
+			// Material ID를 기반으로 고유 Key 생성
+			FString Key = "Material_" + std::to_string(Mat->GetUUID());
+			UniqueMaterials[Key] = Mat;
+		}
+	}
+
+	// Material 목록 표시
+	for (const auto& Pair : UniqueMaterials)
+	{
+		const FString& MaterialName = Pair.first;
+		UMaterial* Material = Pair.second;
+
+		bool bIsSelected = (StaticMeshComponent->GetStaticMesh()->GetMaterial(TargetSlotIndex) == Material);
+
+		if (ImGui::Selectable(MaterialName.c_str(), bIsSelected))
+		{
+			// Material 복사 (수정 가능한 복사본 생성)
+			UMaterial* CopiedMaterial = CopyMaterial(Material);
+			StaticMeshComponent->SetMaterial(TargetSlotIndex, CopiedMaterial);
+		}
+
+		if (bIsSelected)
+		{
+			ImGui::SetItemDefaultFocus();
+		}
+	}
+}
+
+UMaterial* UStaticMeshComponentWidget::CopyMaterial(UMaterial* SourceMaterial)
+{
+	if (!SourceMaterial) return nullptr;
+
+	// Material 복사본 생성
+	UMaterial* CopiedMaterial = new UMaterial();
+
+	// 텍스처 정보 복사 (포인터만 복사)
+	CopiedMaterial->SetDiffuseTexture(SourceMaterial->GetDiffuseTexture());
+	CopiedMaterial->SetAmbientTexture(SourceMaterial->GetAmbientTexture());
+	CopiedMaterial->SetSpecularTexture(SourceMaterial->GetSpecularTexture());
+	CopiedMaterial->SetNormalTexture(SourceMaterial->GetNormalTexture());
+	CopiedMaterial->SetAlphaTexture(SourceMaterial->GetAlphaTexture());
+	CopiedMaterial->SetBumpTexture(SourceMaterial->GetBumpTexture());
+
+	return CopiedMaterial;
 }

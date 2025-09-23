@@ -2,6 +2,7 @@
 #include "Render/UI/Widget/Public/Widget.h"
 
 class UStaticMeshComponent;
+class UMaterial;
 
 UCLASS()
 class UStaticMeshComponentWidget : public UWidget
@@ -14,4 +15,12 @@ public:
 
 private:
 	UStaticMeshComponent* StaticMeshComponent{};
+
+	// Helper functions for rendering different sections
+	void RenderStaticMeshSelector();
+	void RenderMaterialSections();
+	void RenderAvailableMaterials(int32 TargetSlotIndex);
+
+	// Material management functions
+	UMaterial* CopyMaterial(UMaterial* SourceMaterial);
 };
