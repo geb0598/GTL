@@ -38,21 +38,20 @@ void UStaticMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		FJsonSerializer::ReadString(InOutHandle, "ObjStaticMeshAsset", AssetPath);
 		SetStaticMesh(AssetPath);
 
-		if (InOutHandle.hasKey("OverrideMaterial") && InOutHandle.at("OverrideMaterial").JSONType() == json::JSON::Class::Object)
+		JSON OverrideMaterialJson;
+		if (FJsonSerializer::ReadObject(InOutHandle, "OverrideMaterial", OverrideMaterialJson))
 		{
-			JSON& MaterialJson = InOutHandle.at("OverrideMaterial");
-
-			for (auto& Pair : MaterialJson.ObjectRange())
+			for (auto& Pair : OverrideMaterialJson.ObjectRange())
 			{
 				const FString& IdString = Pair.first;
 				JSON& MaterialPathDataJson = Pair.second;
 
-				FString MaterialPath;
-				FJsonSerializer::ReadString(MaterialPathDataJson, "Path", MaterialPath);
-
 				int32 MaterialId;
 				try { MaterialId = std::stoi(IdString); }
 				catch (const std::exception&) { continue; }
+
+				FString MaterialPath;
+				FJsonSerializer::ReadString(MaterialPathDataJson, "Path", MaterialPath);
 
 				for (TObjectIterator<UMaterial> It; It; ++It)
 				{
@@ -62,6 +61,7 @@ void UStaticMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 					if (Mat->GetDiffuseTexture()->GetFilePath() == MaterialPath)
 					{
 						SetMaterial(MaterialId, Mat);
+						break;
 					}
 				}
 			}

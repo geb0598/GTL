@@ -15,7 +15,7 @@
 #include "json.hpp" // 사용하는 JSON 라이브러리
 
 namespace json { class JSON; }
-using JSON = json::JSON;
+using JSON = JSON;
 
 /**
  * @brief Level 직렬화에 관여하는 클래스
@@ -29,32 +29,164 @@ public:
 	//====================================================================================
 
 	/**
-	 * @brief JSON 객체에서 키를 찾아 FString 값을 읽어옵니다.
-	 * 키가 없거나 타입이 문자열이 아니면 기본값을 사용합니다.
+	 * @brief JSON 객체에서 키를 찾아 64비트 정수(int64) 값을 안전하게 읽어옵니다.
+	 * @return 성공하면 true, 실패하면 false를 반환합니다.
 	 */
-	static void ReadString(const JSON& InJson, const std::string& InKey, FString& OutValue, const FString& InDefaultValue = "")
+	static bool ReadInt64(const JSON& InJson, const FString& InKey, int64& OutValue, int64 InDefaultValue = 0)
 	{
 		if (InJson.hasKey(InKey))
 		{
-			const json::JSON& Value = InJson.at(InKey);
-			if (Value.JSONType() == json::JSON::Class::String)
+			const JSON& Value = InJson.at(InKey);
+			if (Value.JSONType() == JSON::Class::Integral)
 			{
-				// json.hpp의 ToString()이 std::string을 반환한다고 가정합니다.
-				// FString이 std::string으로부터 생성 가능해야 합니다.
-				OutValue = Value.ToString();
-				return;
+				OutValue = Value.ToInt();
+				return true;
 			}
 		}
 
-		UE_LOG_ERROR("[JsonSerializer] %s String 파싱에 실패했습니다", InKey.c_str());
+		UE_LOG_ERROR("[JsonSerializer] %s int64 파싱에 실패했습니다 (기본값 사용)", InKey.c_str());
 		OutValue = InDefaultValue;
+		return false;
+	}
+
+	/**
+	 * @brief JSON 객체에서 키를 찾아 32비트 정수(int32) 값을 안전하게 읽어옵니다.
+	 * @return 성공하면 true, 실패하면 false를 반환합니다.
+	 */
+	static bool ReadInt32(const JSON& InJson, const FString& InKey, int32& OutValue, int32 InDefaultValue = 0)
+	{
+		int64 Value_i64;
+		if (ReadInt64(InJson, InKey, Value_i64))
+		{
+			// int32의 표현 범위를 벗어나는지 확인합니다.
+			if (Value_i64 >= INT32_MIN && Value_i64 <= INT32_MAX)
+			{
+				OutValue = static_cast<int32>(Value_i64);
+				return true;
+			}
+		}
+
+		// ReadInt64가 실패했거나, 값의 범위가 벗어난 경우
+		UE_LOG_ERROR("[JsonSerializer] %s int32 파싱에 실패했습니다 (기본값 사용)", InKey.c_str());
+		OutValue = InDefaultValue;
+		return false;
+	}
+
+	/**
+	 * @brief 부호 없는 32비트 정수(uint32)를 안전하게 읽어옵니다.
+	 * @return 성공하면 true, 실패하면 false를 반환합니다.
+	 */
+	static bool ReadUint32(const JSON& InJson, const FString& InKey, uint32& OutValue, uint32 InDefaultValue = 0)
+	{
+		int64 Value_i64;
+		if (ReadInt64(InJson, InKey, Value_i64))
+		{
+			if (Value_i64 >= 0 && Value_i64 <= UINT32_MAX)
+			{
+				OutValue = static_cast<uint32>(Value_i64);
+				return true;
+			}
+
+		}
+
+		UE_LOG_ERROR("[JsonSerializer] %s uint32 파싱에 실패했습니다 (기본값 사용)", InKey.c_str());
+		OutValue = InDefaultValue;
+		return false;
+	}
+
+	/**
+	 * @brief JSON 객체에서 키를 찾아 float 값을 안전하게 읽어옵니다.
+	 * @return 성공하면 true, 실패하면 false를 반환합니다.
+	 */
+	static bool ReadFloat(const JSON& InJson, const FString& InKey, float& OutValue, float InDefaultValue = 0.0f)
+	{
+		if (InJson.hasKey(InKey))
+		{
+			const JSON& Value = InJson.at(InKey);
+			if (Value.JSONType() == JSON::Class::Floating)
+			{
+				// JSON 라이브러리의 숫자 변환 함수를 사용합니다.
+				// ToDouble()로 읽은 후 float으로 캐스팅하거나, ToFloat()가 있다면 직접 사용합니다.
+				OutValue = static_cast<float>(Value.ToFloat());
+				return true;
+			}
+		}
+
+		UE_LOG_ERROR("[JsonSerializer] %s float 파싱에 실패했습니다 (기본값 사용)", InKey.c_str());
+		OutValue = InDefaultValue;
+		return false;
+	}
+
+	/**
+	 * @brief JSON 객체에서 키를 찾아 FString 값을 읽어옵니다.
+	 * @return 성공하면 true, 실패하면 false를 반환합니다.
+	 */
+	static bool ReadString(const JSON& InJson, const FString& InKey, FString& OutValue, const FString& InDefaultValue = "")
+	{
+		if (InJson.hasKey(InKey))
+		{
+			const JSON& Value = InJson.at(InKey);
+			if (Value.JSONType() == JSON::Class::String)
+			{
+				// json.hpp의 ToString()이 FString을 반환한다고 가정합니다.
+				// FString이 FString으로부터 생성 가능해야 합니다.
+				OutValue = Value.ToString();
+				return true;
+			}
+		}
+
+		UE_LOG_ERROR("[JsonSerializer] %s String 파싱에 실패했습니다 (기본값 사용)", InKey.c_str());
+		OutValue = InDefaultValue;
+		return false;
+	}
+
+	/**
+	 * @brief JSON 객체에서 키를 찾아 JSON::Class::Object 값을 안전하게 읽어옵니다.
+	 * @return 성공하면 true, 실패하면 false를 반환합니다.
+	 */
+	static bool ReadObject(const JSON& InJson, const FString& InKey, JSON& OutValue, JSON InDefaultValue = nullptr)
+	{
+		if (InJson.hasKey(InKey))
+		{
+			const JSON& Value = InJson.at(InKey);
+			if (Value.JSONType() == JSON::Class::Object)
+			{
+				OutValue = Value;
+				return true;
+			}
+		}
+
+		UE_LOG_ERROR("[JsonSerializer] %s Object 파싱에 실패했습니다 (기본값 사용)", InKey.c_str());
+		OutValue = InDefaultValue;
+		return false;
+	}
+
+	/**
+	 * @brief JSON 객체에서 키를 찾아 JSON::Class::Array 값을 안전하게 읽어옵니다.
+	 * @return 성공하면 true, 실패하면 false를 반환합니다.
+	 */
+	static bool ReadArray(const JSON& InJson, const FString& InKey, JSON& OutValue, JSON InDefaultValue = nullptr)
+	{
+		if (InJson.hasKey(InKey))
+		{
+			const JSON& Value = InJson.at(InKey);
+			if (Value.JSONType() == JSON::Class::Array)
+			{
+				OutValue = Value;
+				return true;
+			}
+		}
+
+		UE_LOG_ERROR("[JsonSerializer] %s Array 파싱에 실패했습니다 (기본값 사용)", InKey.c_str());
+		OutValue = InDefaultValue;
+		return false;
 	}
 
 	/**
 	 * @brief JSON 객체에서 키를 찾아 FVector 값을 안전하게 읽어옵니다.
-	 * 키가 없거나, 유효한 Vector 배열이 아니면 기본값을 사용합니다.
+	 * @return 성공하면 true, 실패하면 false를 반환합니다.
 	 */
-	static void ReadVector(const JSON& InJson, const std::string& InKey, FVector& OutValue, const FVector& InDefaultValue = FVector::Zero())
+	static bool ReadVector(const JSON& InJson, const FString& InKey, FVector& OutValue, const FVector& InDefaultValue = FVector::Zero())
 	{
 		if (InJson.hasKey(InKey))
 		{
@@ -68,7 +200,7 @@ public:
 						static_cast<float>(VectorJson.at(1).ToFloat()),
 						static_cast<float>(VectorJson.at(2).ToFloat())
 					};
-					return;
+					return true;
 				}
 				catch (const std::exception&)
 				{
@@ -76,30 +208,11 @@ public:
 			}
 		}
 
-		UE_LOG_ERROR("[JsonSerializer] %s Vector 파싱에 실패했습니다", InKey.c_str());
+		UE_LOG_ERROR("[JsonSerializer] %s Vector 파싱에 실패했습니다 (기본값 사용)", InKey.c_str());
 		OutValue = InDefaultValue;
+		return false;
 	}
 
-	/**
-	 * @brief 부호 없는 32비트 정수(uint32_t)를 안전하게 읽어옵니다.
-	 * 음수 값이거나 uint32_t의 표현 범위를 벗어나면 기본값을 사용합니다.
-	 */
-	static void ReadUint32(const JSON& InJson, const std::string& InKey, uint32_t& OutValue, uint32_t InDefaultValue = 0)
-	{
-		int64_t value_i64;
-		if (ReadInt64(InJson, InKey, value_i64))
-		{
-			if (value_i64 >= 0 && value_i64 <= UINT32_MAX)
-			{
-				OutValue = static_cast<uint32_t>(value_i64);
-				return;
-			}
-
-		}
-
-		UE_LOG_ERROR("[JsonSerializer] %s uint32 파싱에 실패했습니다", InKey.c_str());
-		OutValue = InDefaultValue;
-	}
 
 	//====================================================================================
 	// Converting To JSON
@@ -111,6 +224,7 @@ public:
 		VectorArray.append(InVector.X, InVector.Y, InVector.Z);
 		return VectorArray;
 	}
+
 
 	//====================================================================================
 	// File I/O
@@ -145,7 +259,7 @@ public:
 				return false;
 			}
 
-			std::string FileContent((std::istreambuf_iterator<char>(File)), std::istreambuf_iterator<char>());
+			FString FileContent((std::istreambuf_iterator<char>(File)), std::istreambuf_iterator<char>());
 			File.close();
 
 			std::cout << "[JsonSerializer] File Content Length: " << FileContent.length() << "\n";
@@ -157,6 +271,7 @@ public:
 			return false;
 		}
 	}
+
 
 	//====================================================================================
 	// Utility & Analysis Functions
@@ -172,25 +287,4 @@ public:
 		uint32 TotalPrimitives = 0;
 		TMap<EPrimitiveType, uint32> PrimitiveCountByType;
 	};
-
-private:
-	static bool HandleJsonError(const std::exception& InException, const FString& InContext, FString& OutErrorMessage)
-	{
-		OutErrorMessage = InContext + ": " + InException.what();
-		return false;
-	}
-
-	static bool ReadInt64(const json::JSON& InJson, const std::string& InKey, int64_t& OutValue)
-	{
-		if (InJson.hasKey(InKey))
-		{
-			const json::JSON& Value = InJson.at(InKey);
-			if (Value.JSONType() == json::JSON::Class::Integral)
-			{
-				OutValue = Value.ToInt();
-				return true;
-			}
-		}
-		return false;
-	}
 };

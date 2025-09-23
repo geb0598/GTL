@@ -15,6 +15,8 @@
 #include "Core/Public/Object.h"
 #include "Factory/Public/FactorySystem.h"
 #include "Manager/Config/Public/ConfigManager.h"
+#include "Render/Renderer/Public/Renderer.h"
+#include "Editor/Public/ViewportClient.h"
 
 #include <json.hpp>
 
@@ -46,15 +48,16 @@ void ULevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		uint32 NextUUID = 0;
 		FJsonSerializer::ReadUint32(InOutHandle, "NextUUID", Version);
 
-		FString PerspectiveCameraData;
-		FJsonSerializer::ReadString(InOutHandle, "PerspectiveCamera", PerspectiveCameraData);
-		UConfigManager::GetInstance().LoadEditorSetting(PerspectiveCameraData);
-
-		// "Primitives" 키가 존재하고 타입이 Object인지 확인
-		if (InOutHandle.hasKey("Primitives") && InOutHandle.at("Primitives").JSONType() == json::JSON::Class::Object)
+		JSON PerspectiveCameraData;
+		if (FJsonSerializer::ReadObject(InOutHandle, "PerspectiveCamera", PerspectiveCameraData))
 		{
-			JSON& PrimitivesJson = InOutHandle.at("Primitives");
+			UConfigManager::GetInstance().SetCameraSettingsFromJson(PerspectiveCameraData);
+			URenderer::GetInstance().GetViewportClient()->ApplyAllCameraDataToViewports();
+		}
 
+		JSON PrimitivesJson;
+		if (FJsonSerializer::ReadObject(InOutHandle, "Primitives", PrimitivesJson))
+		{
 			// ObjectRange()를 사용하여 Primitives 객체의 모든 키-값 쌍을 순회
 			for (auto& Pair : PrimitivesJson.ObjectRange())
 			{
@@ -79,9 +82,11 @@ void ULevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 	else
 	{
 		InOutHandle["Version"] = 1;
-		InOutHandle["NextUUID"] = GetNextUUID();	// Todo: UUID가 액터별로 많은 UUID가 할당되는 거 같은데?
+		InOutHandle["NextUUID"] = GetNextUUID();	// Todo: 액터 하나당 UUID 가 여러개라서 +1 씩 늘어나지 않는다
 
-		InOutHandle["PerspectiveCamera"] = UConfigManager::GetInstance().GetEditorSettingAsString();
+		// GetCameraSetting 호출 전에 뷰포트 클라이언트의 최신 데이터를 ConfigManager로 동기화합니다.
+		URenderer::GetInstance().GetViewportClient()->UpdateCameraSettingsToConfig();
+		InOutHandle["PerspectiveCamera"] = UConfigManager::GetInstance().GetCameraSettingsAsJson();
 
 		JSON PrimitivesJson;
 		for (const TObjectPtr<AActor>& Actor : LevelActors)

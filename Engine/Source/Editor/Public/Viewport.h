@@ -13,6 +13,25 @@ enum class EViewportCameraType : uint8_t
 	Ortho_Right
 };
 
+// int → EViewportCameraType 변환
+inline EViewportCameraType ToViewportCameraType(int InValue)
+{
+	switch (InValue)
+	{
+	case static_cast<int>(EViewportCameraType::Perspective):   return EViewportCameraType::Perspective;
+	case static_cast<int>(EViewportCameraType::Ortho_Top):     return EViewportCameraType::Ortho_Top;
+	case static_cast<int>(EViewportCameraType::Ortho_Bottom):  return EViewportCameraType::Ortho_Bottom;
+	case static_cast<int>(EViewportCameraType::Ortho_Front):   return EViewportCameraType::Ortho_Front;
+	case static_cast<int>(EViewportCameraType::Ortho_Back):    return EViewportCameraType::Ortho_Back;
+	case static_cast<int>(EViewportCameraType::Ortho_Left):    return EViewportCameraType::Ortho_Left;
+	case static_cast<int>(EViewportCameraType::Ortho_Right):   return EViewportCameraType::Ortho_Right;
+
+	default:
+		UE_LOG_ERROR("[EViewportCameraType] Enum 파싱에 실패했습니다 (기본값 사용)", InValue);
+		return EViewportCameraType::Perspective;
+	}
+}
+
 // EViewportType을 문자열로 변환하는 헬퍼 함수
 inline const char* ViewportTypeToString(EViewportCameraType InType)
 {
