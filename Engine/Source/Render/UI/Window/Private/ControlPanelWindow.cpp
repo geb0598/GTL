@@ -27,7 +27,8 @@ UControlPanelWindow::UControlPanelWindow()
 
 	AddWidget(new UFPSWidget);
 	AddWidget(new UPrimitiveSpawnWidget);
-	AddWidget(new UCameraControlWidget);
+	// 현재 ViewportMenuBarWidget.cpp 에서 사용 중
+	//AddWidget(new UCameraControlWidget);
 }
 
 /**

@@ -1,21 +1,24 @@
 #include "pch.h"
 #include "Render/Renderer/Public/Renderer.h"
-
+#include "Render/Renderer/Public/Pipeline.h"
+#include "Render/FontRenderer/Public/FontRenderer.h"
 #include "Component/Public/BillBoardComponent.h"
+#include "Component/Public/PrimitiveComponent.h"
+#include "Component/Mesh/Public/StaticMeshComponent.h"
 #include "Editor/Public/Editor.h"
+#include "Editor/Public/ViewportClient.h"
+#include "Editor/Public/Camera.h"
 #include "Level/Public/Level.h"
 #include "Manager/Level/Public/LevelManager.h"
 #include "Manager/UI/Public/UIManager.h"
 #include "Component/Public/PrimitiveComponent.h"
 #include "Render/FontRenderer/Public/FontRenderer.h"
 #include "Render/Renderer/Public/Pipeline.h"
+#include "Render/UI/Overlay/Public/StatOverlay.h"
 #include "Texture/Public/Material.h"
 #include "Texture/Public/Texture.h"
 #include "Texture/Public/TextureRenderProxy.h"
-#include "Component/Mesh/Public/StaticMeshComponent.h"
 #include "Source/Component/Mesh/Public/StaticMesh.h"
-#include "Editor/Public/ViewportClient.h"
-#include "Editor/Public/Camera.h"
 
 IMPLEMENT_SINGLETON_CLASS_BASE(URenderer)
 
@@ -262,6 +265,7 @@ void URenderer::Update()
 
 	// 최상위 에디터/GUI는 프레임에 1회만
 	UUIManager::GetInstance().Render();
+	UStatOverlay::GetInstance().Render();
 
 	RenderEnd(); // Present 1회
 }
@@ -641,6 +645,7 @@ void URenderer::OnResize(uint32 InWidth, uint32 InHeight) const
 	GetDeviceContext()->OMSetRenderTargets(0, nullptr, nullptr);
 
 	// SwapChain 버퍼 크기 재설정
+	UStatOverlay::GetInstance().PreResize();
 	HRESULT Result = GetSwapChain()->ResizeBuffers(2, InWidth, InHeight, DXGI_FORMAT_UNKNOWN, 0);
 	if (FAILED(Result))
 	{
@@ -657,6 +662,7 @@ void URenderer::OnResize(uint32 InWidth, uint32 InHeight) const
 	auto* RenderTargetView = DeviceResources->GetRenderTargetView();
 	ID3D11RenderTargetView* RenderTargetViews[] = {RenderTargetView};
 	GetDeviceContext()->OMSetRenderTargets(1, RenderTargetViews, DeviceResources->GetDepthStencilView());
+	UStatOverlay::GetInstance().OnResize();
 }
 
 /**
