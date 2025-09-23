@@ -41,8 +41,8 @@ private:
 	// Camera focus animation
 	bool bIsCameraAnimating = false;
 	float CameraAnimationTime = 0.0f;
-	FVector CameraStartLocation;
-	FVector CameraStartRotation;
+	TArray<FVector> CameraStartLocation;
+	TArray<FVector> CameraStartRotation;
 	FVector CameraTargetLocation;
 	FVector CameraTargetRotation;
 
