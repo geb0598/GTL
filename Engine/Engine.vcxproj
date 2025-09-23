@@ -357,7 +357,6 @@
     <ClInclude Include="Source\Texture\Public\TextureRenderProxy.h" />
     <ClInclude Include="Source\Utility\Public\FileDialog.h" />
     <ClInclude Include="Source\Utility\Public\JsonSerializer.h" />
-    <ClInclude Include="Source\Utility\Public\Metadata.h" />
     <ClInclude Include="Source\Utility\Public\UELogParser.h" />
   </ItemGroup>
   <ItemGroup>
@@ -487,7 +486,6 @@
     </ClCompile>
     <ClCompile Include="Source\Texture\Private\Texture.cpp" />
     <ClCompile Include="Source\Utility\Private\FileDialog.cpp" />
-    <ClCompile Include="Source\Utility\Private\JsonSerializer.cpp" />
     <ClCompile Include="Source\Utility\Private\UELogParser.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

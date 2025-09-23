@@ -4,7 +4,6 @@
 
 class UEditor;
 class ULevel;
-struct FLevelMetadata;
 
 UCLASS()
 class ULevelManager :
@@ -29,10 +28,6 @@ public:
 	bool CreateNewLevel(const FString& InLevelName);
 	static path GetLevelDirectory();
 	static path GenerateLevelFilePath(const FString& InLevelName);
-
-	// Metadata Conversion Functions
-	static FLevelMetadata ConvertLevelToMetadata(TObjectPtr<ULevel> InLevel);
-	static bool LoadLevelFromMetadata(TObjectPtr<ULevel> InLevel, const FLevelMetadata& InMetadata);
 
 	TObjectPtr<UEditor> GetEditor() const { return Editor; }
 
