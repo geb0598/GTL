@@ -469,7 +469,7 @@ void URenderer::RenderStaticMesh(UStaticMeshComponent* InMeshComp, ID3D11Rasteri
 	UTimeManager& TimeManager = UTimeManager::GetInstance();
 	for (const FMeshSection& Section : MeshAsset->Sections)
 	{
-		UMaterial* Material = InMeshComp->GetStaticMesh()->GetMaterial(Section.MaterialSlot);
+		UMaterial* Material = InMeshComp->GetMaterial(Section.MaterialSlot);
 		if (Material)
 		{
 			FMaterialConstants MaterialConstants = {};
