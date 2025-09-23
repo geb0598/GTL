@@ -26,9 +26,6 @@
     <ClCompile Include="Source\Utility\Private\FileDialog.cpp">
       <Filter>Source\Utility\Private</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Utility\Private\JsonSerializer.cpp">
-      <Filter>Source\Utility\Private</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Actor\Private\Actor.cpp">
       <Filter>Source\Actor\Private</Filter>
     </ClCompile>

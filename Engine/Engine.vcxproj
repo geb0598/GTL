@@ -486,7 +486,6 @@
     </ClCompile>
     <ClCompile Include="Source\Texture\Private\Texture.cpp" />
     <ClCompile Include="Source\Utility\Private\FileDialog.cpp" />
-    <ClCompile Include="Source\Utility\Private\JsonSerializer.cpp" />
     <ClCompile Include="Source\Utility\Private\UELogParser.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
