@@ -64,6 +64,13 @@ public:
 	UMaterial() {};
 	UMaterial(const FName& InName) {};
 	~UMaterial() override;
+
+	FVector GetAmbientColor() const { return MaterialData.Ka; }
+	FVector GetDiffuseColor() const { return MaterialData.Kd; }
+	FVector GetSpecularColor() const { return MaterialData.Ks; }
+	float GetSpecularExponent() const { return MaterialData.Ns; }
+	float GetRefractionIndex() const { return MaterialData.Ni; }
+	float GetDissolveFactor() const { return MaterialData.D; }
 	
 	// Texture access functions
 	UTexture* GetDiffuseTexture() const { return DiffuseTexture; }

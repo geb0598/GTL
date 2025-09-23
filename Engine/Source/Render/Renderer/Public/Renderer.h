@@ -94,6 +94,7 @@ public:
 	void UpdateConstant(const FViewProjConstants& InViewProjConstants) const;
 	void UpdateConstant(const FMatrix& InMatrix) const;
 	void UpdateConstant(const FVector4& InColor) const;
+	void UpdateConstant(const FMaterialConstants& InMaterial) const;
 
 	static void ReleaseVertexBuffer(ID3D11Buffer* InVertexBuffer);
 	static void ReleaseIndexBuffer(ID3D11Buffer* InIndexBuffer);
@@ -125,6 +126,7 @@ private:
 	ID3D11Buffer* ConstantBufferViewProj = nullptr;
 	ID3D11Buffer* ConstantBufferColor = nullptr;
 	ID3D11Buffer* ConstantBufferBatchLine = nullptr;
+	ID3D11Buffer* ConstantBufferMaterial = nullptr;
 
 	FLOAT ClearColor[4] = {0.025f, 0.025f, 0.025f, 1.0f};
 

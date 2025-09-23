@@ -25,6 +25,18 @@ struct FViewProjConstants
 	FMatrix Projection;
 };
 
+struct FMaterialConstants
+{
+	FVector4 Ka;
+	FVector4 Kd;
+	FVector4 Ks;
+	float Ns;
+	float Ni;
+	float D;
+	uint32 MaterialFlags;
+	float Time; // Time in seconds
+};
+
 struct FVertex
 {
 	FVector Position;
