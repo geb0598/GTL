@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "Core/Public/Class.h"       // UObject 기반 클래스 및 매크로
 #include "Core/Public/ObjectPtr.h"
+#include "Core/Public/ObjectIterator.h"
 #include "Component/Mesh/Public/StaticMeshComponent.h"
 #include "Component/Mesh/Public/MeshComponent.h"
 #include "Manager/Asset/Public/ObjManager.h"
@@ -8,6 +9,7 @@
 #include "Physics/Public/AABB.h"
 #include "Render/UI/Widget/Public/StaticMeshComponentWidget.h"
 #include "Utility/Public/JsonSerializer.h"
+#include "Texture/Public/Texture.h"
 
 #include <json.hpp>
 
@@ -35,6 +37,35 @@ void UStaticMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		FString AssetPath;
 		FJsonSerializer::ReadString(InOutHandle, "ObjStaticMeshAsset", AssetPath);
 		SetStaticMesh(AssetPath);
+
+		if (InOutHandle.hasKey("OverrideMaterial") && InOutHandle.at("OverrideMaterial").JSONType() == json::JSON::Class::Object)
+		{
+			JSON& MaterialJson = InOutHandle.at("OverrideMaterial");
+
+			for (auto& Pair : MaterialJson.ObjectRange())
+			{
+				const FString& IdString = Pair.first;
+				JSON& MaterialPathDataJson = Pair.second;
+
+				FString MaterialPath;
+				FJsonSerializer::ReadString(MaterialPathDataJson, "Path", MaterialPath);
+
+				int32 MaterialId;
+				try { MaterialId = std::stoi(IdString); }
+				catch (const std::exception&) { continue; }
+
+				for (TObjectIterator<UMaterial> It; It; ++It)
+				{
+					UMaterial* Mat = *It;
+					if (!Mat) continue;
+
+					if (Mat->GetDiffuseTexture()->GetFilePath() == MaterialPath)
+					{
+						SetMaterial(MaterialId, Mat);
+					}
+				}
+			}
+		}
 	}
 	// 저장
 	else
@@ -42,6 +73,17 @@ void UStaticMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		if (StaticMesh)
 		{
 			InOutHandle["ObjStaticMeshAsset"] = StaticMesh->GetAssetPathFileName().ToString();
+
+			int Idx = 0;
+			JSON MaterialsJson;
+			for (const UMaterial* Material : OverrideMaterials)
+			{
+				JSON MaterialJson;
+				MaterialJson["Path"] = Material->GetDiffuseTexture()->GetFilePath().ToString();
+
+				MaterialsJson[std::to_string(Idx++)] = MaterialJson;
+			}
+			InOutHandle["OverrideMaterial"] = MaterialsJson;
 		}
 	}
 }
