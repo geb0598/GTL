@@ -51,9 +51,9 @@ private:
 	UObjectPicker ObjectPicker;
 
 	const float MinScale = 0.01f;
-	float m_SavedRootRatio = 0.5f;
-	float m_SavedLeftRatio = 0.5f;
-	float m_SavedRightRatio = 0.5f;
+	float SavedRootRatio = 0.5f;
+	float SavedLeftRatio = 0.5f;
+	float SavedRightRatio = 0.5f;
 	UGizmo Gizmo;
 	UAxis Axis;
 	UBatchLines BatchLines;
