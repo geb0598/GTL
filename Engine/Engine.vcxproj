@@ -254,8 +254,8 @@
     <ClInclude Include="Source\Core\Public\WindowsBinReader.h" />
     <ClInclude Include="Source\Core\Public\WindowsBinWriter.h" />
     <ClInclude Include="Source\Editor\Public\SplitterWindow.h" />
-    <ClInclude Include="Source\Editor\Public\Viewport.h" />
     <ClInclude Include="Source\Editor\Public\ViewportClient.h" />
+    <ClInclude Include="Source\Editor\Public\Viewport.h" />
     <ClInclude Include="Source\Factory\Actor\Public\StaticMeshActorFactory.h">
       <DeploymentContent>false</DeploymentContent>
     </ClInclude>

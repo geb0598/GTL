@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "Editor/Public/Editor.h"
 #include "Editor/Public/Camera.h"
-#include "Editor/Public/ViewportClient.h"
+#include "Editor/Public/Viewport.h"
 #include "Render/Renderer/Public/Renderer.h"
 #include "Render/UI/Widget/Public/FPSWidget.h"
 #include "Render/UI/Widget/Public/SceneHierarchyWidget.h"
@@ -48,19 +48,19 @@ UEditor::~UEditor()
 void UEditor::Update()
 {
 	URenderer& Renderer = URenderer::GetInstance();
-	FViewportClient* ViewportClient = Renderer.GetViewportClient();
+	FViewport* Viewport = Renderer.GetViewportClient();
 
 	// 1. 마우스 위치를 기반으로 활성 뷰포트를 결정합니다.
-	ViewportClient->UpdateActiveViewport(UInputManager::GetInstance().GetMousePosition());
+	Viewport->UpdateActiveViewportClient(UInputManager::GetInstance().GetMousePosition());
 
 	// 2. 활성 뷰포트의 카메라의 제어만 업데이트합니다.
-	if (UCamera* ActiveCamera = ViewportClient->GetActiveCamera())
+	if (UCamera* ActiveCamera = Viewport->GetActiveCamera())
 	{
 		// ✨ 만약 이동량이 있고, 직교 카메라라면 ViewportClient에 알립니다.
 		const FVector MovementDelta = ActiveCamera->UpdateInput();
 		if (MovementDelta.LengthSquared() > 0.f && ActiveCamera->GetCameraType() == ECameraType::ECT_Orthographic)
 		{
-			ViewportClient->UpdateOrthoFocusPointByDelta(MovementDelta);
+			Viewport->UpdateOrthoFocusPointByDelta(MovementDelta);
 		}
 	}
 	
@@ -213,7 +213,7 @@ void UEditor::UpdateLayout()
 	FRect WorkableRect = { Viewport->WorkPos.x, Viewport->WorkPos.y, Viewport->WorkSize.x, Viewport->WorkSize.y };
 	RootSplitter.Resize(WorkableRect);
 
-	if (FViewportClient* ViewportClient = URenderer::GetInstance().GetViewportClient())
+	if (FViewport* ViewportClient = URenderer::GetInstance().GetViewportClient())
 	{
 		auto& Viewports = ViewportClient->GetViewports();
 		for (int i = 0; i < 4; ++i)
@@ -221,7 +221,7 @@ void UEditor::UpdateLayout()
 			if (i < Viewports.size())
 			{
 				const FRect& Rect = ViewportWindows[i].Rect;
-				Viewports[i].SetViewport({ Rect.Left, Rect.Top, Rect.Width, Rect.Height, 0.0f, 1.0f });
+				Viewports[i].SetViewportInfo({ Rect.Left, Rect.Top, Rect.Width, Rect.Height, 0.0f, 1.0f });
 			}
 		}
 	}
@@ -233,14 +233,14 @@ void UEditor::UpdateLayout()
 void UEditor::ProcessMouseInput(ULevel* InLevel)
 {
 	// 선택된 뷰포트의 정보들을 가져옵니다.
-	FViewportClient* ViewportClient = URenderer::GetInstance().GetViewportClient();
-	FViewport* CurrentViewport = nullptr;
+	FViewport* ViewportClient = URenderer::GetInstance().GetViewportClient();
+	FViewportClient* CurrentViewport = nullptr;
 	UCamera* CurrentCamera = nullptr;  
 
 	// 이미 선택된 뷰포트 영역이 존재한다면 선택된 뷰포트 처리를 진행합니다.
 	if (InteractionViewport) { CurrentViewport = InteractionViewport; }
 	// 선택된 뷰포트 영역이 존재하지 않는다면 현재 마우스 위치의 뷰포트를 선택합니다.
-	else { CurrentViewport = ViewportClient->GetActiveViewport(); }
+	else { CurrentViewport = ViewportClient->GetActiveViewportClient(); }
 
 	// 처리할 영역이 존재하지 않으면 진행을 중단합니다.
 	if (CurrentViewport == nullptr) { return; }
@@ -252,7 +252,7 @@ void UEditor::ProcessMouseInput(ULevel* InLevel)
 
 	const UInputManager& InputManager = UInputManager::GetInstance();
 	const FVector& MousePos = InputManager.GetMousePosition();
-	const D3D11_VIEWPORT& ViewportInfo = CurrentViewport->GetViewport();
+	const D3D11_VIEWPORT& ViewportInfo = CurrentViewport->GetViewportInfo();
 
 	const float NdcX = ((MousePos.X - ViewportInfo.TopLeftX) / ViewportInfo.Width) * 2.0f - 1.0f;
 	const float NdcY = -(((MousePos.Y - ViewportInfo.TopLeftY) / ViewportInfo.Height) * 2.0f - 1.0f);

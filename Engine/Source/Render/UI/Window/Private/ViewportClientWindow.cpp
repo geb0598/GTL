@@ -11,7 +11,7 @@ UViewportClientWindow::UViewportClientWindow()
 	// 위젯 생성 및 초기화
 	if (ViewportMenuBarWidget = new UViewportMenuBarWidget())
 	{
-		if (FViewportClient* ViewportClient = URenderer::GetInstance().GetViewportClient())
+		if (FViewport* ViewportClient = URenderer::GetInstance().GetViewportClient())
 		{
 			ViewportMenuBarWidget->SetViewportClient(ViewportClient);
 			ViewportMenuBarWidget->Initialize();
