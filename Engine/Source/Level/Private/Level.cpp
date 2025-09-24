@@ -135,13 +135,15 @@ void ULevel::Cleanup()
 {
 	UE_LOG("Level: '%s'의 Cleanup을 시작합니다.", GetName().ToString().data());
 
+	SetSelectedActor(nullptr);
+
 	// 1. 지연 삭제 목록에 남아있는 액터들을 먼저 처리합니다.
 	ProcessPendingDeletions();
 
 	// 2. LevelActors 배열에 남아있는 모든 액터의 메모리를 해제합니다.
 	for (const auto& Actor : LevelActors)
 	{
-		delete Actor.Get();
+		delete Actor;
 	}
 	LevelActors.clear();
 

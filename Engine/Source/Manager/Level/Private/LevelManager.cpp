@@ -32,7 +32,7 @@ void ULevelManager::Shutdown()
 	// 현재 레벨 정리
 	if (CurrentLevel)
 	{
-		delete CurrentLevel.Get();
+		delete CurrentLevel;
 		CurrentLevel = nullptr;
 	}
 
@@ -160,7 +160,7 @@ void ULevelManager::SwitchToLevel(ULevel* InNewLevel)
 {
 	if (CurrentLevel)
 	{
-		delete CurrentLevel.Get();
+		delete CurrentLevel;
 	}
 
 	CurrentLevel = InNewLevel;
