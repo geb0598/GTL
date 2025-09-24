@@ -6,6 +6,7 @@
 #include "Component/Public/PrimitiveComponent.h"
 #include "Component/Mesh/Public/StaticMeshComponent.h"
 #include "Editor/Public/Editor.h"
+#include "Editor/Public/Viewport.h"
 #include "Editor/Public/ViewportClient.h"
 #include "Editor/Public/Camera.h"
 #include "Level/Public/Level.h"
@@ -27,7 +28,7 @@ void URenderer::Init(HWND InWindowHandle)
 {
 	DeviceResources = new UDeviceResources(InWindowHandle);
 	Pipeline = new UPipeline(GetDeviceContext());
-	ViewportClient = new FViewportClient();
+	ViewportClient = new FViewport();
 
 	// 래스터라이저 상태 생성
 	CreateRasterizerState();
@@ -238,19 +239,19 @@ void URenderer::Update()
 	RenderBegin();
 
 	// FViewportClient로부터 모든 뷰포트를 가져옵니다.
-	for (FViewport& ViewportInfo : ViewportClient->GetViewports())
+	for (FViewportClient& ViewportClient : ViewportClient->GetViewports())
 	{
 		// 0. 현재 뷰포트가 닫혀있다면 렌더링을 하지 않습니다.
-		if (ViewportInfo.GetViewport().Width < 1.0f || ViewportInfo.GetViewport().Height < 1.0f) { continue; }
+		if (ViewportClient.GetViewportInfo().Width < 1.0f || ViewportClient.GetViewportInfo().Height < 1.0f) { continue; }
 
 		// 1. 현재 뷰포트의 영역을 설정합니다.
-		ViewportInfo.Apply(GetDeviceContext());
+		ViewportClient.Apply(GetDeviceContext());
 
 		// 2. 현재 뷰포트의 카메라 정보를 가져옵니다.
-		UCamera* CurrentCamera = &ViewportInfo.Camera;
+		UCamera* CurrentCamera = &ViewportClient.Camera;
 
 		// 3. 해당 카메라의 View/Projection 행렬로 상수 버퍼를 업데이트합니다.
-		CurrentCamera->Update(ViewportInfo.GetViewport());
+		CurrentCamera->Update(ViewportClient.GetViewportInfo());
 		UpdateConstant(CurrentCamera->GetFViewProjConstants());
 
 		// 4. 씬(레벨, 에디터 요소 등)을 이 뷰포트와 카메라 기준으로 렌더링합니다.

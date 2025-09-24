@@ -2,7 +2,7 @@
 #include "Global/Types.h"
 #include "Core/Public/Object.h"
 #include "Core/Public/Name.h"
-#include "Editor/Public/Viewport.h"
+#include "Editor/Public/ViewportClient.h"
 
 namespace json { class JSON; }
 using JSON = json::JSON;

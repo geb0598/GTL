@@ -1,17 +1,17 @@
 #include "pch.h"
-#include "Editor/Public/Viewport.h"
+#include "Editor/Public/ViewportClient.h"
 
-void FViewport::Apply(ID3D11DeviceContext* InContext) const
+void FViewportClient::Apply(ID3D11DeviceContext* InContext) const
 {
 	InContext->RSSetViewports(1, &ViewportInfo);
 }
 
-void FViewport::ClearDepth(ID3D11DeviceContext* InContext, ID3D11DepthStencilView* InStencilView) const
+void FViewportClient::ClearDepth(ID3D11DeviceContext* InContext, ID3D11DepthStencilView* InStencilView) const
 {
 	InContext->ClearDepthStencilView(InStencilView, D3D11_CLEAR_DEPTH, 1.f, 0);
 }
 
-void FViewport::SetViewportCameraType(EViewportCameraType InViewportCameraType)
+void FViewportClient::SetCameraType(EViewportCameraType InViewportCameraType)
 {
 	CameraType = InViewportCameraType;
 
@@ -25,7 +25,7 @@ void FViewport::SetViewportCameraType(EViewportCameraType InViewportCameraType)
 	}
 }
 
-void FViewport::SnapCameraToView(const FVector& InFocusPoint)
+void FViewportClient::SnapCameraToView(const FVector& InFocusPoint)
 {
 	const float Distance = 50.0f; // 초점으로부터의 기본 거리
 

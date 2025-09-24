@@ -121,7 +121,7 @@ void UConfigManager::SetCameraSettingsFromJson(const JSON& InData)
 			int32 CameraTypeInt;
 			if (FJsonSerializer::ReadInt32(ViewportJson, "CameraType", CameraTypeInt))
 			{
-				ViewportCameraSettings[Index].ViewportCameraType = ToViewportCameraType(CameraTypeInt);
+				ViewportCameraSettings[Index].ViewportCameraType = ToClientCameraType(CameraTypeInt);
 			}
 		}
 	}

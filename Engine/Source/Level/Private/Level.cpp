@@ -16,7 +16,7 @@
 #include "Factory/Public/FactorySystem.h"
 #include "Manager/Config/Public/ConfigManager.h"
 #include "Render/Renderer/Public/Renderer.h"
-#include "Editor/Public/ViewportClient.h"
+#include "Editor/Public/Viewport.h"
 
 #include <json.hpp>
 
@@ -52,7 +52,7 @@ void ULevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		if (FJsonSerializer::ReadObject(InOutHandle, "PerspectiveCamera", PerspectiveCameraData))
 		{
 			UConfigManager::GetInstance().SetCameraSettingsFromJson(PerspectiveCameraData);
-			URenderer::GetInstance().GetViewportClient()->ApplyAllCameraDataToViewports();
+			URenderer::GetInstance().GetViewportClient()->ApplyAllCameraDataToViewportClients();
 		}
 
 		JSON PrimitivesJson;
