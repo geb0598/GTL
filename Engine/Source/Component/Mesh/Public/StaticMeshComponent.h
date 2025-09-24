@@ -28,9 +28,20 @@ public:
 	UMaterial* GetMaterial(int32 Index) const;
 	void SetMaterial(int32 Index, UMaterial* InMaterial);
 
+	void EnableScroll() { bIsScrollEnabled = true; }
+	void DisableScroll() { bIsScrollEnabled = false; }
+	bool IsScrollEnabled() const { return bIsScrollEnabled; }
+
+	void SetElapsedTime(float InElapsedTime) { ElapsedTime = InElapsedTime; }
+	float GetElapsedTime() const { return ElapsedTime; }
+
 private:
 	TObjectPtr<UStaticMesh> StaticMesh;
 
 	// MaterialList
 	TArray<UMaterial*> OverrideMaterials;
+
+	// Scroll
+	bool bIsScrollEnabled;
+	float ElapsedTime;
 };

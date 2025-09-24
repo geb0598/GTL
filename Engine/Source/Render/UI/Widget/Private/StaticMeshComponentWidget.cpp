@@ -47,6 +47,8 @@ void UStaticMeshComponentWidget::RenderWidget()
 	RenderStaticMeshSelector();
 	ImGui::Separator();
 	RenderMaterialSections();
+	ImGui::Separator();
+	RenderOptions();
 }
 
 void UStaticMeshComponentWidget::RenderStaticMeshSelector()
@@ -136,6 +138,23 @@ void UStaticMeshComponentWidget::RenderAvailableMaterials(int32 TargetSlotIndex)
 		if (bIsSelected)
 		{
 			ImGui::SetItemDefaultFocus();
+		}
+	}
+}
+
+void UStaticMeshComponentWidget::RenderOptions()
+{
+	bool bIsScrollEnabled = StaticMeshComponent->IsScrollEnabled();
+
+	if (ImGui::Checkbox("Enable Scroll", &bIsScrollEnabled))
+	{
+		if (bIsScrollEnabled)
+		{
+			StaticMeshComponent->EnableScroll();
+		}
+		else
+		{
+			StaticMeshComponent->DisableScroll();
 		}
 	}
 }

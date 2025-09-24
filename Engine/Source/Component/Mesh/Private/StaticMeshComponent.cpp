@@ -16,6 +16,7 @@
 IMPLEMENT_CLASS(UStaticMeshComponent, UMeshComponent)
 
 UStaticMeshComponent::UStaticMeshComponent()
+	: bIsScrollEnabled(false)
 {
 	Type = EPrimitiveType::StaticMesh;
 
