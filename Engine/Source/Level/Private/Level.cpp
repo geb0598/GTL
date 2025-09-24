@@ -143,7 +143,7 @@ uint32 ULevel::GetNextUUID()
 	return NextUUID;
 }
 
-AActor* ULevel::SpawnActor(const UClass* InActorClass)
+AActor* ULevel::SpawnActor(const UClass* InActorClass, const FName& InName)
 {
 	if (!InActorClass)
 	{
@@ -153,6 +153,10 @@ AActor* ULevel::SpawnActor(const UClass* InActorClass)
 	AActor* NewActor = Cast<AActor>(InActorClass->CreateDefaultObject());
 	if (NewActor)
 	{
+		if (InName != FName::GetNone())
+		{
+			NewActor->SetName(InName);
+		}
 		LevelActors.push_back(TObjectPtr(NewActor));
 		NewActor->BeginPlay();
 		return NewActor;

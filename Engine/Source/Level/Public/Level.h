@@ -60,9 +60,7 @@ public:
 
 	void AddLevelPrimitiveComponent(AActor* Actor);
 
-	template <typename T, typename... Args>
-	TObjectPtr<T> SpawnActor(const FName& InName = "");
-	AActor* SpawnActor(const UClass* InActorClass);
+	AActor* SpawnActor(const UClass* InActorClass, const FName& InName = FName::GetNone());
 
 	// Actor 삭제
 	bool DestroyActor(AActor* InActor);
@@ -94,9 +92,3 @@ private:
 	// 지연 삭제 처리 함수
 	void ProcessPendingDeletions();
 };
-
-template <typename T, typename... Args>
-TObjectPtr<T> ULevel::SpawnActor(const FName& InName)
-{
-	return TObjectPtr(Cast<T>(SpawnActor(T::StaticClass())));
-}
