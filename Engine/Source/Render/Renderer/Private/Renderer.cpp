@@ -466,7 +466,12 @@ void URenderer::RenderStaticMesh(UStaticMeshComponent* InMeshComp, ID3D11Rasteri
 		return;
 	}
 
-	UTimeManager& TimeManager = UTimeManager::GetInstance();
+	if (InMeshComp->IsScrollEnabled())
+	{
+		UTimeManager& TimeManager = UTimeManager::GetInstance();
+		InMeshComp->SetElapsedTime(InMeshComp->GetElapsedTime() + TimeManager.GetDeltaTime());
+	}
+
 	for (const FMeshSection& Section : MeshAsset->Sections)
 	{
 		UMaterial* Material = InMeshComp->GetMaterial(Section.MaterialSlot);
@@ -483,14 +488,7 @@ void URenderer::RenderStaticMesh(UStaticMeshComponent* InMeshComp, ID3D11Rasteri
 			MaterialConstants.Ni = Material->GetRefractionIndex();
 			MaterialConstants.D = Material->GetDissolveFactor();
 			MaterialConstants.MaterialFlags = 0; // Placeholder
-			if (InMeshComp->IsScrollEnabled())
-			{
-				MaterialConstants.Time = TimeManager.GetGameTime();
-			}
-			else
-			{
-				MaterialConstants.Time = 0;
-			}
+			MaterialConstants.Time = InMeshComp->GetElapsedTime();
 
 			// Update Constant Buffer
 			UpdateConstant(MaterialConstants);
