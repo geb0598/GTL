@@ -8,6 +8,7 @@
 #include "Component/Public/PrimitiveComponent.h"
 #include "Render/Renderer/Public/Renderer.h"
 #include "Editor/Public/ViewportClient.h"
+#include "Editor/Public/Viewport.h"
 #include "Global/Quaternion.h"
 
 USceneHierarchyWidget::USceneHierarchyWidget()
@@ -298,8 +299,8 @@ void USceneHierarchyWidget::FocusOnActor(TObjectPtr<AActor> InActor)
 {
 	if (!InActor) { return; }
 
-	FViewport* ViewportClient = URenderer::GetInstance().GetViewportClient();
-	if (!ViewportClient) { return; }
+	FViewport* Viewport = URenderer::GetInstance().GetViewportClient();
+	if (!Viewport) { return; }
 
 	TObjectPtr<UPrimitiveComponent> Prim = nullptr;
 	if (InActor->GetRootComponent() && InActor->GetRootComponent()->IsA(UPrimitiveComponent::StaticClass()))
@@ -323,7 +324,7 @@ void USceneHierarchyWidget::FocusOnActor(TObjectPtr<AActor> InActor)
 	const FVector Size = ComponentMax - ComponentMin;
 	const float BoundingRadius = Size.Length() * 0.5f;
 
-	auto& Viewports = ViewportClient->GetViewport();
+	auto& Viewports = Viewport->GetViewports();
 	const int32 ViewportCount = static_cast<int32>(Viewports.size());
 
 	CameraStartLocation.resize(ViewportCount);
@@ -370,8 +371,8 @@ void USceneHierarchyWidget::UpdateCameraAnimation()
 {
 	if (!bIsCameraAnimating) { return; }
 
-	FViewport* ViewportClient = URenderer::GetInstance().GetViewportClient();
-	if (!ViewportClient)
+	FViewport* Viewport = URenderer::GetInstance().GetViewportClient();
+	if (!Viewport)
 	{
 		bIsCameraAnimating = false;
 		return;
@@ -397,14 +398,14 @@ void USceneHierarchyWidget::UpdateCameraAnimation()
 		SmoothProgress = 1.0f - 8.0f * ProgressFromEnd * ProgressFromEnd * ProgressFromEnd * ProgressFromEnd;
 	}
 
-	auto& Viewports = ViewportClient->GetViewport();
+	auto& Viewports = Viewport->GetViewports();
 	for (int Index = 0; Index < Viewports.size(); ++Index)
 	{
 		UCamera& Camera = Viewports[Index].Camera;
 
 		FVector CurrentLocation = CameraStartLocation[Index] + (CameraTargetLocation[Index] - CameraStartLocation[Index]) * SmoothProgress;
 		Camera.SetLocation(CurrentLocation);
-		ViewportClient->SetFocusPoint(CurrentLocation);
+		Viewport->SetFocusPoint(CurrentLocation);
 
 		if (Camera.GetCameraType() == ECameraType::ECT_Perspective)
 		{

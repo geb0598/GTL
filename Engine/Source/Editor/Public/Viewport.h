@@ -53,7 +53,7 @@ public:
 	*/
 	UCamera* GetActiveCamera() const { return ActiveViewportClient ? &ActiveViewportClient->Camera : nullptr; }
 
-	TArray<FViewportClient>& GetViewport() { return ViewportClients; }
+	TArray<FViewportClient>& GetViewports() { return ViewportClients; }
 
 	void SetFocusPoint(const FVector& NewFocusPoint);
 

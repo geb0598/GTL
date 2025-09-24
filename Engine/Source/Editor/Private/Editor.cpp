@@ -215,7 +215,7 @@ void UEditor::UpdateLayout()
 
 	if (FViewport* ViewportClient = URenderer::GetInstance().GetViewportClient())
 	{
-		auto& Viewports = ViewportClient->GetViewport();
+		auto& Viewports = ViewportClient->GetViewports();
 		for (int i = 0; i < 4; ++i)
 		{
 			if (i < Viewports.size())

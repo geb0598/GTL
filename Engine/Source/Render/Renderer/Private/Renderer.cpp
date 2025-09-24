@@ -239,7 +239,7 @@ void URenderer::Update()
 	RenderBegin();
 
 	// FViewportClient로부터 모든 뷰포트를 가져옵니다.
-	for (FViewportClient& ViewportClient : ViewportClient->GetViewport())
+	for (FViewportClient& ViewportClient : ViewportClient->GetViewports())
 	{
 		// 0. 현재 뷰포트가 닫혀있다면 렌더링을 하지 않습니다.
 		if (ViewportClient.GetViewportInfo().Width < 1.0f || ViewportClient.GetViewportInfo().Height < 1.0f) { continue; }

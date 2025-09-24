@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Render/UI/Widget/Public/ViewportMenuBarWidget.h"
+#include "Editor/Public/Viewport.h"
 #include "Editor/Public/ViewportClient.h"
 
 /* *
@@ -20,19 +21,19 @@ const ImVec4 SliderGrabActive = ImVec4(pow(0.8f, 2.2f), pow(0.8f, 2.2f), pow(0.8
 
 UViewportMenuBarWidget::~UViewportMenuBarWidget()
 {
-	ViewportClient = nullptr;
+	Viewport = nullptr;
 }
 
 void UViewportMenuBarWidget::RenderWidget()
 {
-	if (!ViewportClient) { return; }
+	if (!Viewport) { return; }
 
-	TArray<FViewportClient>& Viewports = ViewportClient->GetViewport();
+	TArray<FViewportClient>& ViewportClients = Viewport->GetViewports();
 
-	for (int Index = 0; Index < Viewports.size(); ++Index)
+	for (int Index = 0; Index < ViewportClients.size(); ++Index)
 	{
-		FViewportClient& Viewport = Viewports[Index];
-		const D3D11_VIEWPORT& ViewportInfo = Viewport.GetViewportInfo();
+		FViewportClient& ViewportClient = ViewportClients[Index];
+		const D3D11_VIEWPORT& ViewportInfo = ViewportClient.GetViewportInfo();
 
 		// 뷰포트 영역이 너무 작으면 렌더링하지 않음
 		if (ViewportInfo.Width < 1.0f || ViewportInfo.Height < 1.0f) { continue; }
@@ -68,45 +69,45 @@ void UViewportMenuBarWidget::RenderWidget()
 		if (ImGui::BeginMenuBar())
 		{
 			// 3. 기존의 뷰포트 타입 메뉴 (Perspective, Ortho 등)
-			if (ImGui::BeginMenu(ClientCameraTypeToString(Viewport.GetCameraType())))
+			if (ImGui::BeginMenu(ClientCameraTypeToString(ViewportClient.GetCameraType())))
 			{
 				if (ImGui::MenuItem("Perspective"))
 				{
-					Viewport.SetCameraType(EViewportCameraType::Perspective);
-					ViewportClient->UpdateAllViewportClientCameras();
+					ViewportClient.SetCameraType(EViewportCameraType::Perspective);
+					Viewport->UpdateAllViewportClientCameras();
 				}
 
 				if (ImGui::BeginMenu("Orthographic"))
 				{
 					if (ImGui::MenuItem("Top"))
 					{
-						Viewport.SetCameraType(EViewportCameraType::Ortho_Top);
-						ViewportClient->UpdateAllViewportClientCameras();
+						ViewportClient.SetCameraType(EViewportCameraType::Ortho_Top);
+						Viewport->UpdateAllViewportClientCameras();
 					}
 					if (ImGui::MenuItem("Bottom"))
 					{
-						Viewport.SetCameraType(EViewportCameraType::Ortho_Bottom);
-						ViewportClient->UpdateAllViewportClientCameras();
+						ViewportClient.SetCameraType(EViewportCameraType::Ortho_Bottom);
+						Viewport->UpdateAllViewportClientCameras();
 					}
 					if (ImGui::MenuItem("Left"))
 					{
-						Viewport.SetCameraType(EViewportCameraType::Ortho_Left);
-						ViewportClient->UpdateAllViewportClientCameras();
+						ViewportClient.SetCameraType(EViewportCameraType::Ortho_Left);
+						Viewport->UpdateAllViewportClientCameras();
 					}
 					if (ImGui::MenuItem("Right"))
 					{
-						Viewport.SetCameraType(EViewportCameraType::Ortho_Right);
-						ViewportClient->UpdateAllViewportClientCameras();
+						ViewportClient.SetCameraType(EViewportCameraType::Ortho_Right);
+						Viewport->UpdateAllViewportClientCameras();
 					}
 					if (ImGui::MenuItem("Front"))
 					{
-						Viewport.SetCameraType(EViewportCameraType::Ortho_Front);
-						ViewportClient->UpdateAllViewportClientCameras();
+						ViewportClient.SetCameraType(EViewportCameraType::Ortho_Front);
+						Viewport->UpdateAllViewportClientCameras();
 					}
 					if (ImGui::MenuItem("Back"))
 					{
-						Viewport.SetCameraType(EViewportCameraType::Ortho_Back);
-						ViewportClient->UpdateAllViewportClientCameras();
+						ViewportClient.SetCameraType(EViewportCameraType::Ortho_Back);
+						Viewport->UpdateAllViewportClientCameras();
 					}
 					ImGui::EndMenu();
 				}
@@ -125,7 +126,7 @@ void UViewportMenuBarWidget::RenderWidget()
 			// "Camera Settings" 버튼을 눌렀을 때 나타날 팝업 정의
 			if (ImGui::BeginPopup("CameraSettingsPopup"))
 			{
-				RenderCameraControls(Viewport.Camera); 
+				RenderCameraControls(ViewportClient.Camera); 
 				ImGui::EndPopup();
 			}
 
