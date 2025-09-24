@@ -76,7 +76,7 @@ void UStaticMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 			InOutHandle["ObjStaticMeshAsset"] = StaticMesh->GetAssetPathFileName().ToString();
 
 			int Idx = 0;
-			JSON MaterialsJson;
+			JSON MaterialsJson = json::Object();
 			for (const UMaterial* Material : OverrideMaterials)
 			{
 				JSON MaterialJson;

@@ -60,43 +60,33 @@ public:
 
 	void AddLevelPrimitiveComponent(AActor* Actor);
 
-	template <typename T, typename... Args>
-	TObjectPtr<T> SpawnActor(const FName& InName = "");
-	AActor* SpawnActor(const UClass* InActorClass);
+	AActor* SpawnActor(const UClass* InActorClass, const FName& InName = FName::GetNone());
 
-	// Actor 삭제
 	bool DestroyActor(AActor* InActor);
-	void MarkActorForDeletion(AActor* InActor); // 지연 삭제를 위한 마킹
+	void MarkActorForDeletion(AActor* InActor);
 
 	void SetSelectedActor(AActor* InActor);
 	TObjectPtr<AActor> GetSelectedActor() const { return SelectedActor; }
-	AGizmo* GetGizmo() const { return Gizmo; }
 
 	uint64 GetShowFlags() const { return ShowFlags; }
 	void SetShowFlags(uint64 InShowFlags) { ShowFlags = InShowFlags; }
 
 private:
 	TArray<TObjectPtr<AActor>> LevelActors;
-	TArray<TObjectPtr<UPrimitiveComponent>> LevelPrimitiveComponents;
+	TArray<TObjectPtr<UPrimitiveComponent>> LevelPrimitiveComponents;	// 액터의 하위 컴포넌트는 액터에서 관리&해제됨
 
 	// 지연 삭제를 위한 리스트
 	TArray<AActor*> ActorsToDelete;
 
 	TObjectPtr<AActor> SelectedActor = nullptr;
-	TObjectPtr<AGizmo> Gizmo = nullptr;
-	TObjectPtr<AAxis> Axis = nullptr;
-	TObjectPtr<AGrid> Grid = nullptr;
 
 	uint64 ShowFlags = static_cast<uint64>(EEngineShowFlags::SF_Primitives) |
 		static_cast<uint64>(EEngineShowFlags::SF_BillboardText) |
 		static_cast<uint64>(EEngineShowFlags::SF_Bounds);
 
-	// 지연 삭제 처리 함수
+	/**
+	 * @brief Level에서 Actor를 실질적으로 제거하는 함수
+	 * 이전 Tick에서 마킹된 Actor를 제거한다
+	 */
 	void ProcessPendingDeletions();
 };
-
-template <typename T, typename... Args>
-TObjectPtr<T> ULevel::SpawnActor(const FName& InName)
-{
-	return TObjectPtr(Cast<T>(SpawnActor(T::StaticClass())));
-}

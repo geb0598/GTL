@@ -29,10 +29,8 @@ ULevel::ULevel(const FName& InName)
 
 ULevel::~ULevel()
 {
-	for (auto Actor : LevelActors)
-	{
-		SafeDelete(Actor);
-	}
+	// 소멸자는 Cleanup 함수를 호출하여 모든 리소스를 정리하도록 합니다.
+	Cleanup();
 }
 
 void ULevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
@@ -70,7 +68,7 @@ void ULevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 
 				UClass* NewClass = UClass::FindClass(TypeString);
 
-				AActor* NewActor = SpawnActor(NewClass);
+				AActor* NewActor = SpawnActor(NewClass, IdString);
 				if (NewActor)
 				{
 					NewActor->Serialize(bInIsLoading, PrimitiveDataJson);
@@ -88,7 +86,7 @@ void ULevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		URenderer::GetInstance().GetViewportClient()->UpdateCameraSettingsToConfig();
 		InOutHandle["PerspectiveCamera"] = UConfigManager::GetInstance().GetCameraSettingsAsJson();
 
-		JSON PrimitivesJson;
+		JSON PrimitivesJson = json::Object();
 		for (const TObjectPtr<AActor>& Actor : LevelActors)
 		{
 			JSON PrimitiveJson;
@@ -135,6 +133,28 @@ void ULevel::Render()
 
 void ULevel::Cleanup()
 {
+	UE_LOG("Level: '%s'의 Cleanup을 시작합니다.", GetName().ToString().data());
+
+	SetSelectedActor(nullptr);
+
+	// 1. 지연 삭제 목록에 남아있는 액터들을 먼저 처리합니다.
+	ProcessPendingDeletions();
+
+	// 2. LevelActors 배열에 남아있는 모든 액터의 메모리를 해제합니다.
+	for (const auto& Actor : LevelActors)
+	{
+		delete Actor;
+	}
+	LevelActors.clear();
+
+	// 3. 모든 액터 객체가 삭제되었으므로, 포인터를 담고 있던 컨테이너들을 비웁니다.
+	ActorsToDelete.clear();
+	LevelPrimitiveComponents.clear();
+
+	// 4. 선택된 액터 참조를 안전하게 해제합니다.
+	SelectedActor = nullptr;
+
+	UE_LOG("Level: '%s'의 Cleanup을 완료했습니다.", GetName().ToString().data());
 }
 
 uint32 ULevel::GetNextUUID()
@@ -143,7 +163,7 @@ uint32 ULevel::GetNextUUID()
 	return NextUUID;
 }
 
-AActor* ULevel::SpawnActor(const UClass* InActorClass)
+AActor* ULevel::SpawnActor(const UClass* InActorClass, const FName& InName)
 {
 	if (!InActorClass)
 	{
@@ -153,6 +173,10 @@ AActor* ULevel::SpawnActor(const UClass* InActorClass)
 	AActor* NewActor = Cast<AActor>(InActorClass->CreateDefaultObject());
 	if (NewActor)
 	{
+		if (InName != FName::GetNone())
+		{
+			NewActor->SetName(InName);
+		}
 		LevelActors.push_back(TObjectPtr(NewActor));
 		NewActor->BeginPlay();
 		return NewActor;
@@ -238,9 +262,7 @@ void ULevel::SetSelectedActor(AActor* InActor)
 	}
 }
 
-/**
- * @brief Level에서 Actor 제거하는 함수
- */
+// Level에서 Actor 제거하는 함수
 bool ULevel::DestroyActor(AActor* InActor)
 {
 	if (!InActor)
@@ -262,13 +284,6 @@ bool ULevel::DestroyActor(AActor* InActor)
 	if (SelectedActor == InActor)
 	{
 		SelectedActor = nullptr;
-
-		//Deprecated : Gizmo는 에디터에서 처리
-		// Gizmo Target Release
-		/*if (Gizmo)
-		{
-			Gizmo->SetTargetActor(nullptr);
-		}*/
 	}
 
 	// Remove
@@ -278,9 +293,7 @@ bool ULevel::DestroyActor(AActor* InActor)
 	return true;
 }
 
-/**
- * @brief Delete In Next Tick
- */
+// 지연 삭제를 위한 마킹
 void ULevel::MarkActorForDeletion(AActor* InActor)
 {
 	if (!InActor)
@@ -310,10 +323,6 @@ void ULevel::MarkActorForDeletion(AActor* InActor)
 	}
 }
 
-/**
- * @brief Level에서 Actor를 실질적으로 제거하는 함수
- * 이전 Tick에서 마킹된 Actor를 제거한다
- */
 void ULevel::ProcessPendingDeletions()
 {
 	if (ActorsToDelete.empty())
@@ -323,36 +332,17 @@ void ULevel::ProcessPendingDeletions()
 
 	UE_LOG("Level: %zu개의 객체 지연 삭제 프로세스 처리 시작", ActorsToDelete.size());
 
-	// 대기 중인 액터들을 삭제
-	for (AActor* ActorToDelete : ActorsToDelete)
+	// 원본 배열을 복사하여 사용 (DestroyActor가 원본을 수정할 가능성에 대비)
+	TArray<AActor*> ActorsToProcess = ActorsToDelete;
+	ActorsToDelete.clear();
+
+	for (AActor* ActorToDelete : ActorsToProcess)
 	{
-		if (!ActorToDelete)
-			continue;
-
-		// 혹시 남아있을 수 있는 참조 정리
-		if (SelectedActor == ActorToDelete)
+		if (ActorToDelete)
 		{
-			SelectedActor = nullptr;
+			DestroyActor(ActorToDelete);
 		}
-
-		// LevelActors 리스트에서 제거
-		for (auto Iterator = LevelActors.begin(); Iterator != LevelActors.end(); ++Iterator)
-		{
-			if (*Iterator == ActorToDelete)
-			{
-				LevelActors.erase(Iterator);
-				break;
-			}
-		}
-
-		FName DeletedActorName = ActorToDelete->GetName();
-
-		// Release Memory
-		delete ActorToDelete;
-		UE_LOG("Level: Actor 제거: %s (%p)", DeletedActorName.ToString().data(), static_cast<void*>(ActorToDelete));
 	}
 
-	// Clear TArray
-	ActorsToDelete.clear();
 	UE_LOG("Level: 모든 지연 삭제 프로세스 완료");
 }
