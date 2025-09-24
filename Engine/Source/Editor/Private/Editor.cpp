@@ -121,9 +121,9 @@ void UEditor::RenderEditor(UCamera* InCamera)
 void UEditor::SetSingleViewportLayout(int InActiveIndex)
 {
 	// 1. 멀티뷰로 돌아가기 위해 현재 스플리터 비율을 저장합니다.
-	m_SavedRootRatio = RootSplitter.GetRatio();
-	m_SavedLeftRatio = LeftSplitter.GetRatio();
-	m_SavedRightRatio = RightSplitter.GetRatio();
+	SavedRootRatio = RootSplitter.GetRatio();
+	SavedLeftRatio = LeftSplitter.GetRatio();
+	SavedRightRatio = RightSplitter.GetRatio();
 
 	// 2. 인덱스에 따라 스플리터 비율을 조정하여 하나의 뷰포트만 보이게 합니다.
 	switch (InActiveIndex)
@@ -156,9 +156,9 @@ void UEditor::SetSingleViewportLayout(int InActiveIndex)
  */
 void UEditor::RestoreMultiViewportLayout()
 {
-	RootSplitter.SetRatio(m_SavedRootRatio);
-	LeftSplitter.SetRatio(m_SavedLeftRatio);
-	RightSplitter.SetRatio(m_SavedRightRatio);
+	RootSplitter.SetRatio(SavedRootRatio);
+	LeftSplitter.SetRatio(SavedLeftRatio);
+	RightSplitter.SetRatio(SavedRightRatio);
 }
 
 void UEditor::InitializeLayout()
