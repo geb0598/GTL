@@ -2,6 +2,7 @@
 #include "Render/UI/Widget/Public/ViewportMenuBarWidget.h"
 #include "Editor/Public/Viewport.h"
 #include "Editor/Public/ViewportClient.h"
+#include "Editor/Public/Editor.h"
 
 /* *
 * @brief UI에 적용할 색상을 정의합니다.
@@ -128,6 +129,59 @@ void UViewportMenuBarWidget::RenderWidget()
 			{
 				RenderCameraControls(ViewportClient.Camera); 
 				ImGui::EndPopup();
+			}
+
+			ImGui::Separator();
+
+			// 5. 뷰포트 레이아웃 전환 버튼
+			{
+				const char* LayoutIcon = bIsSingleViewportClient ? "[+]" : "□";
+				const char* TooltipText = bIsSingleViewportClient ? "Switch to 4 Viewport" : "Switch to Single Viewport";
+				const float ButtonWidth = 25.0f;
+
+				// 메뉴바의 가용 공간 내에서 커서를 오른쪽 끝으로 이동
+				ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - ButtonWidth);
+
+				// Bar의 우측 말단에 배치
+				if (ImGui::Button(LayoutIcon, ImVec2(ButtonWidth, 0)))
+				{
+					// FViewport가 UEditor에 대한 포인터를 가지고 있다고 가정합니다.
+					if (Editor)
+					{
+						bIsSingleViewportClient = !bIsSingleViewportClient;
+
+						if (bIsSingleViewportClient) // 싱글 뷰포트로 전환
+						{
+							// 현재 활성화된(마우스가 위에 있는) 뷰포트를 찾아 전체 화면으로 만듭니다.
+							FViewportClient* ActiveClient = Viewport->GetActiveViewportClient();
+							int ActiveIndex = Index; // 활성 뷰포트가 없으면 현재 메뉴바의 뷰포트를 기준으로 합니다.
+
+							if (ActiveClient)
+							{
+								for (int i = 0; i < ViewportClients.size(); ++i)
+								{
+									if (&ViewportClients[i] == ActiveClient)
+									{
+										ActiveIndex = i;
+										break;
+									}
+								}
+							}
+							Editor->SetSingleViewportLayout(ActiveIndex);
+						}
+						else // 4분할 뷰포트로 복원
+						{
+							Editor->RestoreMultiViewportLayout();
+						}
+					}
+
+				}
+
+				// 호버링 시, 문구 출력
+				if (ImGui::IsItemHovered())
+				{
+					ImGui::SetTooltip(TooltipText);
+				}
 			}
 
 			ImGui::EndMenuBar();

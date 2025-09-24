@@ -7,6 +7,7 @@
 #include "Render/UI/Widget/Public/SceneHierarchyWidget.h"
 #include "Render/UI/Widget/Public/SplitterDebugWidget.h"
 #include "Render/UI/Widget/Public/CameraControlWidget.h"
+#include "Render/UI/Widget/Public/ViewportMenuBarWidget.h"
 #include "Manager/Level/Public/LevelManager.h"
 #include "Manager/UI/Public/UIManager.h"
 #include "Manager/Input/Public/InputManager.h"
@@ -33,6 +34,11 @@ UEditor::UEditor()
 	if (auto* SplitterWidget = reinterpret_cast<USplitterDebugWidget*>(UIManager.FindWidget("Splitter Widget")))
 	{
 		SplitterWidget->SetSplitters(&RootSplitter, &LeftSplitter, &RightSplitter);
+	}
+
+	if (auto* ViewportWidget = reinterpret_cast<UViewportMenuBarWidget*>(UIManager.FindWidget("ViewportMenuBar Widget")))
+	{
+		ViewportWidget->SetEdtior(this);
 	}
 
 	InitializeLayout();
@@ -110,6 +116,49 @@ void UEditor::RenderEditor(UCamera* InCamera)
 		AActor* SelectedActor = ULevelManager::GetInstance().GetCurrentLevel()->GetSelectedActor();
 		Gizmo.RenderGizmo(SelectedActor, InCamera);
 	}
+}
+
+void UEditor::SetSingleViewportLayout(int InActiveIndex)
+{
+	// 1. 멀티뷰로 돌아가기 위해 현재 스플리터 비율을 저장합니다.
+	m_SavedRootRatio = RootSplitter.GetRatio();
+	m_SavedLeftRatio = LeftSplitter.GetRatio();
+	m_SavedRightRatio = RightSplitter.GetRatio();
+
+	// 2. 인덱스에 따라 스플리터 비율을 조정하여 하나의 뷰포트만 보이게 합니다.
+	switch (InActiveIndex)
+	{
+	case 0: // 좌상단
+		RootSplitter.SetRatio(1.0f);
+		LeftSplitter.SetRatio(1.0f);
+		break;
+	case 1: // 좌하단
+		RootSplitter.SetRatio(1.0f);
+		LeftSplitter.SetRatio(0.0f);
+		break;
+	case 2: // 우상단
+		RootSplitter.SetRatio(0.0f);
+		RightSplitter.SetRatio(1.0f);
+		break;
+	case 3: // 우하단
+		RootSplitter.SetRatio(0.0f);
+		RightSplitter.SetRatio(0.0f);
+		break;
+	default:
+		// 유효하지 않은 인덱스의 경우, 기본 4분할 레이아웃으로 복원
+		RestoreMultiViewportLayout();
+		break;
+	}
+}
+
+/**
+ * @brief 저장된 비율을 사용하여 4분할 뷰포트 레이아웃으로 복원합니다.
+ */
+void UEditor::RestoreMultiViewportLayout()
+{
+	RootSplitter.SetRatio(m_SavedRootRatio);
+	LeftSplitter.SetRatio(m_SavedLeftRatio);
+	RightSplitter.SetRatio(m_SavedRightRatio);
 }
 
 void UEditor::InitializeLayout()

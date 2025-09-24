@@ -396,8 +396,8 @@
     <ClCompile Include="Source\Core\Private\WindowsBinWriter.cpp" />
     <ClCompile Include="Source\Core\Public\WindowsBinReader.cpp" />
     <ClCompile Include="Source\Editor\Private\SplitterWindow.cpp" />
-    <ClCompile Include="Source\Editor\Private\Viewport.cpp" />
     <ClCompile Include="Source\Editor\Private\ViewportClient.cpp" />
+    <ClCompile Include="Source\Editor\Private\Viewport.cpp" />
     <ClCompile Include="Source\Factory\Actor\Private\StaticMeshActorFactory.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>

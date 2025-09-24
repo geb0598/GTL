@@ -113,10 +113,10 @@
     <ClCompile Include="Source\Editor\Private\SplitterWindow.cpp">
       <Filter>Source\Editor\Private</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\Private\Viewport.cpp">
+    <ClCompile Include="Source\Editor\Private\ViewportClient.cpp">
       <Filter>Source\Editor\Private</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\Private\ViewportClient.cpp">
+    <ClCompile Include="Source\Editor\Private\Viewport.cpp">
       <Filter>Source\Editor\Private</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\Private\Axis.cpp">

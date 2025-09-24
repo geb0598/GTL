@@ -41,6 +41,8 @@ public:
 	 */
 	void UpdateOrthoFocusPointByDelta(const FVector& InDelta);
 
+	bool IsSingleViewportMode() const;
+
 	/**
 	* @brief 현재 활성화된 뷰포트를 반환합니다.
 	* @return 활성 뷰포트의 포인터. 없으면 nullptr.
