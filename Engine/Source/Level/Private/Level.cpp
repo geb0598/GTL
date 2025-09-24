@@ -88,7 +88,7 @@ void ULevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		URenderer::GetInstance().GetViewportClient()->UpdateCameraSettingsToConfig();
 		InOutHandle["PerspectiveCamera"] = UConfigManager::GetInstance().GetCameraSettingsAsJson();
 
-		JSON PrimitivesJson;
+		JSON PrimitivesJson = json::Object();
 		for (const TObjectPtr<AActor>& Actor : LevelActors)
 		{
 			JSON PrimitiveJson;
