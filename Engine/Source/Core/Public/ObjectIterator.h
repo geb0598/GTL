@@ -64,9 +64,9 @@ protected:
 	{
 		ObjectArray.clear();
 
-		for (size_t i = 0; i < GUObjectArray.size(); ++i)
+		for (size_t i = 0; i < GetUObjectArray().size(); ++i)
 		{
-			UObject* Object = Cast<TObject>(GUObjectArray[i]);
+			UObject* Object = Cast<TObject>(GetUObjectArray()[i]);
 
 			if (Object)
 			{

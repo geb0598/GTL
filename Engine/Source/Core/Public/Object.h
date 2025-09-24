@@ -225,4 +225,4 @@ bool IsValid(const TObjectPtr<U>& InObjectPtr)
 	return InObjectPtr && IsA<T>(InObjectPtr);
 }
 
-extern TArray<TObjectPtr<UObject>> GUObjectArray;
+TArray<TObjectPtr<UObject>>& GetUObjectArray();

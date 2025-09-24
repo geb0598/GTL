@@ -4,6 +4,7 @@
 #include <list>
 #include <optional>
 #include <queue>
+#include <deque>
 #include <stack>
 #include <unordered_map>
 #include <unordered_set>
@@ -26,6 +27,8 @@ template<typename T, size_t N>
 using TStaticArray = std::array<T, N>;
 template<typename T, typename Container = std::deque<T>>
 using TQueue = std::queue<T, Container>;
+template<typename T>
+using TDeque = std::deque<T>;
 template<typename T>
 using TOptional = std::optional<T>;
 template<typename T>
