@@ -153,7 +153,7 @@ void UClass::Shutdown()
 		{
 			FString ClassName = ClassObject->GetClassTypeName().ToString();
 			UE_LOG_WARNING("System: GC: %s에 해제되지 않은 메모리가 있습니다", ClassName.data());
-			delete ClassObject.Get();
+			delete ClassObject;
 			UE_LOG_SUCCESS("System: GC: %s에 할당한 메모리를 해제했습니다", ClassName.data());
 		}
 	}

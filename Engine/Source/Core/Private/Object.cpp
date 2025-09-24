@@ -6,7 +6,12 @@
 #include <json.hpp>
 
 uint32 UEngineStatics::NextUUID = 0;
-TArray<TObjectPtr<UObject>> GUObjectArray;
+
+TArray<TObjectPtr<UObject>>& GetUObjectArray()
+{
+	static TArray<TObjectPtr<UObject>> GUObjectArray;
+	return GUObjectArray;
+}
 
 IMPLEMENT_CLASS_BASE(UObject)
 
@@ -15,9 +20,9 @@ UObject::~UObject()
 	/** @todo: 이후에 리뷰 필요 */
 
 	// std::vector에 맞는 올바른 인덱스 유효성 검사
-	if (InternalIndex < GUObjectArray.size())
+	if (InternalIndex < GetUObjectArray().size())
 	{
-		GUObjectArray[InternalIndex] = nullptr;
+		GetUObjectArray()[InternalIndex] = nullptr;
 	}
 }
 
@@ -31,8 +36,8 @@ UObject::UObject()
 	UUID = UEngineStatics::GenUUID();
 	Name = FName("Object_" + to_string(UUID));
 
-	GUObjectArray.emplace_back(this);
-	InternalIndex = static_cast<uint32>(GUObjectArray.size()) - 1;
+	GetUObjectArray().emplace_back(this);
+	InternalIndex = static_cast<uint32>(GetUObjectArray().size()) - 1;
 }
 
 UObject::UObject(const FName& InName)
@@ -41,8 +46,8 @@ UObject::UObject(const FName& InName)
 {
 	UUID = UEngineStatics::GenUUID();
 
-	GUObjectArray.emplace_back(this);
-	InternalIndex = static_cast<uint32>(GUObjectArray.size()) - 1;
+	GetUObjectArray().emplace_back(this);
+	InternalIndex = static_cast<uint32>(GetUObjectArray().size()) - 1;
 }
 
 void UObject::SetOuter(UObject* InObject)

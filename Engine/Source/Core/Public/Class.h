@@ -44,7 +44,6 @@ private:
 	ClassConstructorType Constructor;
 };
 
-
 /**
  * @brief RTTI 매크로 시스템
  *
