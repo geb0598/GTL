@@ -3,6 +3,9 @@
 #include "Name.h"
 #include "ObjectPtr.h"
 
+namespace json { class JSON; }
+using JSON = json::JSON;
+
 UCLASS()
 class UObject
 {
@@ -10,6 +13,15 @@ class UObject
 	DECLARE_CLASS(UObject, UObject)
 
 public:
+	// 생성자 및 소멸자
+	UObject();
+	explicit UObject(const FName& InName);
+	virtual ~UObject();
+
+	// 2. 가상 함수 (인터페이스)
+	virtual void Serialize(const bool bInIsLoading, JSON& InOutHandle);
+
+	// 3. Public 멤버 함수
 	bool IsA(TObjectPtr<UClass> InClass) const;
 	void AddMemoryUsage(uint64 InBytes, uint32 InCount);
 	void RemoveMemoryUsage(uint64 InBytes, uint32 InCount);
@@ -17,33 +29,26 @@ public:
 	// Getter & Setter
 	const FName& GetName() const { return Name; }
 	UObject* GetOuter() const { return Outer.Get(); }
-
 	uint64 GetAllocatedBytes() const { return AllocatedBytes; }
 	uint32 GetAllocatedCount() const { return AllocatedCounts; }
+	uint32 GetUUID() const { return UUID; }
 
 	void SetName(const FName& InName) { Name = InName; }
 	void SetOuter(UObject* InObject);
-
-	// 기본적으로 외부에서는 생성자 제외 DisplayName만 변경할 수 있도록 처리
 	void SetDisplayName(const FString& InName) const { Name.SetDisplayName(InName); }
 
-	// Special Member Function
-	UObject();
-	explicit UObject(const FName& InName);
-	virtual ~UObject();
-
-	uint32 GetUUID() const { return UUID; }
+private:
+	// 4. Private 멤버 함수
+	void PropagateMemoryChange(uint64 InBytesDelta, uint32 InCountDelta);
 
 private:
+	// 5. Private 멤버 변수
 	uint32 UUID;
 	uint32 InternalIndex;
 	FName Name;
 	TObjectPtr<UObject> Outer;
-
 	uint64 AllocatedBytes = 0;
 	uint32 AllocatedCounts = 0;
-
-	void PropagateMemoryChange(uint64 InBytesDelta, uint32 InCountDelta);
 };
 
 

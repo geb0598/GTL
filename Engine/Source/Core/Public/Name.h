@@ -5,19 +5,15 @@
  * 대소문자 관계 없는 비교 처리와 사용자가 직접 작성한 Display Name을 동시에 사용할 수 있음
  * @param DisplayIndex 표시용 이름 배열에 접근하기 위한 인덱스
  * @param ComparisonIndex 이름 비교를 위한 인덱스
- * @param DisplayNames 사용자가 제공한 실제 출력될 이름을 저장하는 TArray
- * @param NameMap 이름 비교를 위해 LowerString과 Index를 저장하는 TMap
- * @param NextIndex 각 이름의 고유한 인덱스를 부여하기 위한 정적 카운터
  */
 struct FName
 {
 public:
-	// DisplayIndex는 사용자가 정의한 대문자명까지 원래 이름대로 표기하기 위한 Index
-	// 실제론 동일한 값을 가지나 해당 변수를 사용할 때 목적을 명확하게 사용하기 위해 구분하는 것으로 확인됨
 	int32 DisplayIndex;
 	int32 ComparisonIndex;
 
-	static const FName None;
+	// 'None' 값에 접근하기 위한 정적 함수
+	static const FName& GetNone();
 
 	FName();
 	FName(const char* InStringPtr);
@@ -36,18 +32,13 @@ public:
 	}
 
 	// Display 이름 변경 함수
-	void SetDisplayName(const FString& InDisplayName) const { DisplayNames[this->DisplayIndex] = InDisplayName; }
+	void SetDisplayName(const FString& InDisplayName) const;
 
 private:
-	static TArray<FString> DisplayNames;
-	static TMap<FString, uint32> NameMap;
-	static uint32 NextIndex;
+	// 정적 멤버 변수 선언을 제거하고 구현 파일에서 관리하도록 변경합니다.
 
-	FName(int32 InComparisonIndex)
-	{
-		this->ComparisonIndex = InComparisonIndex;
-		this->DisplayIndex = this->ComparisonIndex;
-	}
+	// 특정 인덱스로 FName을 생성하는 private 생성자
+	FName(int32 InComparisonIndex);
 };
 
 // std::hash에 대한 FName 특수화

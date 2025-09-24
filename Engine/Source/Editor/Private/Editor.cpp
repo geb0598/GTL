@@ -17,12 +17,6 @@
 
 UEditor::UEditor()
 {
-	// 위젯들은 더 이상 Editor의 특정 카메라를 참조하지 않습니다.
-	// 대신 매 프레임 ViewportClient->GetActiveCamera()를 통해
-	// 동적으로 활성 카메라 정보를 얻어와야 합니다.
-	// auto& UIManager = UUIManager::GetInstance();
-	// auto* SceneHierarchyWidget = reinterpret_cast<USceneHierarchyWidget*>(UIManager.FindWidget("Scene Hierarchy Widget"));
-
 	const TArray<float>& SplitterRatio = UConfigManager::GetInstance().GetSplitterRatio();
 	RootSplitter.SetRatio(SplitterRatio[0]);
 	LeftSplitter.SetRatio(SplitterRatio[1]);

@@ -6,6 +6,19 @@
 #include "Component/Public/PrimitiveComponent.h"
 #include "Manager/Level/Public/LevelManager.h"
 #include "Manager/UI/Public/UIManager.h"
+#include "Utility/Public/JsonSerializer.h"
+#include "Actor/Public/CubeActor.h"
+#include "Actor/Public/SphereActor.h"
+#include "Actor/Public/TriangleActor.h"
+#include "Actor/Public/SquareActor.h"
+#include "Factory/Public/NewObject.h"
+#include "Core/Public/Object.h"
+#include "Factory/Public/FactorySystem.h"
+#include "Manager/Config/Public/ConfigManager.h"
+#include "Render/Renderer/Public/Renderer.h"
+#include "Editor/Public/ViewportClient.h"
+
+#include <json.hpp>
 
 ULevel::ULevel() = default;
 
@@ -19,6 +32,72 @@ ULevel::~ULevel()
 	for (auto Actor : LevelActors)
 	{
 		SafeDelete(Actor);
+	}
+}
+
+void ULevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
+{
+	Super::Serialize(bInIsLoading, InOutHandle);
+
+	// 불러오기
+	if (bInIsLoading)
+	{
+		uint32 Version = 0;
+		FJsonSerializer::ReadUint32(InOutHandle, "Version", Version);
+
+		uint32 NextUUID = 0;
+		FJsonSerializer::ReadUint32(InOutHandle, "NextUUID", Version);
+
+		JSON PerspectiveCameraData;
+		if (FJsonSerializer::ReadObject(InOutHandle, "PerspectiveCamera", PerspectiveCameraData))
+		{
+			UConfigManager::GetInstance().SetCameraSettingsFromJson(PerspectiveCameraData);
+			URenderer::GetInstance().GetViewportClient()->ApplyAllCameraDataToViewports();
+		}
+
+		JSON PrimitivesJson;
+		if (FJsonSerializer::ReadObject(InOutHandle, "Primitives", PrimitivesJson))
+		{
+			// ObjectRange()를 사용하여 Primitives 객체의 모든 키-값 쌍을 순회
+			for (auto& Pair : PrimitivesJson.ObjectRange())
+			{
+				// Pair.first는 ID 문자열, Pair.second는 단일 프리미티브의 JSON 데이터입니다.
+				const FString& IdString = Pair.first;
+				JSON& PrimitiveDataJson = Pair.second;
+
+				FString TypeString;
+				FJsonSerializer::ReadString(PrimitiveDataJson, "Type", TypeString);
+
+				UClass* NewClass = UClass::FindClass(TypeString);
+
+				AActor* NewActor = SpawnActor(NewClass);
+				if (NewActor)
+				{
+					NewActor->Serialize(bInIsLoading, PrimitiveDataJson);
+				}
+			}
+		}
+	}
+	// 저장
+	else
+	{
+		InOutHandle["Version"] = 1;
+		InOutHandle["NextUUID"] = GetNextUUID();	// Todo: 액터 하나당 UUID 가 여러개라서 +1 씩 늘어나지 않는다
+
+		// GetCameraSetting 호출 전에 뷰포트 클라이언트의 최신 데이터를 ConfigManager로 동기화합니다.
+		URenderer::GetInstance().GetViewportClient()->UpdateCameraSettingsToConfig();
+		InOutHandle["PerspectiveCamera"] = UConfigManager::GetInstance().GetCameraSettingsAsJson();
+
+		JSON PrimitivesJson;
+		for (const TObjectPtr<AActor>& Actor : LevelActors)
+		{
+			JSON PrimitiveJson;
+			PrimitiveJson["Type"] = Actor->GetClass()->GetClassTypeName().ToString();
+			Actor->Serialize(bInIsLoading, PrimitiveJson);
+
+			PrimitivesJson[std::to_string(Actor->GetUUID())] = PrimitiveJson;
+		}
+		InOutHandle["Primitives"] = PrimitivesJson;
 	}
 }
 
@@ -58,6 +137,30 @@ void ULevel::Cleanup()
 {
 }
 
+uint32 ULevel::GetNextUUID()
+{
+	uint32 NextUUID = 1;
+	return NextUUID;
+}
+
+AActor* ULevel::SpawnActor(const UClass* InActorClass)
+{
+	if (!InActorClass)
+	{
+		return nullptr;
+	}
+
+	AActor* NewActor = Cast<AActor>(InActorClass->CreateDefaultObject());
+	if (NewActor)
+	{
+		LevelActors.push_back(TObjectPtr(NewActor));
+		NewActor->BeginPlay();
+		return NewActor;
+	}
+
+	return nullptr;
+}
+
 void ULevel::AddLevelPrimitiveComponent(AActor* Actor)
 {
 	if (!Actor) return;
@@ -67,6 +170,12 @@ void ULevel::AddLevelPrimitiveComponent(AActor* Actor)
 		if (Component->GetComponentType() >= EComponentType::Primitive)
 		{
 			TObjectPtr<UPrimitiveComponent> PrimitiveComponent = Cast<UPrimitiveComponent>(Component);
+
+			if (!PrimitiveComponent)
+			{
+				continue;
+			}
+
 			/* 3가지 경우 존재.
 			1: primitive show flag가 꺼져 있으면, 도형, 빌보드 모두 렌더링 안함.
 			2: primitive show flag가 켜져 있고, billboard show flag가 켜져 있으면, 도형, 빌보드 모두 렌더링
@@ -101,7 +210,7 @@ void ULevel::SetSelectedActor(AActor* InActor)
 				TObjectPtr<UPrimitiveComponent> PrimitiveComponent = Cast<UPrimitiveComponent>(Component);
 				if (PrimitiveComponent->IsVisible())
 				{
-					PrimitiveComponent->SetColor({0.f, 0.f, 0.f, 0.f});
+					PrimitiveComponent->SetColor({ 0.f, 0.f, 0.f, 0.f });
 				}
 			}
 		}
@@ -122,7 +231,7 @@ void ULevel::SetSelectedActor(AActor* InActor)
 				TObjectPtr<UPrimitiveComponent> PrimitiveComponent = Cast<UPrimitiveComponent>(Component);
 				if (PrimitiveComponent->IsVisible())
 				{
-					PrimitiveComponent->SetColor({1.f, 0.8f, 0.2f, 0.4f});
+					PrimitiveComponent->SetColor({ 1.f, 0.8f, 0.2f, 0.4f });
 				}
 			}
 		}

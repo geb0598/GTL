@@ -5,9 +5,16 @@
 
 using std::stringstream;
 
-// 전역 클래스 레지스트리 초기화
-TArray<TObjectPtr<UClass>> UClass::AllClasses;
-
+/**
+ * @brief '최초 사용 시 생성' 기법을 적용한 클래스 레지스트리 접근자
+ * @return 모든 UClass 정보를 담고 있는 정적 TArray의 참조
+ */
+TArray<TObjectPtr<UClass>>& UClass::GetAllClasses()
+{
+	// 이 함수가 최초로 호출될 때 단 한 번만 안전하게 초기화됩니다.
+	static TArray<TObjectPtr<UClass>> AllClasses;
+	return AllClasses;
+}
 /**
  * @brief UClass Constructor
  * @param InName Class 이름
@@ -16,7 +23,7 @@ TArray<TObjectPtr<UClass>> UClass::AllClasses;
  * @param InConstructor 생성자 함수 포인터
  */
 UClass::UClass(const FName& InName, TObjectPtr<UClass> InSuperClass, size_t InClassSize,
-               ClassConstructorType InConstructor)
+	ClassConstructorType InConstructor)
 	: ClassName(InName), SuperClass(InSuperClass), ClassSize(InClassSize), Constructor(InConstructor)
 {
 	UE_LOG("UClass: 클래스 등록: %s", ClassName.ToString().data());
@@ -44,7 +51,7 @@ bool UClass::IsChildOf(const TObjectPtr<UClass> InClass) const
 	const UClass* CurrentClass = this;
 	while (CurrentClass)
 	{
-		if (CurrentClass == InClass)
+		if (CurrentClass->ClassName == InClass->ClassName)
 		{
 			return true;
 		}
@@ -74,9 +81,9 @@ TObjectPtr<UObject> UClass::CreateDefaultObject() const
  * @param InClassName 찾을 클래스 이름
  * @return 찾은 UClass 포인터 (없으면 nullptr)
  */
-TObjectPtr<UClass> UClass::FindClass(const FString& InClassName)
+TObjectPtr<UClass> UClass::FindClass(const FName& InClassName)
 {
-	for (TObjectPtr<UClass> Class : AllClasses)
+	for (TObjectPtr<UClass> Class : GetAllClasses())
 	{
 		if (Class && Class->GetClassTypeName() == InClassName)
 		{
@@ -95,8 +102,8 @@ void UClass::SignUpClass(TObjectPtr<UClass> InClass)
 {
 	if (InClass)
 	{
-		AllClasses.emplace_back(InClass);
-		UE_LOG("UClass: Class registered: %s (Total: %llu)", InClass->GetClassTypeName().ToString().data(), AllClasses.size());
+		GetAllClasses().emplace_back(InClass);
+		UE_LOG("UClass: Class registered: %s (Total: %llu)", InClass->GetClassTypeName().ToString().data(), GetAllClasses().size());
 	}
 }
 
@@ -106,11 +113,11 @@ void UClass::SignUpClass(TObjectPtr<UClass> InClass)
  */
 void UClass::PrintAllClasses()
 {
-	UE_LOG("=== Registered Classes (%llu) ===", AllClasses.size());
+	UE_LOG("=== Registered Classes (%llu) ===", GetAllClasses().size());
 
-	for (size_t i = 0; i < AllClasses.size(); ++i)
+	for (size_t i = 0; i < GetAllClasses().size(); ++i)
 	{
-		UClass* Class = AllClasses[i];
+		UClass* Class = GetAllClasses()[i];
 
 		stringstream ss;
 		ss << Class->GetClassTypeName().ToString();
@@ -140,7 +147,7 @@ void UClass::PrintAllClasses()
  */
 void UClass::Shutdown()
 {
-	for (TObjectPtr<UClass>& ClassObject : AllClasses)
+	for (TObjectPtr<UClass>& ClassObject : GetAllClasses())
 	{
 		if (ClassObject.Get())
 		{
@@ -151,5 +158,5 @@ void UClass::Shutdown()
 		}
 	}
 
-	(void)AllClasses.empty();
+	(void)GetAllClasses().empty();
 }

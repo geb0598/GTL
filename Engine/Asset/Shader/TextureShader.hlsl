@@ -18,6 +18,7 @@ cbuffer MaterialConstants : register(b2)
 	float Ni;		// Index of refraction
 	float D;		// Dissolve factor
 	uint MaterialFlags;	// Which textures are available (bitfield)
+	float Time;
 };
 
 Texture2D DiffuseTexture : register(t0);	// map_Kd
@@ -96,6 +97,8 @@ float4 mainPS(PS_INPUT input) : SV_TARGET
 	
 	//return finalColor;
 
-	float4 texColor = DiffuseTexture.Sample(SamplerWrap, input.tex);
+	float2 ScrollSpeed = float2(0.1f, 0.0f);
+	float2 UV = frac(input.tex + ScrollSpeed * Time);
+	float4 texColor = DiffuseTexture.Sample(SamplerWrap, UV);
 	return texColor;
 }

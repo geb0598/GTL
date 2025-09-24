@@ -2,6 +2,7 @@
 #include "Render/UI/Widget/Public/Widget.h"
 
 class UStaticMeshComponent;
+class UMaterial;
 
 UCLASS()
 class UStaticMeshComponentWidget : public UWidget

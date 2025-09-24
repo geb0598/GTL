@@ -5,6 +5,8 @@
 #include "Manager/Level/Public/LevelManager.h"
 #include "Level/Public/Level.h"
 #include "Core/Public/ObjectIterator.h"
+#include "Texture/Public/Material.h"
+#include "Texture/Public/Texture.h"
 
 IMPLEMENT_CLASS(UStaticMeshComponentWidget, UWidget)
 

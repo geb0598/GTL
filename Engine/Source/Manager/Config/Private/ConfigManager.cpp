@@ -2,6 +2,9 @@
 #include "Manager/Config/Public/ConfigManager.h"
 #include "Core/Public/Class.h"
 #include "Editor/Public/Camera.h"
+#include "Utility/Public/JsonSerializer.h"
+
+#include <json.hpp>
 
 IMPLEMENT_SINGLETON_CLASS_BASE(UConfigManager)
 
@@ -16,32 +19,6 @@ UConfigManager::~UConfigManager()
 	SaveEditorSetting();
 }
 
-void UConfigManager::SaveEditorSetting()
-{
-	std::ofstream Ofs(EditorIniFileName.ToString());
-	if (Ofs.is_open())
-	{
-		Ofs << "CellSize=" << CellSize << "\n";
-		Ofs << "CameraSensitivity=" << CameraSensitivity << "\n";
-		Ofs << "RootSplitterRatio=" << RootSplitterRatio << "\n";
-		Ofs << "LeftSplitterRatio=" << LeftSplitterRatio << "\n";
-		Ofs << "RightSplitterRatio=" << RightSplitterRatio << "\n";
-
-		for (int Index = 0; Index < 4; ++Index)
-		{
-			const auto& Data = ViewportCameraSettings[Index];
-			std::string Prefix = "Viewport" + std::to_string(Index);
-			Ofs << Prefix + "_CameraType=" << static_cast<int>(Data.ViewportCameraType) << "\n";
-			Ofs << Prefix + "_Location=" << VectorToString(Data.Location) << "\n";
-			Ofs << Prefix + "_Rotation=" << VectorToString(Data.Rotation) << "\n";
-			Ofs << Prefix + "_FocusLocation=" << VectorToString(Data.FocusLocation) << "\n";
-			Ofs << Prefix + "_FovY=" << Data.FovY << "\n";
-			Ofs << Prefix + "_OrthoWidth=" << Data.OrthoWidth << "\n";
-			Ofs << "\n";
-		}
-	}
-}
-
 void UConfigManager::LoadEditorSetting()
 {
 	const FString& FileNameStr = EditorIniFileName.ToString();
@@ -53,14 +30,14 @@ void UConfigManager::LoadEditorSetting()
 		return; // 파일이 없으면 기본값 유지
 	}
 
-	std::string Line;
+	FString Line;
 	while (std::getline(Ifs, Line))
 	{
 		size_t DelimiterPos = Line.find('=');
-		if (DelimiterPos == std::string::npos) continue;
+		if (DelimiterPos == FString::npos) continue;
 
-		std::string Key = Line.substr(0, DelimiterPos);
-		std::string Value = Line.substr(DelimiterPos + 1);
+		FString Key = Line.substr(0, DelimiterPos);
+		FString Value = Line.substr(DelimiterPos + 1);
 
 		// --- 기본 설정 파싱 ---
 		if (Key == "CellSize") CellSize = std::stof(Value);
@@ -68,44 +45,84 @@ void UConfigManager::LoadEditorSetting()
 		else if (Key == "RootSplitterRatio") RootSplitterRatio = std::stof(Value);
 		else if (Key == "LeftSplitterRatio") LeftSplitterRatio = std::stof(Value);
 		else if (Key == "RightSplitterRatio") RightSplitterRatio = std::stof(Value);
+	}
+}
 
-		// --- 뷰포트 카메라 설정 파싱 ---
-		else if (Key.rfind("Viewport", 0) == 0)
+void UConfigManager::SaveEditorSetting()
+{
+	std::ofstream Ofs(EditorIniFileName.ToString());
+	if (Ofs.is_open())
+	{
+		Ofs << "CellSize=" << CellSize << "\n";
+		Ofs << "CameraSensitivity=" << CameraSensitivity << "\n";
+		Ofs << "RootSplitterRatio=" << RootSplitterRatio << "\n";
+		Ofs << "LeftSplitterRatio=" << LeftSplitterRatio << "\n";
+		Ofs << "RightSplitterRatio=" << RightSplitterRatio << "\n";
+	}
+}
+
+JSON UConfigManager::GetCameraSettingsAsJson()
+{
+	JSON RootJson = json::Object();
+
+	for (int32 Index = 0; Index < 4; ++Index)
+	{
+		const auto& Data = ViewportCameraSettings[Index];
+		JSON ViewportJson = json::Object();
+
+		ViewportJson["CameraType"] = static_cast<int>(Data.ViewportCameraType);
+
+		// FJsonSerializer 유틸리티 함수를 사용하여 FVector를 JSON 배열로 변환
+		ViewportJson["Location"] = FJsonSerializer::VectorToJson(Data.Location);
+		ViewportJson["Rotation"] = FJsonSerializer::VectorToJson(Data.Rotation);
+		ViewportJson["FocusLocation"] = FJsonSerializer::VectorToJson(Data.FocusLocation);
+
+		ViewportJson["FarClip"] = Data.FarClip;
+		ViewportJson["NearClip"] = Data.NearClip;
+		ViewportJson["FovY"] = Data.FovY;
+		ViewportJson["OrthoWidth"] = Data.OrthoWidth;
+
+		// Index를 FString 키로 변환 ("0", "1", "2", "3")
+		FString Key = std::to_string(Index);
+		RootJson[Key] = ViewportJson;
+	}
+
+	return RootJson;
+}
+
+void UConfigManager::SetCameraSettingsFromJson(const JSON& InData)
+{
+	if (InData.JSONType() != JSON::Class::Object)
+	{
+		return;
+	}
+
+	for (int32 Index = 0; Index < 4; ++Index)
+	{
+		// Index를 FString 키로 변환하여 데이터를 찾음
+		FString Key = std::to_string(Index);
+		JSON ViewportJson;
+
+		// ReadObject 유틸리티 함수로 해당 뷰포트의 JSON 데이터를 안전하게 가져옴
+		if (FJsonSerializer::ReadObject(InData, Key, ViewportJson))
 		{
-			// "Viewport" 다음의 숫자(인덱스)를 추출
-			int Index = std::stoi(Key.substr(8, 1));
-			if (Index >= 0 && Index < 4)
+			// 유틸리티 함수를 사용하여 반복적인 검사 없이 간결하게 데이터 파싱
+			// 실패 시 각 함수 내부에서 로그를 남기고 기본값을 할당함
+			FJsonSerializer::ReadVector(ViewportJson, "Location", ViewportCameraSettings[Index].Location);
+			FJsonSerializer::ReadVector(ViewportJson, "Rotation", ViewportCameraSettings[Index].Rotation);
+			FJsonSerializer::ReadVector(ViewportJson, "FocusLocation", ViewportCameraSettings[Index].FocusLocation);
+
+			FJsonSerializer::ReadFloat(ViewportJson, "FarClip", ViewportCameraSettings[Index].FarClip);
+			FJsonSerializer::ReadFloat(ViewportJson, "NearClip", ViewportCameraSettings[Index].NearClip);
+			FJsonSerializer::ReadFloat(ViewportJson, "FovY", ViewportCameraSettings[Index].FovY);
+			FJsonSerializer::ReadFloat(ViewportJson, "OrthoWidth", ViewportCameraSettings[Index].OrthoWidth);
+
+			// CameraType은 int로 읽은 후 Enum으로 캐스팅 (Enum은 동적 캐스팅이 안됨)
+			int32 CameraTypeInt;
+			if (FJsonSerializer::ReadInt32(ViewportJson, "CameraType", CameraTypeInt))
 			{
-				// 키의 나머지 부분 (e.g., "_Location")을 확인
-				std::string Suffix = Key.substr(9);
-				if (Suffix == "_CameraType") ViewportCameraSettings[Index].ViewportCameraType = static_cast<EViewportCameraType>(std::stoi(Value));
-				else if (Suffix == "_Location") ViewportCameraSettings[Index].Location = StringToVector(Value);
-				else if (Suffix == "_Rotation") ViewportCameraSettings[Index].Rotation = StringToVector(Value);
-				else if (Suffix == "_FocusLocation") ViewportCameraSettings[Index].FocusLocation = StringToVector(Value);
-				else if (Suffix == "_FovY") ViewportCameraSettings[Index].FovY = std::stof(Value);
-				else if (Suffix == "_OrthoWidth") ViewportCameraSettings[Index].OrthoWidth = std::stof(Value);
+				ViewportCameraSettings[Index].ViewportCameraType = ToViewportCameraType(CameraTypeInt);
 			}
 		}
 	}
-}
-
-FVector UConfigManager::StringToVector(const std::string& InString)
-{
-	std::stringstream StringStream(InString);
-	std::string Item;
-	std::vector<float> Components;
-	while (std::getline(StringStream, Item, ','))
-	{
-		Components.push_back(std::stof(Item));
-	}
-
-	if (Components.size() == 3) { return FVector(Components[0], Components[1], Components[2]); }
-
-	return FVector::Zero(); // 파싱 실패 시 0 벡터 반환
-}
-
-// FVector를 "x,y,z" 형태의 문자열로 변환
-std::string UConfigManager::VectorToString(const FVector& InVector)
-{
-	return std::to_string(InVector.X) + "," + std::to_string(InVector.Y) + "," + std::to_string(InVector.Z);
 }

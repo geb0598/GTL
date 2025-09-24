@@ -4,6 +4,9 @@
 #include "Core/Public/Name.h"
 #include "Editor/Public/Viewport.h"
 
+namespace json { class JSON; }
+using JSON = json::JSON;
+
 /**
  * @brief 뷰포트 클라이언트의 카메라 정보
  * @param Location 위치
@@ -28,7 +31,9 @@ struct FViewportCameraData
 
 	FViewportCameraData()
 		:Location(-15, 0, 0), Rotation(0, 0, 0), FocusLocation(0, 0, 0), FovY(90.f),
-		NearClip(0.1f), FarClip(100.0f), OrthoWidth(90.0f), ViewportCameraType(EViewportCameraType::Perspective) {}
+		NearClip(0.1f), FarClip(10000.0f), OrthoWidth(90.0f), ViewportCameraType(EViewportCameraType::Perspective)
+	{
+	}
 };
 
 UCLASS()
@@ -40,6 +45,9 @@ class UConfigManager : public UObject
 public:
 	void SaveEditorSetting();
 	void LoadEditorSetting();
+
+	JSON GetCameraSettingsAsJson();
+	void SetCameraSettingsFromJson(const JSON& InData);
 
 	float GetCellSize() const
 	{
@@ -57,7 +65,6 @@ public:
 	}
 
 	const FViewportCameraData& GetViewportCameraData(int InIndex) const { return ViewportCameraSettings[InIndex]; }
-
 
 	void SetCellSize(const float cellSize)
 	{
@@ -79,10 +86,6 @@ public:
 	void SetViewportCameraData(int InIndex, const FViewportCameraData& InData) { ViewportCameraSettings[InIndex] = InData; }
 
 private:
-	// INI 파일 파싱을 위한 헬퍼 함수
-	FVector StringToVector(const std::string& InString);
-	std::string VectorToString(const FVector& InVector);
-
 	FName EditorIniFileName;
 	float CellSize;
 	float CameraSensitivity;

@@ -1,12 +1,7 @@
 #pragma once
-#include <optional>
-
 #include "Types.h"
 
-using std::array;
-
 // 있을 수도, 없을 수도 있는 상황을 표현하기 위한 기능
-using std::optional;
 using std::nullopt;
 
 // enum의 타입을 알 수 있는 기능
@@ -228,8 +223,8 @@ namespace EnumReflection
 	constexpr auto MakeEnumSequence(index_sequence<Is...>) noexcept
 	{
 		constexpr size_t N = sizeof...(Is);
-		array<EnumType, N> Values{};
-		array<const char*, N> Names{};
+		TStaticArray<EnumType, N> Values{};
+		TStaticArray<const char*, N> Names{};
 		size_t ValidCount = 0;
 
 		// 각 인덱스를 enum 값으로 변환하고 유효성 검사
@@ -298,7 +293,7 @@ public:
 	}
 
 	// 문자열을 enum 값으로 변환
-	static constexpr optional<EnumType> FromString(const char* InName) noexcept
+	static constexpr TOptional<EnumType> FromString(const char* InName) noexcept
 	{
 		return FromStringImpl(
 			InName, make_index_sequence<EnumReflection::EnumRange<EnumType>::Max - EnumReflection::EnumRange<
@@ -306,7 +301,7 @@ public:
 	}
 
 	// FString 버전 (backward compatibility)
-	static constexpr optional<EnumType> FromString(const FString& InName) noexcept
+	static constexpr TOptional<EnumType> FromString(const FString& InName) noexcept
 	{
 		return FromString(InName.c_str());
 	}
@@ -347,14 +342,14 @@ private:
 
 	// 컴파일타임 FromString 구현
 	template <size_t... Is>
-	static constexpr optional<EnumType> FromStringImpl(const char* InName, index_sequence<Is...>) noexcept
+	static constexpr TOptional<EnumType> FromStringImpl(const char* InName, index_sequence<Is...>) noexcept
 	{
 		if (!InName)
 		{
 			return nullopt;
 		}
 
-		optional<EnumType> Result = nullopt;
+		TOptional<EnumType> Result = nullopt;
 		(([&]
 		{
 			constexpr auto EnumValue = static_cast<EnumType>(Is + EnumReflection::EnumRange<EnumType>::Min);
@@ -407,7 +402,7 @@ const char* EnumToString(EnumType InValue) noexcept
 }
 
 template <typename EnumType>
-optional<EnumType> StringToEnum(const FString& InName) noexcept
+TOptional<EnumType> StringToEnum(const FString& InName) noexcept
 {
 	return TEnumReflector<EnumType>::FromString(InName);
 }

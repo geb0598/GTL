@@ -10,10 +10,20 @@ public:
 	~FViewportClient();
 
 	/**
+	 * @brief 현재 모든 뷰포트의 카메라 상태를 UConfigManager에 동기화하는 새로운 함수
+	 */
+	void UpdateCameraSettingsToConfig();
+
+	/**
 	* @brief ViewportClient가 보유한 Viewport들의 정보를 갱신합니다.
 	* 이 함수는 현재 2x2 기준으로 작성되어 있습니다.
 	*/
 	void InitializeLayout(const D3D11_VIEWPORT& InViewport);
+
+	/**
+	* @brief 모든 뷰포트의 카메라 데이터를 ConfigManager로부터 가져와 적용합니다.
+	*/
+	void ApplyAllCameraDataToViewports();
 
 	/**
 	* @brief 현재 활성화된 FViewport를 갱신합니다.
@@ -44,6 +54,8 @@ public:
 	UCamera* GetActiveCamera() const { return ActiveViewport ? &ActiveViewport->Camera : nullptr; }
 
 	TArray<FViewport>& GetViewports() { return Viewports; }
+
+	void SetFocusPoint(const FVector& NewFocusPoint);
 
 private:
 	TArray<FViewport> Viewports = {};

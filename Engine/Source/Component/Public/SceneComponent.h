@@ -1,6 +1,9 @@
 #pragma once
 #include "Component/Public/ActorComponent.h"
 
+namespace json { class JSON; }
+using JSON = json::JSON;
+
 UCLASS()
 class USceneComponent : public UActorComponent
 {
@@ -9,6 +12,8 @@ class USceneComponent : public UActorComponent
 
 public:
 	USceneComponent();
+
+	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
 	void SetParentAttachment(USceneComponent* SceneComponent);
 	void RemoveChild(USceneComponent* ChildDeleted);

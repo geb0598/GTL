@@ -11,9 +11,6 @@
 #include "Level/Public/Level.h"
 #include "Manager/Level/Public/LevelManager.h"
 #include "Manager/UI/Public/UIManager.h"
-#include "Component/Public/PrimitiveComponent.h"
-#include "Render/FontRenderer/Public/FontRenderer.h"
-#include "Render/Renderer/Public/Pipeline.h"
 #include "Render/UI/Overlay/Public/StatOverlay.h"
 #include "Texture/Public/Material.h"
 #include "Texture/Public/Texture.h"
@@ -469,9 +466,10 @@ void URenderer::RenderStaticMesh(UStaticMeshComponent* InMeshComp, ID3D11Rasteri
 		return;
 	}
 
+	UTimeManager& TimeManager = UTimeManager::GetInstance();
 	for (const FMeshSection& Section : MeshAsset->Sections)
 	{
-		UMaterial* Material = InMeshComp->GetStaticMesh()->GetMaterial(Section.MaterialSlot);
+		UMaterial* Material = InMeshComp->GetMaterial(Section.MaterialSlot);
 		if (Material)
 		{
 			FMaterialConstants MaterialConstants = {};
@@ -828,6 +826,16 @@ void URenderer::CreateConstantBuffer()
 
 		GetDevice()->CreateBuffer(&ViewProjConstantBufferDescription, nullptr, &ConstantBufferViewProj);
 	}
+
+	{
+		D3D11_BUFFER_DESC MaterialConstantBufferDescription = {};
+		MaterialConstantBufferDescription.ByteWidth = sizeof(FMaterial) + 0xf & 0xfffffff0;
+		MaterialConstantBufferDescription.Usage = D3D11_USAGE_DYNAMIC; // 매 프레임 CPU에서 업데이트
+		MaterialConstantBufferDescription.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		MaterialConstantBufferDescription.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+
+		GetDevice()->CreateBuffer(&MaterialConstantBufferDescription, nullptr, &ConstantBufferMaterial);
+	}
 }
 
 /**
@@ -851,6 +859,12 @@ void URenderer::ReleaseConstantBuffer()
 	{
 		ConstantBufferViewProj->Release();
 		ConstantBufferViewProj = nullptr;
+	}
+
+	if (ConstantBufferMaterial)
+	{
+		ConstantBufferMaterial->Release();
+		ConstantBufferMaterial = nullptr;
 	}
 }
 
@@ -943,6 +957,31 @@ void URenderer::UpdateConstant(const FVector4& InColor) const
 			ColorConstants->W = InColor.W;
 		}
 		GetDeviceContext()->Unmap(ConstantBufferColor, 0);
+	}
+}
+
+void URenderer::UpdateConstant(const FMaterialConstants& InMaterial) const
+{
+	Pipeline->SetConstantBuffer(2, false, ConstantBufferMaterial);
+
+	if (ConstantBufferMaterial)
+	{
+		D3D11_MAPPED_SUBRESOURCE ConstantBufferMSR = {};
+
+		GetDeviceContext()->Map(ConstantBufferMaterial, 0, D3D11_MAP_WRITE_DISCARD, 0, &ConstantBufferMSR);
+
+		FMaterialConstants* MaterialConstants = static_cast<FMaterialConstants*>(ConstantBufferMSR.pData);
+		{
+			MaterialConstants->Ka = InMaterial.Ka;
+			MaterialConstants->Kd = InMaterial.Kd;
+			MaterialConstants->Ks = InMaterial.Ks;
+			MaterialConstants->Ns = InMaterial.Ns;
+			MaterialConstants->Ni = InMaterial.Ni;
+			MaterialConstants->D = InMaterial.D;
+			MaterialConstants->MaterialFlags = InMaterial.MaterialFlags;
+			MaterialConstants->Time = InMaterial.Time;
+		}
+		GetDeviceContext()->Unmap(ConstantBufferMaterial, 0);
 	}
 }
 

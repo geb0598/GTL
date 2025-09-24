@@ -9,9 +9,9 @@ IMPLEMENT_CLASS(UTexture, UObject)
  * 생성에 필요한 내용을 갖추도록 구현
  */
 UTexture::UTexture()
-	: TextureFilePath(FName::None)
+	: TextureFilePath(FName::GetNone())
 {
-	SetName(FName::None);
+	SetName(FName::GetNone());
 }
 
 UTexture::UTexture(const FName& InFilePath, FName InName)
