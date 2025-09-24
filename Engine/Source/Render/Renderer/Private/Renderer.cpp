@@ -108,16 +108,16 @@ void URenderer::CreateDefaultShader()
 	ID3DBlob* PixelShaderCSO;
 
 	D3DCompileFromFile(L"Asset/Shader/SampleShader.hlsl", nullptr, nullptr, "mainVS", "vs_5_0", 0, 0,
-	                   &VertexShaderCSO, nullptr);
+		&VertexShaderCSO, nullptr);
 
 	GetDevice()->CreateVertexShader(VertexShaderCSO->GetBufferPointer(),
-	                                VertexShaderCSO->GetBufferSize(), nullptr, &DefaultVertexShader);
+		VertexShaderCSO->GetBufferSize(), nullptr, &DefaultVertexShader);
 
 	D3DCompileFromFile(L"Asset/Shader/SampleShader.hlsl", nullptr, nullptr, "mainPS", "ps_5_0", 0, 0,
-	                   &PixelShaderCSO, nullptr);
+		&PixelShaderCSO, nullptr);
 
 	GetDevice()->CreatePixelShader(PixelShaderCSO->GetBufferPointer(),
-	                               PixelShaderCSO->GetBufferSize(), nullptr, &DefaultPixelShader);
+		PixelShaderCSO->GetBufferSize(), nullptr, &DefaultPixelShader);
 
 	D3D11_INPUT_ELEMENT_DESC DefaultLayout[] =
 	{
@@ -128,7 +128,7 @@ void URenderer::CreateDefaultShader()
 	};
 
 	GetDevice()->CreateInputLayout(DefaultLayout, ARRAYSIZE(DefaultLayout), VertexShaderCSO->GetBufferPointer(),
-	                               VertexShaderCSO->GetBufferSize(), &DefaultInputLayout);
+		VertexShaderCSO->GetBufferSize(), &DefaultInputLayout);
 
 	Stride = sizeof(FNormalVertex);
 
@@ -142,16 +142,16 @@ void URenderer::CreateTextureShader()
 	ID3DBlob* TexturePSBlob;
 
 	D3DCompileFromFile(L"Asset/Shader/TextureShader.hlsl", nullptr, nullptr, "mainVS", "vs_5_0", 0, 0,
-					  &TextureVSBlob, nullptr);
+		&TextureVSBlob, nullptr);
 
 	GetDevice()->CreateVertexShader(TextureVSBlob->GetBufferPointer(),
-									TextureVSBlob->GetBufferSize(), nullptr, &TextureVertexShader);
+		TextureVSBlob->GetBufferSize(), nullptr, &TextureVertexShader);
 
 	D3DCompileFromFile(L"Asset/Shader/TextureShader.hlsl", nullptr, nullptr, "mainPS", "ps_5_0", 0, 0,
-					  &TexturePSBlob, nullptr);
+		&TexturePSBlob, nullptr);
 
 	GetDevice()->CreatePixelShader(TexturePSBlob->GetBufferPointer(),
-								   TexturePSBlob->GetBufferSize(), nullptr, &TexturePixelShader);
+		TexturePSBlob->GetBufferSize(), nullptr, &TexturePixelShader);
 
 	D3D11_INPUT_ELEMENT_DESC TextureLayout[] =
 	{
@@ -165,7 +165,7 @@ void URenderer::CreateTextureShader()
 
 	// TODO(KHJ): ShaderBlob 파일로 저장하고, 이후 이미 존재하는 경우 컴파일 없이 Blob을 로드할 수 있도록 할 것
 	// TODO(KHJ): 실제 텍스처용 셰이더를 별도로 생성해야 함 (UV 좌표 포함)
-	
+
 	TextureVSBlob->Release();
 	TexturePSBlob->Release();
 }
@@ -231,7 +231,7 @@ void URenderer::ReleaseDepthStencilState()
 	{
 		GetDeviceContext()->OMSetRenderTargets(0, nullptr, nullptr);
 	}
-}    
+}
 
 // Renderer.cpp
 void URenderer::Update()
@@ -279,7 +279,7 @@ void URenderer::RenderBegin() const
 	auto* DepthStencilView = DeviceResources->GetDepthStencilView();
 	GetDeviceContext()->ClearDepthStencilView(DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-	ID3D11RenderTargetView* rtvs[] = {RenderTargetView}; // 배열 생성
+	ID3D11RenderTargetView* rtvs[] = { RenderTargetView }; // 배열 생성
 
 	GetDeviceContext()->OMSetRenderTargets(1, rtvs, DeviceResources->GetDepthStencilView());
 	DeviceResources->UpdateViewport();
@@ -383,7 +383,7 @@ void URenderer::RenderPrimitive(const FEditorPrimitive& InPrimitive, const FRend
  * @param InIndexBufferStride 인덱스 버퍼 스트라이드
  */
 void URenderer::RenderPrimitiveIndexed(const FEditorPrimitive& InPrimitive, const FRenderState& InRenderState,
-                                       bool bInUseBaseConstantBuffer, uint32 InStride, uint32 InIndexBufferStride)
+	bool bInUseBaseConstantBuffer, uint32 InStride, uint32 InIndexBufferStride)
 {
 	// Always visible 옵션에 따라 Depth 테스트 여부 결정
 	ID3D11DepthStencilState* DepthStencilState =
@@ -435,6 +435,8 @@ void URenderer::RenderEnd() const
 
 void URenderer::RenderStaticMesh(UStaticMeshComponent* InMeshComp, ID3D11RasterizerState* InRasterizerState)
 {
+	if (!InMeshComp->GetStaticMesh()) return;
+
 	FStaticMesh* MeshAsset = InMeshComp->GetStaticMesh()->GetStaticMeshAsset();
 	if (!MeshAsset)	return;
 
@@ -587,7 +589,7 @@ ID3D11Buffer* URenderer::CreateVertexBuffer(FNormalVertex* InVertices, uint32 In
 	VertexBufferDescription.Usage = D3D11_USAGE_IMMUTABLE; // 변경되지 않는 정적 데이터
 	VertexBufferDescription.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
-	D3D11_SUBRESOURCE_DATA VertexBufferInitData = {InVertices};
+	D3D11_SUBRESOURCE_DATA VertexBufferInitData = { InVertices };
 
 	ID3D11Buffer* VertexBuffer = nullptr;
 	GetDevice()->CreateBuffer(&VertexBufferDescription, &VertexBufferInitData, &VertexBuffer);
@@ -617,7 +619,7 @@ ID3D11Buffer* URenderer::CreateVertexBuffer(FVector* InVertices, uint32 InByteWi
 		VertexBufferDescription.MiscFlags = 0;
 	}
 
-	D3D11_SUBRESOURCE_DATA VertexBufferInitData = {InVertices};
+	D3D11_SUBRESOURCE_DATA VertexBufferInitData = { InVertices };
 
 	ID3D11Buffer* VertexBuffer = nullptr;
 	GetDevice()->CreateBuffer(&VertexBufferDescription, &VertexBufferInitData, &VertexBuffer);
@@ -680,7 +682,7 @@ void URenderer::OnResize(uint32 InWidth, uint32 InHeight) const
 
 	// 새로운 렌더 타겟 바인딩
 	auto* RenderTargetView = DeviceResources->GetRenderTargetView();
-	ID3D11RenderTargetView* RenderTargetViews[] = {RenderTargetView};
+	ID3D11RenderTargetView* RenderTargetViews[] = { RenderTargetView };
 	GetDeviceContext()->OMSetRenderTargets(1, RenderTargetViews, DeviceResources->GetDepthStencilView());
 	UStatOverlay::GetInstance().OnResize();
 }
@@ -717,17 +719,17 @@ void URenderer::ReleaseIndexBuffer(ID3D11Buffer* InIndexBuffer)
  * @param OutInputLayout 출력될 Input Layout 포인터
  */
 void URenderer::CreateVertexShaderAndInputLayout(const wstring& InFilePath,
-                                                 const TArray<D3D11_INPUT_ELEMENT_DESC>& InInputLayoutDescs,
-                                                 ID3D11VertexShader** OutVertexShader,
-                                                 ID3D11InputLayout** OutInputLayout)
+	const TArray<D3D11_INPUT_ELEMENT_DESC>& InInputLayoutDescs,
+	ID3D11VertexShader** OutVertexShader,
+	ID3D11InputLayout** OutInputLayout)
 {
 	ID3DBlob* VertexShaderBlob = nullptr;
 	ID3DBlob* ErrorBlob = nullptr;
 
 	// Vertex Shader 컴파일
 	HRESULT Result = D3DCompileFromFile(InFilePath.data(), nullptr, nullptr, "mainVS", "vs_5_0",
-	                                    D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0,
-	                                    &VertexShaderBlob, &ErrorBlob);
+		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0,
+		&VertexShaderBlob, &ErrorBlob);
 
 	// 컴파일 실패 시 에러 처리
 	if (FAILED(Result))
@@ -742,12 +744,12 @@ void URenderer::CreateVertexShaderAndInputLayout(const wstring& InFilePath,
 
 	// Vertex Shader 객체 생성
 	GetDevice()->CreateVertexShader(VertexShaderBlob->GetBufferPointer(),
-	                                VertexShaderBlob->GetBufferSize(), nullptr, OutVertexShader);
+		VertexShaderBlob->GetBufferSize(), nullptr, OutVertexShader);
 
 	// Input Layout 생성
 	GetDevice()->CreateInputLayout(InInputLayoutDescs.data(), static_cast<uint32>(InInputLayoutDescs.size()),
-	                               VertexShaderBlob->GetBufferPointer(),
-	                               VertexShaderBlob->GetBufferSize(), OutInputLayout);
+		VertexShaderBlob->GetBufferPointer(),
+		VertexShaderBlob->GetBufferSize(), OutInputLayout);
 
 	// TODO(KHJ): 이 값이 여기에 있는 게 맞나? 검토 필요
 	Stride = sizeof(FNormalVertex);
@@ -767,8 +769,8 @@ void URenderer::CreatePixelShader(const wstring& InFilePath, ID3D11PixelShader**
 
 	// Pixel Shader 컴파일
 	HRESULT Result = D3DCompileFromFile(InFilePath.data(), nullptr, nullptr, "mainPS", "ps_5_0",
-	                                    D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0,
-	                                    &PixelShaderBlob, &ErrorBlob);
+		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0,
+		&PixelShaderBlob, &ErrorBlob);
 
 	// 컴파일 실패 시 에러 처리
 	if (FAILED(Result))
@@ -783,7 +785,7 @@ void URenderer::CreatePixelShader(const wstring& InFilePath, ID3D11PixelShader**
 
 	// Pixel Shader 객체 생성
 	GetDevice()->CreatePixelShader(PixelShaderBlob->GetBufferPointer(),
-	                               PixelShaderBlob->GetBufferSize(), nullptr, OutPixelShader);
+		PixelShaderBlob->GetBufferSize(), nullptr, OutPixelShader);
 
 	PixelShaderBlob->Release();
 }
@@ -878,8 +880,8 @@ void URenderer::UpdateConstant(const UPrimitiveComponent* InPrimitive) const
 		FMatrix* Constants = static_cast<FMatrix*>(constantbufferMSR.pData);
 		{
 			*Constants = FMatrix::GetModelMatrix(InPrimitive->GetRelativeLocation(),
-			                                     FVector::GetDegreeToRadian(InPrimitive->GetRelativeRotation()),
-			                                     InPrimitive->GetRelativeScale3D());
+				FVector::GetDegreeToRadian(InPrimitive->GetRelativeRotation()),
+				InPrimitive->GetRelativeScale3D());
 		}
 		GetDeviceContext()->Unmap(ConstantBufferModels, 0);
 	}
@@ -1020,7 +1022,7 @@ ID3D11RasterizerState* URenderer::GetRasterizerState(const FRenderState& InRende
 	D3D11_FILL_MODE FillMode = ToD3D11(InRenderState.FillMode);
 	D3D11_CULL_MODE CullMode = ToD3D11(InRenderState.CullMode);
 
-	const FRasterKey Key{FillMode, CullMode};
+	const FRasterKey Key{ FillMode, CullMode };
 	if (auto Iter = RasterCache.find(Key); Iter != RasterCache.end())
 	{
 		return Iter->second;

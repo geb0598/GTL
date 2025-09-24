@@ -133,8 +133,6 @@ void ULevel::Render()
 
 void ULevel::Cleanup()
 {
-	UE_LOG("Level: '%s'의 Cleanup을 시작합니다.", GetName().ToString().data());
-
 	SetSelectedActor(nullptr);
 
 	// 1. 지연 삭제 목록에 남아있는 액터들을 먼저 처리합니다.
@@ -153,8 +151,6 @@ void ULevel::Cleanup()
 
 	// 4. 선택된 액터 참조를 안전하게 해제합니다.
 	SelectedActor = nullptr;
-
-	UE_LOG("Level: '%s'의 Cleanup을 완료했습니다.", GetName().ToString().data());
 }
 
 uint32 ULevel::GetNextUUID()

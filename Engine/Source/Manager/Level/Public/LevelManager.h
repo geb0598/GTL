@@ -13,7 +13,7 @@ class ULevelManager :
 
 public:
 	void Update() const;
-	bool LoadLevel(const FString& InLevelName, const FString& InFilePath);
+	bool LoadLevel(const FString& InFilePath);
 	void Shutdown();
 
 	// Getter

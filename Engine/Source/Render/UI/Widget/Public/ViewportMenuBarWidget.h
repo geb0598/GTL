@@ -23,6 +23,6 @@ private:
 	FViewport* Viewport = nullptr; // 참조할 뷰포트 클라이언트 대상
 	UEditor* Editor = nullptr;
 
-	bool bIsSingleViewportClient = false;
+	bool bIsSingleViewportClient = true;
 };
 

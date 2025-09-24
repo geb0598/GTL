@@ -39,12 +39,16 @@ void UConfigManager::LoadEditorSetting()
 		FString Key = Line.substr(0, DelimiterPos);
 		FString Value = Line.substr(DelimiterPos + 1);
 
-		// --- 기본 설정 파싱 ---
-		if (Key == "CellSize") CellSize = std::stof(Value);
-		else if (Key == "CameraSensitivity") CameraSensitivity = std::stof(Value);
-		else if (Key == "RootSplitterRatio") RootSplitterRatio = std::stof(Value);
-		else if (Key == "LeftSplitterRatio") LeftSplitterRatio = std::stof(Value);
-		else if (Key == "RightSplitterRatio") RightSplitterRatio = std::stof(Value);
+		try
+		{
+			if (Key == "CellSize") CellSize = std::stof(Value);
+			else if (Key == "CameraSensitivity") CameraSensitivity = std::stof(Value);
+			else if (Key == "RootSplitterRatio") RootSplitterRatio = std::stof(Value);
+			else if (Key == "LeftSplitterRatio") LeftSplitterRatio = std::stof(Value);
+			else if (Key == "RightSplitterRatio") RightSplitterRatio = std::stof(Value);
+			else if (Key == "LastUsedLevelPath") LastUsedLevelPath = Value;
+		}
+		catch (const std::exception&) {}
 	}
 }
 
@@ -58,6 +62,7 @@ void UConfigManager::SaveEditorSetting()
 		Ofs << "RootSplitterRatio=" << RootSplitterRatio << "\n";
 		Ofs << "LeftSplitterRatio=" << LeftSplitterRatio << "\n";
 		Ofs << "RightSplitterRatio=" << RightSplitterRatio << "\n";
+		Ofs << "LastUsedLevelPath=" << LastUsedLevelPath << "\n";
 	}
 }
 

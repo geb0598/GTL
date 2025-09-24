@@ -9,6 +9,7 @@
 #include "Manager/Time/Public/TimeManager.h"
 
 #include "Manager/UI/Public/UIManager.h"
+#include "Manager/Config/Public/ConfigManager.h"
 #include "Render/Renderer/Public/Renderer.h"
 
 #include "Render/UI/Window/Public/ConsoleWindow.h"
@@ -96,8 +97,15 @@ int FClientApp::InitializeSystem() const
 	UAssetManager::GetInstance().Initialize();
 
 	// Create Default Level
-	// TODO(KHJ): 나중에 Init에서 처리하도록 하는 게 맞을 듯
-	ULevelManager::GetInstance().CreateNewLevel();
+	FString LastSavedLevelPath = UConfigManager::GetInstance().GetLastSavedLevelPath();
+	if (ULevelManager::GetInstance().LoadLevel(LastSavedLevelPath))
+	{
+		// 마지막을 저장한 레벨을 성공적으로 로드
+	}
+	else
+	{
+		ULevelManager::GetInstance().CreateNewLevel();
+	}
 
 	return S_OK;
 }

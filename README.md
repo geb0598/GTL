@@ -1,77 +1,207 @@
-# GTL-Week03 Engine
-### Game Tech Lab 3주차 - 7팀 프로젝트
 
- ![Engine_Editor](Document/engine_editor.jpg)
+# ✦ WEEK 04: 엔진 개발 기술 문서
 
-<br>
+이번 4주차 개발 과정에서는 **외부 3D 모델링 데이터를 엔진에 통합**하고, 이를 효율적으로 렌더링하며, 사용자 편의성을 높이는 에디터 기능을 구현하는 데 중점을 두었습니다.  
+핵심 목표는 **Wavefront OBJ 파일을 엔진의 자체 형식으로 변환하는 데이터 파이프라인을 구축**하고, **StaticMesh를 씬에 배치하여 렌더링**하는 것이었습니다.  
+또한, **다중 뷰포트와 개선된 에디터 UI**를 통해 작업 효율성을 극대화하고자 했습니다.  
 
-## 📖 프로젝트 개요
+본 문서는 이번 주에 구현된 주요 기능들을 **Editor & Rendering**과 **Engine Core** 두 가지 주제로 나누어, 각 기능의 구현 목표, 설계 방식, 그리고 설계 의도를 상세히 설명합니다.  
 
-본 프로젝트는 Game Tech Lab 과정의 일환으로 개발된 **C++ 및 DirectX 11 기반의 미니 게임 엔진**입니다. Windows 애플리케이션으로서, 기본적인 엔진 아키텍처와 3D 렌더링 파이프라인 구축에 중점을 두고 학습 및 개발을 진행했습니다.
+---
 
-<br>
+## 주요 구현 내용
 
-## ✨ 주요 기능
+## 1. Editor & Rendering
 
-* 🎮 **렌더링 엔진**: DirectX 11 API를 기반으로 3D 그래픽 렌더링을 지원합니다.
-* 🎨 **에디터 UI**: 디버깅 및 실시간 객체 제어를 위해 **ImGui** 라이브러리를 통합했습니다.
-* 📦 **에셋 관리**: 셰이더(`.hlsl`), 텍스처 등 필수 에셋을 로드하고 관리하는 기본 시스템을 갖추고 있습니다.
-* 👁️ **뷰 모드**: **Lit**, **Unlit**, **Wireframe** 뷰 모드 간의 전환을 지원하여 다양한 관점에서 씬을 분석할 수 있습니다.
-* 🌳 **씬 관리자**: 씬(Scene)에 배치된 모든 액터(Actor)의 목록을 계층 구조로 시각화하고 관리합니다.
+사용자가 3D 모델을 직접 씬에 배치하고, 여러 각도에서 관찰하며, 작업 내용을 저장하고 불러올 수 있는 **직관적인 환경**을 구축했습니다.
 
-<br>
+---
 
-## 💻 코드 구조
+### 1.1 StaticMesh 렌더링 및 조작
 
-* `BatchLines`
-    * 에디터에 표시되는 다양한 선(그리드, 바운딩 박스 등)을 **하나의 버퍼에 모아 단일 드로우 콜(Draw Call)로 렌더링(배칭)**하는 최적화 클래스입니다.
+- 사용자가 에디터 내에서 `.obj` 파일 기반의 **정적 메시(StaticMesh)** 를 씬에 배치하고,  
+  위치·회전·크기를 조작하며, 그 결과를 **씬 파일(.json)에 저장 및 복원**할 수 있는 기능을 구현.
+  
+1. `UStaticMeshComp`를 `UPrimitiveComponent`의 자식 클래스로 구현 → 씬에 배치 가능한 기본 단위 생성.  
+2. 에디터 UI 패널에 **드롭다운 리스트** 추가.  
+   - `TObjectIterator<UStaticMesh>`를 활용해 엔진에 로드된 모든 `UStaticMesh Asset`을 동적으로 표시.  
+3. 드롭다운에서 선택된 Asset을 `UStaticMeshComp`에 **Assign(할당)** 가능.  
+4. 렌더링 전용 **StaticMeshShader.hlsl** 추가.  
+   - `FVertexPNCT` 정점 구조체를 입력받아 **Texture & Material 처리** 수행.  
 
-* `BoundingBoxLines`
-    * 객체를 감싸는 직육면체 형태의 경계 상자(AABB, Axis-Aligned Bounding Box)를 그리기 위한 정점 데이터를 생성합니다. 이 데이터는 `BatchLines`에 전달되어 렌더링됩니다.
+```cpp
+// Vertex Layout
+struct FVertexPNCT {
+    FVector Position;
+    FVector Normal;
+    FVector4 Color;
+    FVector2 UV;
+};
 
-* `BillBoardComponent`
-    * 항상 카메라를 정면으로 바라보도록 자동 회전하는 3D 컴포넌트입니다. 3D 월드 상에 액터의 이름이나 아이콘 같은 2D 정보를 표시하는 데 유용하게 사용됩니다.
+// StaticMeshShader VS_INPUT
+struct VS_INPUT {
+    float3 p : POSITION;
+    float3 n : NORMAL;
+    float4 c : COLOR;
+    float2 t : TEXTURE;
+};
+````
 
-* `FontRenderer`
-    * 폰트 아틀라스(Font Atlas) 텍스처를 사용하여 화면에 텍스트를 렌더링하는 클래스입니다. 셰이더 설정, 정점 버퍼 생성, 알파 블렌딩 등 텍스트 렌더링에 필요한 모든 과정을 캡슐화합니다.
+5. `UStaticMeshComp::Serialize` 함수를 통해 **씬 저장 시 JSON 포맷으로 Asset 정보 관리**.
 
-* `SceneManagerWindow`
-    * 씬에 존재하는 모든 액터를 계층 구조로 보여주는 ImGui 기반의 UI 창 클래스입니다. 내부적으로 `SceneHierarchyWidget`을 사용하여 실제 목록을 표시하고 상호작용을 관리합니다.
+   * 로드 시 `FObjManager`를 통해 재로딩 → 씬 복원.
 
-<br>
+```json
+"Primitives" : {
+  "3": {
+    "ObjStaticMeshAsset": "Data/Cube.obj",
+    "Location": [ -0.563450, 0.573828, -0.020000 ],
+    "Rotation": [ 0.860000, 0.000000, 5.990000 ],
+    "Scale": [ 1.000000, 1.000000, 1.000000 ],
+    "Type": "StaticMeshComp"
+  }
+}
+```
 
-## 🛠️ 시작하기
+* **Asset ↔ Scene Object(컴포넌트) 분리** → 관리 효율성 극대화.
+* 씬 파일에는 **경로만 저장**하여 파일 크기 최소화.
+* `FObjManager`에서 **중앙 관리 → 중복 로드 방지 → 성능 및 확장성 향상**.
 
-### 요구 사항
+---
 
-* **OS**: Windows 10 이상
-* **IDE**: Visual Studio 2022 이상
-    * 반드시 **"C++를 사용한 데스크톱 개발"** 워크로드가 설치되어 있어야 합니다.
-* **SDK**: Windows SDK (최신 버전 권장)
+### 1.2 다중 뷰포트 및 직교 뷰 구현
 
-### 빌드 순서
+* 단일 Perspective 뷰 → Orthogonal 뷰를 포함한 4분할 뷰포트 환경 구현.
+* 사용자는 **스플리터** 및 **버튼**으로 뷰포트의 수와 크기 조절 가능.
 
-1.  `git`을 사용하여 이 저장소를 로컬 컴퓨터에 복제합니다.
-    ```bash
-    git clone [저장소 URL]
-    ```
-2.  Visual Studio에서 `GTL03.sln` 솔루션 파일을 엽니다.
-3.  솔루션 구성을 `Debug` 또는 `Release` 모드로, 플랫폼을 `x64`로 설정합니다.
-4.  메뉴에서 `빌드 > 솔루션 빌드`를 선택하거나 단축키 `F7`을 눌러 프로젝트를 빌드합니다.
-5.  빌드가 성공하면 `Build/Debug` 또는 `Build/Release` 디렉터리에서 실행 파일(`GTL03.exe`)을 찾을 수 있습니다.
+1. `SSplitterH`, `SSplitterV` 클래스 구현 (재귀적 화면 분할).
 
-<br>
+```cpp
+class SSplitter : public SWindow {
+    SWindow* SideLT; // Left or Top
+    SWindow* SideRB; // Right or Bottom
+};
+```
 
-## 📂 프로젝트 구조
-├───Engine/             메인 엔진 프로젝트 소스 코드<br>
-│   ├───Core/           애플리케이션 프레임워크 (AppWindow, ClientApp)<br>
-│   ├───Editor/         에디터 관련 기능 (카메라, 기즈모, 그리드)<br>
-│   ├───Global/         전역 타입, 수학 유틸리티 (벡터, 행렬)<br>
-│   ├───Mesh/           액터 및 컴포넌트, 기하학적 프리미티브<br>
-│   ├───Render/         렌더링 시스템 (Device, Context, Shaders...)<br>
-│   └───Asset/          기본 에셋 (셰이더, 텍스처, 폰트)<br>
-│<br>
-├───External/           외부 라이브러리 (DirectXTK, ImGui, json...)<br>
-├───Document/           프로젝트 관련 문서<br>
-├───GTL03.sln           Visual Studio 솔루션 파일<br>
-└───README.md           이 파일<br>
+2. `FViewport`, `FViewportClient` 도입 → 뷰포트별 카메라(Perspective/Orthogonal) 관리.
+3. `RSSetViewports` API 사용 → 각 뷰포트 영역에 맞게 렌더링 출력.
+4. 스플리터 위치는 **Editor.ini에 저장** → 레이아웃 복원.
+5. Perspective 뷰 카메라는 **씬 파일에 직렬화(Serializer)** → 마지막 카메라 구도 유지.
+
+```json
+"PerspectiveCamera": {
+  "Location": [0.000000, 2.000000, -5.000000],
+  "Rotation": [0.100000, 0.000000, 0.000000],
+  "FOV": 60.0,
+  "NearClip": 0.100000,
+  "FarClip": 1000.000000
+}
+```
+
+* 다중 뷰포트 + 직교 뷰 → **정밀한 오브젝트 배치 필수**.
+* 전체 구도는 Perspective로 확인, 세부 축 조정은 Orthogonal 뷰로 처리.
+* **편의성과 정확성 동시 확보**.
+
+---
+
+## 2. Engine Core (눈에 안 보이는 세상)
+
+보이지 않는 영역에서는 외부 데이터를 **엔진 친화적 구조로 가공**하고, 효율적으로 관리하며,
+다른 시스템에서 쉽게 접근 가능하도록 **견고한 기반을 구축**했습니다.
+
+---
+
+### 2.1 Wavefront OBJ 파싱 및 데이터 파이프라인
+
+* `.obj` / `.mtl` 파일을 읽어, 엔진에서 렌더링 가능한 **FStaticMesh** 형식으로 변환.
+
+1. `FObjImporter` 클래스 구현 → .obj 파싱 → Raw Data(`FObjInfo`) 생성.
+2. Raw Data → \*\*GPU 최적화된 Cooked Data(`FStaticMesh`)\*\*로 변환.
+
+   * **중복 제거된 고유 정점 생성 + 인덱스 버퍼 구성**.
+
+```cpp
+// Raw Data
+struct FObjInfo { ... };
+
+// Cooked Data
+struct FStaticMesh {
+    std::string PathFileName;
+    TArray<FNormalVertex> Vertices;
+    TArray<uint32> Indices;
+    // + Material Section 정보
+};
+```
+
+3. 다중 Material 지원 → `.mtl` 파일 파싱 후 FStaticMesh 내에 **Material Section 관리**.
+
+* Raw Data (편집 친화) vs Cooked Data (GPU 최적화) **분리 필수**.
+* Cooked Data로 Baking/Cooking → **로딩 속도 및 렌더링 성능 최적화**.
+
+---
+
+### 2.2 Asset 관리 시스템 (FObjManager & UStaticMesh)
+
+1. `FObjManager` → FStaticMesh(Cooked Data) **싱글톤 캐싱 관리**.
+
+```cpp
+class FObjManager {
+private:
+    static std::map<string, FStaticMesh*> ObjStaticMeshMap;
+public:
+    static FStaticMesh* LoadObjStaticMeshAsset(const std::string& PathFileName);
+    static UStaticMesh* LoadObjStaticMesh(const std::string& PathFileName);
+};
+```
+
+2. `UStaticMesh` → `UObject` 상속, FStaticMesh를 **래핑(Wrapper)**.
+
+```cpp
+class UStaticMesh : public UObject {
+    FStaticMesh* StaticMeshAsset;
+    ...
+};
+```
+
+3. `UStaticMeshComp` → 어떤 메시 데이터를 렌더링할지 `UStaticMesh` 포인터로 지정.
+
+* `FObjManager` 캐싱 → **중복 파싱 방지**.
+* `UStaticMesh`를 `UObject`화 → **GC, Reflection, Serializer 활용 가능**.
+* 정적 메시가 단순 데이터가 아닌, 엔진 관리 **완전한 Asset**으로 기능.
+
+---
+
+### 2.3 TObjectIterator 구현
+
+* 특정 타입의 모든 `UObject` 인스턴스를 순회할 수 있는 **템플릿 이터레이터** 구현.
+
+1. 내부적으로 전역 배열 `GObjObjects` 순회.
+2. `operator++` 오버로딩 → **유효한 TObject 타입**만 탐색.
+
+```cpp
+// 모든 UStaticMesh 순회 예시
+for (TObjectIterator<UStaticMesh> It; It; ++It) {
+    UStaticMesh* StaticMesh = *It;
+    // ...
+}
+```
+
+* **Iterator 패턴 적용** → 특정 타입 오브젝트 접근 로직 단순화.
+* 에디터 UI, 씬 관리 등에서 코드 가독성과 유지보수성 향상.
+
+---
+
+## 결론
+
+4주차 개발을 통해 **3D 데이터를 저장 및 로드하고 편집의 자유도가 존재하는 엔진**을 완성했습니다.
+
+* **Raw → Cooked Data 변환**
+* **Asset 관리 시스템 구축**
+* **사용자 친화적 에디터 UI**
+
+**Parser, Serializer, Iterator**와 같은 관리가 용이한 개념을 적용하고,
+**StaticMesh, Material, Texture** 를 추가하고, 결합하여
+**더 복잡하고 사실적인 기능을 보장하는 에디터**를 구성할 수 있는 발판을 가지게 되었습니다.
+
+```
+

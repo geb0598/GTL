@@ -44,6 +44,11 @@ void UStaticMeshComponentWidget::RenderWidget()
 		return;
 	}
 
+	if (!StaticMeshComponent->GetStaticMesh())
+	{
+		return;
+	}
+
 	RenderStaticMeshSelector();
 	ImGui::Separator();
 	RenderMaterialSections();
@@ -183,7 +188,7 @@ FString UStaticMeshComponentWidget::GetMaterialDisplayName(UMaterial* Material) 
 			// 파일 이름만 추출 (확장자 제외)
 			size_t LastSlash = TexturePath.find_last_of("/\\");
 			size_t LastDot = TexturePath.find_last_of(".");
-			
+
 			if (LastSlash != std::string::npos)
 			{
 				FString FileName = TexturePath.substr(LastSlash + 1);
@@ -214,7 +219,7 @@ FString UStaticMeshComponentWidget::GetMaterialDisplayName(UMaterial* Material) 
 			{
 				size_t LastSlash = TexturePath.find_last_of("/\\");
 				size_t LastDot = TexturePath.find_last_of(".");
-				
+
 				if (LastSlash != std::string::npos)
 				{
 					FString FileName = TexturePath.substr(LastSlash + 1);
