@@ -22,11 +22,21 @@ bool FObjImporter::LoadObj(const std::filesystem::path& FilePath, FObjInfo* OutO
 
 	if (Config.bIsBinaryEnabled && std::filesystem::exists(BinFilePath))
 	{
-		UE_LOG("바이너리 파일이 존재합니다: %s", BinFilePath.string().c_str());
-		FWindowsBinReader WindowsBinReader(BinFilePath);
-		WindowsBinReader << *OutObjInfo;
+		auto ObjTime = std::filesystem::last_write_time(FilePath);
+		auto BinTime = std::filesystem::last_write_time(BinFilePath);
 
-		return true;
+		if (BinTime >= ObjTime)
+		{
+			UE_LOG("바이너리 파일이 존재합니다: %s", BinFilePath.string().c_str());
+			FWindowsBinReader WindowsBinReader(BinFilePath);
+			WindowsBinReader << *OutObjInfo;
+
+			return true;
+		}
+		else
+		{
+			UE_LOG("바이너리 파일이 원본보다 오래되었습니다. 무시합니다: %s", BinFilePath.string().c_str());
+		}
 	}
 
 	if (FilePath.extension() != ".obj")
