@@ -139,7 +139,7 @@ FStaticMesh* FObjManager::LoadObjStaticMeshAsset(const FName& PathFileName, cons
 				StaticMesh->MaterialInfo[CurrentMaterialSlot].NsMap = std::move(ObjInfo.ObjectMaterialInfoList[j].NsMap);
 				StaticMesh->MaterialInfo[CurrentMaterialSlot].DMap = std::move(ObjInfo.ObjectMaterialInfoList[j].DMap);
 				StaticMesh->MaterialInfo[CurrentMaterialSlot].BumpMap = std::move(ObjInfo.ObjectMaterialInfoList[j].BumpMap);
-				
+
 				MaterialNameToSlot.emplace(MaterialName, CurrentMaterialSlot);
 				CurrentMaterialSlot++;
 				break;
@@ -275,11 +275,16 @@ UStaticMesh* FObjManager::LoadObjStaticMesh(const FName& PathFileName, const FOb
 	}
 
 	FStaticMesh* StaticMeshAsset = FObjManager::LoadObjStaticMeshAsset(PathFileName, Config);
-	UStaticMesh* StaticMesh = new UStaticMesh();
-	StaticMesh->SetStaticMeshAsset(StaticMeshAsset);
+	if (StaticMeshAsset)
+	{
+		UStaticMesh* StaticMesh = new UStaticMesh();
+		StaticMesh->SetStaticMeshAsset(StaticMeshAsset);
 
-	// MTL 정보를 바탕으로 재질 객체 생성
-	CreateMaterialsFromMTL(StaticMesh, StaticMeshAsset, PathFileName);
+		// MTL 정보를 바탕으로 재질 객체 생성
+		CreateMaterialsFromMTL(StaticMesh, StaticMeshAsset, PathFileName);
 
-	return StaticMesh;
+		return StaticMesh;
+	}
+
+	return nullptr;
 }
