@@ -8,7 +8,7 @@
 #include "Editor/Public/SplitterWindow.h"
 
 class UPrimitiveComponent;
-class FViewport;
+class FViewportClient;
 class UCamera;
 class ULevel;
 class USplitterWidget;
@@ -57,7 +57,7 @@ private:
 	SSplitterH RightSplitter;
 	SWindow ViewportWindows[4]; // 최종 뷰포트 영역의 정보, 쉽게 참조하도록 선언했습니다.
 	SSplitter* DraggedSplitter = nullptr; // 드래그 상태를 추적하는 포인터
-	FViewport* InteractionViewport = nullptr; // 뷰포트의 상호작용을 고정하는 포인터
+	FViewportClient* InteractionViewport = nullptr; // 뷰포트의 상호작용을 고정하는 포인터
 
 	EViewModeIndex CurrentViewMode = EViewModeIndex::VMI_Lit;
 };

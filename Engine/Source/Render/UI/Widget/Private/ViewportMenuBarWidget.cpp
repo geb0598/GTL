@@ -27,12 +27,12 @@ void UViewportMenuBarWidget::RenderWidget()
 {
 	if (!ViewportClient) { return; }
 
-	TArray<FViewport>& Viewports = ViewportClient->GetViewports();
+	TArray<FViewportClient>& Viewports = ViewportClient->GetViewport();
 
 	for (int Index = 0; Index < Viewports.size(); ++Index)
 	{
-		FViewport& Viewport = Viewports[Index];
-		const D3D11_VIEWPORT& ViewportInfo = Viewport.GetViewport();
+		FViewportClient& Viewport = Viewports[Index];
+		const D3D11_VIEWPORT& ViewportInfo = Viewport.GetViewportInfo();
 
 		// 뷰포트 영역이 너무 작으면 렌더링하지 않음
 		if (ViewportInfo.Width < 1.0f || ViewportInfo.Height < 1.0f) { continue; }
@@ -68,45 +68,45 @@ void UViewportMenuBarWidget::RenderWidget()
 		if (ImGui::BeginMenuBar())
 		{
 			// 3. 기존의 뷰포트 타입 메뉴 (Perspective, Ortho 등)
-			if (ImGui::BeginMenu(ViewportTypeToString(Viewport.GetViewportCameraType())))
+			if (ImGui::BeginMenu(ClientCameraTypeToString(Viewport.GetCameraType())))
 			{
 				if (ImGui::MenuItem("Perspective"))
 				{
-					Viewport.SetViewportCameraType(EViewportCameraType::Perspective);
-					ViewportClient->UpdateAllViewportCameras();
+					Viewport.SetCameraType(EViewportCameraType::Perspective);
+					ViewportClient->UpdateAllViewportClientCameras();
 				}
 
 				if (ImGui::BeginMenu("Orthographic"))
 				{
 					if (ImGui::MenuItem("Top"))
 					{
-						Viewport.SetViewportCameraType(EViewportCameraType::Ortho_Top);
-						ViewportClient->UpdateAllViewportCameras();
+						Viewport.SetCameraType(EViewportCameraType::Ortho_Top);
+						ViewportClient->UpdateAllViewportClientCameras();
 					}
 					if (ImGui::MenuItem("Bottom"))
 					{
-						Viewport.SetViewportCameraType(EViewportCameraType::Ortho_Bottom);
-						ViewportClient->UpdateAllViewportCameras();
+						Viewport.SetCameraType(EViewportCameraType::Ortho_Bottom);
+						ViewportClient->UpdateAllViewportClientCameras();
 					}
 					if (ImGui::MenuItem("Left"))
 					{
-						Viewport.SetViewportCameraType(EViewportCameraType::Ortho_Left);
-						ViewportClient->UpdateAllViewportCameras();
+						Viewport.SetCameraType(EViewportCameraType::Ortho_Left);
+						ViewportClient->UpdateAllViewportClientCameras();
 					}
 					if (ImGui::MenuItem("Right"))
 					{
-						Viewport.SetViewportCameraType(EViewportCameraType::Ortho_Right);
-						ViewportClient->UpdateAllViewportCameras();
+						Viewport.SetCameraType(EViewportCameraType::Ortho_Right);
+						ViewportClient->UpdateAllViewportClientCameras();
 					}
 					if (ImGui::MenuItem("Front"))
 					{
-						Viewport.SetViewportCameraType(EViewportCameraType::Ortho_Front);
-						ViewportClient->UpdateAllViewportCameras();
+						Viewport.SetCameraType(EViewportCameraType::Ortho_Front);
+						ViewportClient->UpdateAllViewportClientCameras();
 					}
 					if (ImGui::MenuItem("Back"))
 					{
-						Viewport.SetViewportCameraType(EViewportCameraType::Ortho_Back);
-						ViewportClient->UpdateAllViewportCameras();
+						Viewport.SetCameraType(EViewportCameraType::Ortho_Back);
+						ViewportClient->UpdateAllViewportClientCameras();
 					}
 					ImGui::EndMenu();
 				}

@@ -13,7 +13,7 @@ class AActor;
 class AGizmo;
 class UEditor;
 class UFontRenderer;
-class FViewportClient;
+class FViewport;
 class UCamera;
 
 /**
@@ -109,7 +109,7 @@ public:
 	IDXGISwapChain* GetSwapChain() const { return DeviceResources->GetSwapChain(); }
 	ID3D11RenderTargetView* GetRenderTargetView() const { return DeviceResources->GetRenderTargetView(); }
 	UDeviceResources* GetDeviceResources() const { return DeviceResources; }
-	FViewportClient* GetViewportClient() const { return ViewportClient; }
+	FViewport* GetViewportClient() const { return ViewportClient; }
 	bool GetIsResizing() const { return bIsResizing; }
 
 	void SetIsResizing(bool isResizing) { bIsResizing = isResizing; }
@@ -140,7 +140,7 @@ private:
 	
 	uint32 Stride = 0;
 
-	FViewportClient* ViewportClient = nullptr;
+	FViewport* ViewportClient = nullptr;
 
 	struct FRasterKey
 	{

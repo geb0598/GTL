@@ -298,7 +298,7 @@ void USceneHierarchyWidget::FocusOnActor(TObjectPtr<AActor> InActor)
 {
 	if (!InActor) { return; }
 
-	FViewportClient* ViewportClient = URenderer::GetInstance().GetViewportClient();
+	FViewport* ViewportClient = URenderer::GetInstance().GetViewportClient();
 	if (!ViewportClient) { return; }
 
 	TObjectPtr<UPrimitiveComponent> Prim = nullptr;
@@ -323,7 +323,7 @@ void USceneHierarchyWidget::FocusOnActor(TObjectPtr<AActor> InActor)
 	const FVector Size = ComponentMax - ComponentMin;
 	const float BoundingRadius = Size.Length() * 0.5f;
 
-	auto& Viewports = ViewportClient->GetViewports();
+	auto& Viewports = ViewportClient->GetViewport();
 	const int32 ViewportCount = static_cast<int32>(Viewports.size());
 
 	CameraStartLocation.resize(ViewportCount);
@@ -370,7 +370,7 @@ void USceneHierarchyWidget::UpdateCameraAnimation()
 {
 	if (!bIsCameraAnimating) { return; }
 
-	FViewportClient* ViewportClient = URenderer::GetInstance().GetViewportClient();
+	FViewport* ViewportClient = URenderer::GetInstance().GetViewportClient();
 	if (!ViewportClient)
 	{
 		bIsCameraAnimating = false;
@@ -397,7 +397,7 @@ void USceneHierarchyWidget::UpdateCameraAnimation()
 		SmoothProgress = 1.0f - 8.0f * ProgressFromEnd * ProgressFromEnd * ProgressFromEnd * ProgressFromEnd;
 	}
 
-	auto& Viewports = ViewportClient->GetViewports();
+	auto& Viewports = ViewportClient->GetViewport();
 	for (int Index = 0; Index < Viewports.size(); ++Index)
 	{
 		UCamera& Camera = Viewports[Index].Camera;
