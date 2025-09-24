@@ -103,7 +103,7 @@ void UAssetManager::Initialize()
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
 	};
 	URenderer::GetInstance().CreateVertexShaderAndInputLayout(L"Asset/Shader/BatchLineVS.hlsl", layoutDesc,
-	                                                          &vertexShader, &inputLayout);
+		&vertexShader, &inputLayout);
 	VertexShaders.emplace(EShaderType::BatchLine, vertexShader);
 	InputLayouts.emplace(EShaderType::BatchLine, inputLayout);
 
@@ -154,18 +154,21 @@ void UAssetManager::LoadAllObjStaticMesh()
 
 	TArray<FName> ObjList;
 	const FString DataDirectory = "Data/"; // 검색할 기본 디렉토리
-
-	// recursive_directory_iterator를 사용하여 디렉토리와 모든 하위 디렉토리를 순회합니다.
-	for (const auto& Entry : std::filesystem::recursive_directory_iterator(DataDirectory))
+	// 디렉토리가 실제로 존재하는지 먼저 확인합니다.
+	if (std::filesystem::exists(DataDirectory) && std::filesystem::is_directory(DataDirectory))
 	{
-		// 현재 항목이 일반 파일이고, 확장자가 ".obj"인지 확인합니다.
-		if (Entry.is_regular_file() && Entry.path().extension() == ".obj")
+		// recursive_directory_iterator를 사용하여 디렉토리와 모든 하위 디렉토리를 순회합니다.
+		for (const auto& Entry : std::filesystem::recursive_directory_iterator(DataDirectory))
 		{
-			// .generic_string()을 사용하여 OS에 상관없이 '/' 구분자를 사용하는 경로를 바로 얻습니다.
-			FString PathString = Entry.path().generic_string();
+			// 현재 항목이 일반 파일이고, 확장자가 ".obj"인지 확인합니다.
+			if (Entry.is_regular_file() && Entry.path().extension() == ".obj")
+			{
+				// .generic_string()을 사용하여 OS에 상관없이 '/' 구분자를 사용하는 경로를 바로 얻습니다.
+				FString PathString = Entry.path().generic_string();
 
-			// 찾은 파일 경로를 FName으로 변환하여 ObjList에 추가합니다.
-			ObjList.push_back(FName(PathString));
+				// 찾은 파일 경로를 FName으로 변환하여 ObjList에 추가합니다.
+				ObjList.push_back(FName(PathString));
+			}
 		}
 	}
 
@@ -435,7 +438,7 @@ ID3D11ShaderResourceView* UAssetManager::CreateTextureFromFile(const path& InFil
 			else
 			{
 				UE_LOG_ERROR("ResourceManager: DDS 텍스처 로드 실패 - %ls (HRESULT: 0x%08lX)",
-				             InFilePath.c_str(), ResultHandle);
+					InFilePath.c_str(), ResultHandle);
 			}
 		}
 		else
@@ -456,7 +459,7 @@ ID3D11ShaderResourceView* UAssetManager::CreateTextureFromFile(const path& InFil
 			else
 			{
 				UE_LOG_ERROR("ResourceManager: WIC 텍스처 로드 실패 - %ls (HRESULT: 0x%08lX)"
-				             , InFilePath.c_str(), ResultHandle);
+					, InFilePath.c_str(), ResultHandle);
 			}
 		}
 	}
