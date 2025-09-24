@@ -77,14 +77,28 @@ public:
 		RightSplitterRatio = RightRatio;
 	}
 
+	FString GetLastSavedLevelPath()
+	{
+		return LastUsedLevelPath;
+	}
+
+	void SetLastUsedLevelPath(FString InLevelPath)
+	{
+		LastUsedLevelPath = InLevelPath;
+	}
+
 	void SetViewportCameraData(int InIndex, const FViewportCameraData& InData) { ViewportCameraSettings[InIndex] = InData; }
 
 private:
+	// ini 파일에 저장
 	FName EditorIniFileName;
 	float CellSize;
 	float CameraSensitivity;
 	float RootSplitterRatio;
 	float LeftSplitterRatio;
 	float RightSplitterRatio;
+	FString LastUsedLevelPath;
+
+	// Json으로 Level에 같이 저장
 	FViewportCameraData ViewportCameraSettings[4];
 };

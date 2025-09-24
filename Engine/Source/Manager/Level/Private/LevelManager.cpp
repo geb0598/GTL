@@ -5,6 +5,7 @@
 #include "Manager/Path/Public/PathManager.h"
 #include "Utility/Public/JsonSerializer.h"
 #include "Editor/Public/Editor.h"
+#include "Manager/Config/Public/ConfigManager.h"
 
 #include <json.hpp>
 
@@ -81,6 +82,8 @@ bool ULevelManager::SaveCurrentLevel(const FString& InFilePath) const
 
 		if (bSuccess)
 		{
+			UConfigManager::GetInstance().SetLastUsedLevelPath(InFilePath);	// 재시작 시 다시 열기 위해 저장
+
 			UE_LOG("LevelManager: 레벨이 성공적으로 저장되었습니다");
 		}
 		else
@@ -96,16 +99,21 @@ bool ULevelManager::SaveCurrentLevel(const FString& InFilePath) const
 	}
 }
 
-bool ULevelManager::LoadLevel(const FString& InLevelName, const FString& InFilePath)
+bool ULevelManager::LoadLevel(const FString& InFilePath)
 {
-	UE_LOG("LevelManager: Loading Level '%s' From: %s", InLevelName.data(), InFilePath.data());
+	UE_LOG("LevelManager: Loading Level: %s", InFilePath.data());
 
-	TObjectPtr<ULevel> NewLevel = TObjectPtr(new ULevel(InLevelName));
+	path FilePath(InFilePath);
+	FString LevelName = FilePath.stem().string();
+
+	TObjectPtr<ULevel> NewLevel = TObjectPtr(new ULevel(LevelName));
 	try
 	{
 		JSON LevelJsonData;
 		if (FJsonSerializer::LoadJsonFromFile(LevelJsonData, InFilePath))
 		{
+			UConfigManager::GetInstance().SetLastUsedLevelPath(InFilePath);	// 재시작 시 다시 열기 위해 저장
+
 			NewLevel->Serialize(true, LevelJsonData);
 		}
 		else
@@ -125,7 +133,7 @@ bool ULevelManager::LoadLevel(const FString& InLevelName, const FString& InFileP
 	// 새 레벨을 등록하고 활성 레벨로 전환합니다.
 	SwitchToLevel(NewLevel);
 
-	UE_LOG("LevelManager: Level '%s' (으)로 레벨을 교체 완료했습니다", InLevelName.c_str());
+	UE_LOG("LevelManager: Level '%s' (으)로 레벨을 교체 완료했습니다", LevelName.c_str());
 	return true;
 }
 

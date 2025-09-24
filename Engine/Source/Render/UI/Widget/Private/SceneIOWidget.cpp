@@ -1,9 +1,9 @@
 #include "pch.h"
 #include "Render/UI/Widget/Public/SceneIOWidget.h"
 
-#include <shobjidl.h>
-
 #include "Manager/Level/Public/LevelManager.h"
+
+#include <shobjidl.h>
 
 USceneIOWidget::USceneIOWidget()
 	: UWidget("Scene IO Widget")
@@ -128,23 +128,8 @@ void USceneIOWidget::LoadLevel(const FString& InFilePath)
 {
 	try
 	{
-		// 파일명에서 확장자를 제외하고 레벨 이름 추출
-		FString LevelName = InFilePath;
-
-		size_t LastSlash = LevelName.find_last_of("\\/");
-		if (LastSlash != std::wstring::npos)
-		{
-			LevelName = LevelName.substr(LastSlash + 1);
-		}
-
-		size_t LastDot = LevelName.find_last_of('.');
-		if (LastDot != std::wstring::npos)
-		{
-			LevelName = LevelName.substr(0, LastDot);
-		}
-
 		ULevelManager& LevelManager = ULevelManager::GetInstance();
-		bool bSuccess = LevelManager.LoadLevel(LevelName, InFilePath);
+		bool bSuccess = LevelManager.LoadLevel(InFilePath);
 
 		if (bSuccess)
 		{
@@ -225,7 +210,7 @@ path USceneIOWidget::OpenSaveFileDialog()
 
 		// 2. FileSaveDialog 인스턴스 생성
 		ResultHandle = CoCreateInstance(CLSID_FileSaveDialog, nullptr, CLSCTX_ALL,
-		                                IID_IFileSaveDialog, reinterpret_cast<void**>(&FileSaveDialogPtr));
+			IID_IFileSaveDialog, reinterpret_cast<void**>(&FileSaveDialogPtr));
 
 		if (SUCCEEDED(ResultHandle))
 		{
@@ -312,7 +297,7 @@ path USceneIOWidget::OpenLoadFileDialog()
 
 		// FileOpenDialog 인스턴스 생성
 		ResultHandle = CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_ALL,
-		                                IID_IFileOpenDialog, reinterpret_cast<void**>(&FileOpenDialog));
+			IID_IFileOpenDialog, reinterpret_cast<void**>(&FileOpenDialog));
 
 		if (SUCCEEDED(ResultHandle))
 		{

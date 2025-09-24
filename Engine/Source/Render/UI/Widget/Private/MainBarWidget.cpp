@@ -376,11 +376,8 @@ void UMainBarWidget::LoadLevel()
 	{
 		try
 		{
-			// 파일명에서 확장자를 제외하고 레벨 이름 추출
-			FString LevelName = FilePath.stem().string();
-
 			ULevelManager& LevelManager = ULevelManager::GetInstance();
-			bool bSuccess = LevelManager.LoadLevel(LevelName, FilePath.string());
+			bool bSuccess = LevelManager.LoadLevel(FilePath.string());
 
 			if (bSuccess)
 			{
