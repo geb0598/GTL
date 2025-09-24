@@ -78,6 +78,9 @@ int FClientApp::Run(HINSTANCE InInstanceHandle, int InCmdShow)
  */
 int FClientApp::InitializeSystem() const
 {
+	// 현재 시간을 랜덤 시드로 설정
+	srand(static_cast<unsigned int>(time(NULL)));
+
 	// Initialize By Get Instance
 	UTimeManager::GetInstance();
 	UInputManager::GetInstance();
