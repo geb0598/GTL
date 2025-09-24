@@ -14,8 +14,9 @@ void USplitterDebugWidget::RenderWidget()
 	if (!RootSplitter || !LeftSplitter || !RightSplitter) { return; }
 
 	// 화면의 최상단에 그려지도록 포그라운드 드로우 리스트를 사용합니다.
-	ImDrawList* DrawList = ImGui::GetForegroundDrawList();
-	const ImU32 SplitterColor = IM_COL32(11, 10, 9, 100);
+	ImDrawList* DrawList = ImGui::GetBackgroundDrawList();
+
+	const ImU32 SplitterColor = IM_COL32(11, 11, 11, 100);
 
 	// 루트 스플리터 그리기
 	const FRect& RootRect = RootSplitter->Rect;
