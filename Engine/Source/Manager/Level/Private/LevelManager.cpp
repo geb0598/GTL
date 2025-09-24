@@ -108,10 +108,12 @@ bool ULevelManager::LoadLevel(const FString& InLevelName, const FString& InFileP
 		{
 			NewLevel->Serialize(true, LevelJsonData);
 		}
-
-		UE_LOG("LevelManager: Failed To Load Level From: %s", InFilePath.c_str());
-		delete NewLevel;
-		return false;
+		else
+		{
+			UE_LOG("LevelManager: Failed To Load Level From: %s", InFilePath.c_str());
+			delete NewLevel;
+			return false;
+		}
 	}
 	catch (const exception& InException)
 	{

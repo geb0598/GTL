@@ -68,7 +68,7 @@ void ULevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 
 				UClass* NewClass = UClass::FindClass(TypeString);
 
-				AActor* NewActor = SpawnActor(NewClass);
+				AActor* NewActor = SpawnActor(NewClass, IdString);
 				if (NewActor)
 				{
 					NewActor->Serialize(bInIsLoading, PrimitiveDataJson);

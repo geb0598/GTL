@@ -405,7 +405,7 @@ void UMainBarWidget::LoadLevel()
 void UMainBarWidget::CreateNewLevel()
 {
 	ULevelManager& LevelMgr = ULevelManager::GetInstance();
-	if (ULevelManager::GetInstance().CreateNewLevel("Untitled"))
+	if (ULevelManager::GetInstance().CreateNewLevel())
 	{
 		UE_LOG("MainBarWidget: 새로운 레벨이 성공적으로 생성되었습니다");
 	}
