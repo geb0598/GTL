@@ -49,8 +49,6 @@ public:
 
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
-	uint32 GetNextUUID();
-
 	const TArray<TObjectPtr<AActor>>& GetLevelActors() const { return LevelActors; }
 
 	const TArray<TObjectPtr<UPrimitiveComponent>>& GetLevelPrimitiveComponents() const

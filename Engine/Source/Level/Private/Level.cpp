@@ -43,6 +43,7 @@ void ULevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		uint32 Version = 0;
 		FJsonSerializer::ReadUint32(InOutHandle, "Version", Version);
 
+		// NOTE: 레벨 로드 시 NextUUID를 변경하면 UUID 충돌이 발생하므로 관련 기능 구현을 보류합니다.
 		uint32 NextUUID = 0;
 		FJsonSerializer::ReadUint32(InOutHandle, "NextUUID", Version);
 
@@ -80,7 +81,9 @@ void ULevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 	else
 	{
 		InOutHandle["Version"] = 1;
-		InOutHandle["NextUUID"] = GetNextUUID();	// Todo: 액터 하나당 UUID 가 여러개라서 +1 씩 늘어나지 않는다
+
+		// NOTE: 레벨 로드 시 NextUUID를 변경하면 UUID 충돌이 발생하므로 관련 기능 구현을 보류합니다.
+		InOutHandle["NextUUID"] = 0;
 
 		// GetCameraSetting 호출 전에 뷰포트 클라이언트의 최신 데이터를 ConfigManager로 동기화합니다.
 		URenderer::GetInstance().GetViewportClient()->UpdateCameraSettingsToConfig();
@@ -151,12 +154,6 @@ void ULevel::Cleanup()
 
 	// 4. 선택된 액터 참조를 안전하게 해제합니다.
 	SelectedActor = nullptr;
-}
-
-uint32 ULevel::GetNextUUID()
-{
-	uint32 NextUUID = 1;
-	return NextUUID;
 }
 
 AActor* ULevel::SpawnActorToLevel(UClass* InActorClass, const FName& InName)
