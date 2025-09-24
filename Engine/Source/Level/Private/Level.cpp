@@ -68,7 +68,7 @@ void ULevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 
 				UClass* NewClass = UClass::FindClass(TypeString);
 
-				AActor* NewActor = SpawnActor(NewClass, IdString);
+				AActor* NewActor = SpawnActorToLevel(NewClass, IdString);
 				if (NewActor)
 				{
 					NewActor->Serialize(bInIsLoading, PrimitiveDataJson);
@@ -159,14 +159,14 @@ uint32 ULevel::GetNextUUID()
 	return NextUUID;
 }
 
-AActor* ULevel::SpawnActor(const UClass* InActorClass, const FName& InName)
+AActor* ULevel::SpawnActorToLevel(UClass* InActorClass, const FName& InName)
 {
 	if (!InActorClass)
 	{
 		return nullptr;
 	}
 
-	AActor* NewActor = Cast<AActor>(InActorClass->CreateDefaultObject());
+	AActor* NewActor = NewObject<AActor>(nullptr, TObjectPtr(InActorClass), InName);
 	if (NewActor)
 	{
 		if (InName != FName::GetNone())

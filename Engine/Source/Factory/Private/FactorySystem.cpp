@@ -24,12 +24,16 @@ void FFactorySystem::Initialize()
 
 	UE_LOG_SYSTEM("FactorySystem: Factory System을 초기화합니다...");
 
+	// NOTE: Factory는 현시점에서 필요하지 않다고 생각되어 제외함
+
+	/*
 	// Factory 인스턴스 생성 (생성자에서 자동 등록)
 	static UCubeActorFactory CubeFactory;
 	static USphereActorFactory SphereFactory;
 	static UTriangleActorFactory TriangleFactory;
 	static USquareActorFactory SquareFactory;
 	static UStaticMeshActorFactory StaticMeshFactory;
+	*/
 
 	bIsInitialized = true;
 

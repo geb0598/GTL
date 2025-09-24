@@ -87,7 +87,7 @@ bool OpenObjFromFileDialog()
 		return false;
 	}
 
-	AActor* NewActor = CurrentLevel->SpawnActor(AStaticMeshActor::StaticClass());
+	AActor* NewActor = CurrentLevel->SpawnActorToLevel(AStaticMeshActor::StaticClass());
 	UStaticMeshComponent* StaticMeshComponent = nullptr;
 	for (const auto& Component : NewActor->GetOwnedComponents())
 	{

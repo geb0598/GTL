@@ -22,6 +22,8 @@ TObjectPtr<T> NewObject(TObjectPtr<UObject> InOuter = nullptr, TObjectPtr<UClass
 
 	TObjectPtr<UClass> ClassToUse = InClass ? InClass : T::StaticClass();
 
+	// NOTE: Factory는 현시점에서 필요하지 않다고 생각되어 제외함
+	
 	//// Factory를 사용하여 생성 시도
 	//TObjectPtr<UFactory> Factory = UFactory::FindFactory(ClassToUse);
 	//if (Factory)
@@ -33,10 +35,7 @@ TObjectPtr<T> NewObject(TObjectPtr<UObject> InOuter = nullptr, TObjectPtr<UClass
 	//	}
 	//}
 
-	//// Factory가 없으면 기존 방식으로 폴백
-	//UE_LOG_WARNING("NewObject: %s를 생성할 Factory를 찾지 못해, new를 통한 폴백 생성으로 처리합니다",
-	//	ClassToUse->GetClassTypeName().ToString().data());
-
+	// Factory가 없으면 기존 방식으로 폴백
 	TObjectPtr<T> NewObject;
 	if (InClass && InClass->IsChildOf(T::StaticClass()))
 	{
