@@ -49,9 +49,6 @@ void FViewport::InitializeLayout(const D3D11_VIEWPORT& InViewport)
 	ViewportClients[2].SetViewportInfo({ BaseX + 0.0f,      BaseY + HalfH,     HalfW, HalfH, 0.0f, 1.0f });
 	ViewportClients[3].SetViewportInfo({ BaseX + HalfW,     BaseY + HalfH,     HalfW, HalfH, 0.0f, 1.0f });
 
-	// 모든 뷰포트에 저장된 카메라 데이터를 일괄 적용합니다.
-	ApplyAllCameraDataToViewportClients();
-
 	// 모든 직교 카메라가 새로운 FocusPoint를 바라보도록 위치를 즉시 갱신합니다.
 	UpdateAllViewportClientCameras();
 }

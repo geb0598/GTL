@@ -20,20 +20,14 @@ using JSON = json::JSON;
  */
 struct FViewportCameraData
 {
-	FVector Location;
-	FVector Rotation;
-	FVector FocusLocation;
-	float FovY;
-	float FarClip;
-	float NearClip;
-	float OrthoWidth;
-	EViewportCameraType ViewportCameraType;
-
-	FViewportCameraData()
-		:Location(-15, 0, 0), Rotation(0, 0, 0), FocusLocation(0, 0, 0), FovY(90.f),
-		NearClip(0.1f), FarClip(10000.0f), OrthoWidth(90.0f), ViewportCameraType(EViewportCameraType::Perspective)
-	{
-	}
+	FVector Location{};
+	FVector Rotation{};
+	FVector FocusLocation{};
+	float FovY{};
+	float FarClip{};
+	float NearClip{};
+	float OrthoWidth{};
+	EViewportCameraType ViewportCameraType = EViewportCameraType::Perspective;
 };
 
 UCLASS()
