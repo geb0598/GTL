@@ -57,15 +57,25 @@ void UViewportMenuBarWidget::RenderWidget()
 		ImGui::PushStyleColor(ImGuiCol_SliderGrab, SliderGrab);
 		ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, SliderGrabActive);
 
-		// 1. UI를 그릴 위치를 뷰포트의 좌측 상단으로 지정
-		ImGui::SetCursorScreenPos(ImVec2(ViewportInfo.TopLeftX, ViewportInfo.TopLeftY));
+		// 1. 독립 윈도우 위치와 크기 지정
+		ImGui::SetNextWindowPos(ImVec2(ViewportInfo.TopLeftX, ViewportInfo.TopLeftY));
+		ImGui::SetNextWindowSize(ImVec2(ViewportInfo.Width, 22.0f));
 
-		// 2. 메뉴바를 담을 투명한 자식 창(컨테이너) 생성
-		ImGui::BeginChild("ViewportMenuBarContainer",
-			ImVec2(ViewportInfo.Width, 22.0f), // 높이를 살짝 늘려줍니다.
-			false, ImGuiWindowFlags_MenuBar |
+		std::string WindowName = "ViewportMenuBarContainer_" + std::to_string(Index);
+
+		// 2. 투명한 윈도우 생성 (메뉴바 전용)
+		ImGui::Begin(WindowName.c_str(),
+			nullptr,
+			ImGuiWindowFlags_NoTitleBar |
+			ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_MenuBar |
 			ImGuiWindowFlags_NoScrollbar |
-			ImGuiWindowFlags_NoScrollWithMouse);
+			ImGuiWindowFlags_NoScrollWithMouse |
+			ImGuiWindowFlags_NoBackground |   // 배경 제거
+			ImGuiWindowFlags_NoDecoration |   // 테두리 제거 (NoTitleBar, NoResize, NoMove 포함)
+			ImGuiWindowFlags_NoBringToFrontOnFocus
+		);
 
 		if (ImGui::BeginMenuBar())
 		{
@@ -80,117 +90,76 @@ void UViewportMenuBarWidget::RenderWidget()
 
 				if (ImGui::BeginMenu("Orthographic"))
 				{
-					if (ImGui::MenuItem("Top"))
-					{
-						ViewportClient.SetCameraType(EViewportCameraType::Ortho_Top);
-						Viewport->UpdateAllViewportClientCameras();
-					}
-					if (ImGui::MenuItem("Bottom"))
-					{
-						ViewportClient.SetCameraType(EViewportCameraType::Ortho_Bottom);
-						Viewport->UpdateAllViewportClientCameras();
-					}
-					if (ImGui::MenuItem("Left"))
-					{
-						ViewportClient.SetCameraType(EViewportCameraType::Ortho_Left);
-						Viewport->UpdateAllViewportClientCameras();
-					}
-					if (ImGui::MenuItem("Right"))
-					{
-						ViewportClient.SetCameraType(EViewportCameraType::Ortho_Right);
-						Viewport->UpdateAllViewportClientCameras();
-					}
-					if (ImGui::MenuItem("Front"))
-					{
-						ViewportClient.SetCameraType(EViewportCameraType::Ortho_Front);
-						Viewport->UpdateAllViewportClientCameras();
-					}
-					if (ImGui::MenuItem("Back"))
-					{
-						ViewportClient.SetCameraType(EViewportCameraType::Ortho_Back);
-						Viewport->UpdateAllViewportClientCameras();
-					}
+					if (ImGui::MenuItem("Top")) { ViewportClient.SetCameraType(EViewportCameraType::Ortho_Top);    Viewport->UpdateAllViewportClientCameras(); }
+					if (ImGui::MenuItem("Bottom")) { ViewportClient.SetCameraType(EViewportCameraType::Ortho_Bottom); Viewport->UpdateAllViewportClientCameras(); }
+					if (ImGui::MenuItem("Left")) { ViewportClient.SetCameraType(EViewportCameraType::Ortho_Left);   Viewport->UpdateAllViewportClientCameras(); }
+					if (ImGui::MenuItem("Right")) { ViewportClient.SetCameraType(EViewportCameraType::Ortho_Right);  Viewport->UpdateAllViewportClientCameras(); }
+					if (ImGui::MenuItem("Front")) { ViewportClient.SetCameraType(EViewportCameraType::Ortho_Front);  Viewport->UpdateAllViewportClientCameras(); }
+					if (ImGui::MenuItem("Back")) { ViewportClient.SetCameraType(EViewportCameraType::Ortho_Back);   Viewport->UpdateAllViewportClientCameras(); }
 					ImGui::EndMenu();
 				}
 				ImGui::EndMenu();
 			}
 
-			// 4. 각 메뉴의 영역이 구분이 되도록 만듭니다.
 			ImGui::Separator();
 
-			// 카메라 설정을 위한 버튼 추가
+			// 카메라 설정 버튼
 			if (ImGui::Button("Camera Settings"))
 			{
 				ImGui::OpenPopup("CameraSettingsPopup");
 			}
-
-			// "Camera Settings" 버튼을 눌렀을 때 나타날 팝업 정의
 			if (ImGui::BeginPopup("CameraSettingsPopup"))
 			{
-				RenderCameraControls(ViewportClient.Camera); 
+				RenderCameraControls(ViewportClient.Camera);
 				ImGui::EndPopup();
 			}
 
 			ImGui::Separator();
 
-			// 5. 뷰포트 레이아웃 전환 버튼
+			// 뷰포트 레이아웃 전환 버튼
 			{
 				const char* LayoutIcon = bIsSingleViewportClient ? "[+]" : "□";
 				const char* TooltipText = bIsSingleViewportClient ? "Switch to 4 Viewport" : "Switch to Single Viewport";
 				const float ButtonWidth = 25.0f;
 
-				// 메뉴바의 가용 공간 내에서 커서를 오른쪽 끝으로 이동
 				ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - ButtonWidth);
 
-				// Bar의 우측 말단에 배치
 				if (ImGui::Button(LayoutIcon, ImVec2(ButtonWidth, 0)))
 				{
-					// FViewport가 UEditor에 대한 포인터를 가지고 있다고 가정합니다.
 					if (Editor)
 					{
 						bIsSingleViewportClient = !bIsSingleViewportClient;
-
-						if (bIsSingleViewportClient) // 싱글 뷰포트로 전환
+						if (bIsSingleViewportClient)
 						{
-							// 현재 활성화된(마우스가 위에 있는) 뷰포트를 찾아 전체 화면으로 만듭니다.
 							FViewportClient* ActiveClient = Viewport->GetActiveViewportClient();
-							int ActiveIndex = Index; // 활성 뷰포트가 없으면 현재 메뉴바의 뷰포트를 기준으로 합니다.
-
+							int ActiveIndex = Index;
 							if (ActiveClient)
 							{
 								for (int i = 0; i < ViewportClients.size(); ++i)
 								{
-									if (&ViewportClients[i] == ActiveClient)
-									{
-										ActiveIndex = i;
-										break;
-									}
+									if (&ViewportClients[i] == ActiveClient) { ActiveIndex = i; break; }
 								}
 							}
 							Editor->SetSingleViewportLayout(ActiveIndex);
 						}
-						else // 4분할 뷰포트로 복원
+						else
 						{
 							Editor->RestoreMultiViewportLayout();
 						}
 					}
-
 				}
 
-				// 호버링 시, 문구 출력
 				if (ImGui::IsItemHovered())
 				{
 					ImGui::SetTooltip(TooltipText);
 				}
 			}
-
 			ImGui::EndMenuBar();
 		}
 
-		ImGui::EndChild();
+		ImGui::End(); // End of ViewportMenuBarContainer 윈도우
 
 		ImGui::PopStyleColor(14);
-
 		ImGui::PopID();
 	}
 }
