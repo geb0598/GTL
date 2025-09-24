@@ -1,6 +1,5 @@
 #pragma once
 #include "Core/Public/Object.h"
-//#include "Editor/Public/Editor.h"
 
 class UEditor;
 class ULevel;
@@ -14,9 +13,7 @@ class ULevelManager :
 
 public:
 	void Update() const;
-	void CreateDefaultLevel();
-	void RegisterLevel(const FName& InName, TObjectPtr<ULevel> InLevel);
-	void LoadLevel(const FName& InName);
+	bool LoadLevel(const FString& InLevelName, const FString& InFilePath);
 	void Shutdown();
 
 	// Getter
@@ -24,7 +21,6 @@ public:
 
 	// Save & Load System
 	bool SaveCurrentLevel(const FString& InFilePath) const;
-	bool LoadLevel(const FString& InLevelName, const FString& InFilePath);
 	bool CreateNewLevel(const FString& InLevelName);
 	static path GetLevelDirectory();
 	static path GenerateLevelFilePath(const FString& InLevelName);
@@ -32,7 +28,9 @@ public:
 	TObjectPtr<UEditor> GetEditor() const { return Editor; }
 
 private:
+	void SwitchToLevel(ULevel* InNewLevel);
+
+private:
 	TObjectPtr<ULevel> CurrentLevel;
-	TMap<FName, TObjectPtr<ULevel>> Levels;
 	TObjectPtr<UEditor> Editor;
 };

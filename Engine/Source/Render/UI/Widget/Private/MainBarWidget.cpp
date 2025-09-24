@@ -155,8 +155,8 @@ void UMainBarWidget::RenderWindowsMenu() const
 					Window->ToggleVisibility();
 
 					UE_LOG("MainBarWidget: %s 창 토글됨 (현재 상태: %s)",
-					       Window->GetWindowTitle().ToString().data(),
-					       Window->IsVisible() ? "표시" : "숨김");
+						Window->GetWindowTitle().ToString().data(),
+						Window->IsVisible() ? "표시" : "숨김");
 				}
 			}
 
@@ -405,8 +405,7 @@ void UMainBarWidget::LoadLevel()
 void UMainBarWidget::CreateNewLevel()
 {
 	ULevelManager& LevelMgr = ULevelManager::GetInstance();
-	FString NewLevelName = FString("NewLevel");
-	if (LevelMgr.CreateNewLevel(NewLevelName))
+	if (ULevelManager::GetInstance().CreateNewLevel("Untitled"))
 	{
 		UE_LOG("MainBarWidget: 새로운 레벨이 성공적으로 생성되었습니다");
 	}
@@ -434,7 +433,7 @@ path UMainBarWidget::OpenSaveFileDialog()
 
 		// 2. FileSaveDialog 인스턴스 생성
 		ResultHandle = CoCreateInstance(CLSID_FileSaveDialog, nullptr, CLSCTX_ALL,
-		                                IID_IFileSaveDialog, reinterpret_cast<void**>(&FileSaveDialogPtr));
+			IID_IFileSaveDialog, reinterpret_cast<void**>(&FileSaveDialogPtr));
 
 		if (SUCCEEDED(ResultHandle))
 		{
@@ -521,7 +520,7 @@ path UMainBarWidget::OpenLoadFileDialog()
 
 		// FileOpenDialog 인스턴스 생성
 		ResultHandle = CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_ALL,
-		                                IID_IFileOpenDialog, reinterpret_cast<void**>(&FileOpenDialog));
+			IID_IFileOpenDialog, reinterpret_cast<void**>(&FileOpenDialog));
 
 		if (SUCCEEDED(ResultHandle))
 		{
