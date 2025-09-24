@@ -14,4 +14,13 @@ public:
 
 private:
 	UStaticMeshComponent* StaticMeshComponent{};
+
+	// Helper functions for rendering different sections
+	void RenderStaticMeshSelector();
+	void RenderMaterialSections();
+	void RenderAvailableMaterials(int32 TargetSlotIndex);
+	void RenderOptions();
+
+	// Material utility functions
+	FString GetMaterialDisplayName(UMaterial* Material) const;
 };

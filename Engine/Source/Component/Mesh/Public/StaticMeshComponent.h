@@ -37,9 +37,18 @@ public:
 
 	TObjectPtr<UClass> GetSpecificWidgetClass() const override;
 
+	UMaterial* GetMaterial(int32 Index) const;
+	void SetMaterial(int32 Index, UMaterial* InMaterial);
+
+	void EnableScroll() { bIsScrollEnabled = true; }
+	void DisableScroll() { bIsScrollEnabled = false; }
+	bool IsScrollEnabled() const { return bIsScrollEnabled; }
+
 private:
 	TObjectPtr<UStaticMesh> StaticMesh;
 
 	// MaterialList
+	TArray<UMaterial*> OverrideMaterials;
 
+	bool bIsScrollEnabled;
 };

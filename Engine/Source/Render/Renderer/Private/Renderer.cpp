@@ -474,6 +474,29 @@ void URenderer::RenderStaticMesh(UStaticMeshComponent* InMeshComp, ID3D11Rasteri
 		UMaterial* Material = InMeshComp->GetStaticMesh()->GetMaterial(Section.MaterialSlot);
 		if (Material)
 		{
+			FMaterialConstants MaterialConstants = {};
+			FVector AmbientColor = Material->GetAmbientColor();
+			MaterialConstants.Ka = FVector4(AmbientColor.X, AmbientColor.Y, AmbientColor.Z, 1.0f);
+			FVector DiffuseColor = Material->GetDiffuseColor();
+			MaterialConstants.Kd = FVector4(DiffuseColor.X, DiffuseColor.Y, DiffuseColor.Z, 1.0f);
+			FVector SpecularColor = Material->GetSpecularColor();
+			MaterialConstants.Ks = FVector4(SpecularColor.X, SpecularColor.Y, SpecularColor.Z, 1.0f);
+			MaterialConstants.Ns = Material->GetSpecularExponent();
+			MaterialConstants.Ni = Material->GetRefractionIndex();
+			MaterialConstants.D = Material->GetDissolveFactor();
+			MaterialConstants.MaterialFlags = 0; // Placeholder
+			if (InMeshComp->IsScrollEnabled())
+			{
+				MaterialConstants.Time = TimeManager.GetGameTime();
+			}
+			else
+			{
+				MaterialConstants.Time = 0;
+			}
+
+			// Update Constant Buffer
+			UpdateConstant(MaterialConstants);
+
 			if (Material->GetDiffuseTexture())
 			{
 				auto* Proxy = Material->GetDiffuseTexture()->GetRenderProxy();
