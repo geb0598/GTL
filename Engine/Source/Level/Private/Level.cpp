@@ -45,7 +45,7 @@ void ULevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 
 		// NOTE: 레벨 로드 시 NextUUID를 변경하면 UUID 충돌이 발생하므로 관련 기능 구현을 보류합니다.
 		uint32 NextUUID = 0;
-		FJsonSerializer::ReadUint32(InOutHandle, "NextUUID", Version);
+		FJsonSerializer::ReadUint32(InOutHandle, "NextUUID", NextUUID);
 
 		JSON PerspectiveCameraData;
 		if (FJsonSerializer::ReadObject(InOutHandle, "PerspectiveCamera", PerspectiveCameraData))
@@ -67,7 +67,7 @@ void ULevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 				FString TypeString;
 				FJsonSerializer::ReadString(PrimitiveDataJson, "Type", TypeString);
 
-				UClass* NewClass = UClass::FindClass(TypeString);
+				UClass* NewClass = UClass::FindClass("AStaticMeshActor");
 
 				AActor* NewActor = SpawnActorToLevel(NewClass, IdString);
 				if (NewActor)
