@@ -2,6 +2,8 @@
 
 #define DT UTimeManager::GetInstance().GetDeltaTime()
 
+#ifdef _DEBUG
+
 // UE_LOG Macro 시스템
 // 기본 UE_LOG (Info 타입)
 #define UE_LOG(fmt, ...) \
@@ -85,6 +87,20 @@
         } catch(...) {} \
     } while(0)
 
+#else
+
+#define UE_LOG(fmt, ...) do {} while(0)
+#define UE_LOG_INFO(fmt, ...) do {} while(0)
+#define UE_LOG_WARNING(fmt, ...) do {} while(0)
+#define UE_LOG_ERROR(fmt, ...) do {} while(0)
+#define UE_LOG_SUCCESS(fmt, ...) do {} while(0)
+#define UE_LOG_SYSTEM(fmt, ...) do {} while(0)
+#define UE_LOG_DEBUG(fmt, ...) do {} while(0)
+#define UE_LOG_COMMAND(fmt, ...) do {} while(0)
+#define UE_LOG_TERMINAL(fmt, ...) do {} while(0)
+#define UE_LOG_TERMINAL_ERROR(fmt, ...) do {} while(0)
+
+#endif
 
 /**
  * @brief UENUM 매크로 시스템
@@ -107,7 +123,6 @@
  * 실제로는 아무 기능도 하지 않지만, 코드의 가독성과 일관성을 위해 사용
  */
 #define UENUM()
-
 
 /**
  * @brief Enum reflection 기능을 활성화하는 매크로
