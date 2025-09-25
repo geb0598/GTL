@@ -437,12 +437,12 @@ path UMainBarWidget::OpenSaveFileDialog()
 			// 3. 대화상자 옵션 설정
 			// 파일 타입 필터 설정
 			COMDLG_FILTERSPEC SpecificationRange[] = {
-				{L"JSON Files (*.json)", L"*.json"},
+				{L"Scene Files (*.scene)", L"*.scene"},
 				{L"All Files (*.*)", L"*.*"}
 			};
 			FileSaveDialogPtr->SetFileTypes(ARRAYSIZE(SpecificationRange), SpecificationRange);
 
-			// 기본 필터를 "JSON Files" 로 설정
+			// 기본 필터를 "Scene Files" 로 설정
 			FileSaveDialogPtr->SetFileTypeIndex(1);
 
 			// 기본 확장자 설정
@@ -523,13 +523,13 @@ path UMainBarWidget::OpenLoadFileDialog()
 		{
 			// 파일 타입 필터 설정
 			COMDLG_FILTERSPEC SpecificationRange[] = {
-				{L"JSON Files (*.json)", L"*.json"},
+				{L"Scene Files (*.scene)", L"*.scene"},
 				{L"All Files (*.*)", L"*.*"}
 			};
 
 			FileOpenDialog->SetFileTypes(ARRAYSIZE(SpecificationRange), SpecificationRange);
 
-			// 기본 필터를 "JSON Files" 로 설정
+			// 기본 필터를 "Scene Files" 로 설정
 			FileOpenDialog->SetFileTypeIndex(1);
 
 			// 대화상자 제목 설정
