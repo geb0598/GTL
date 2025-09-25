@@ -208,31 +208,30 @@ void UEditor::UpdateLayout()
 	// 3. 드래그 상태라면 스플리터 기능을 이행합니다.
 	if (DraggedSplitter)
 	{
+		const ImGuiViewport* Viewport = ImGui::GetMainViewport();
+		FRect WorkableRect = { Viewport->WorkPos.x, Viewport->WorkPos.y, Viewport->WorkSize.x, Viewport->WorkSize.y };
+
 		FRect ParentRect;
 
 		if (DraggedSplitter == &RootSplitter)
 		{
-			const D3D11_VIEWPORT& ViewportInfo = URenderer::GetInstance().GetDeviceResources()->GetViewportInfo();
-			ParentRect = { ViewportInfo.TopLeftX, ViewportInfo.TopLeftY, ViewportInfo.Width, ViewportInfo.Height };
-			RootSplitter.Resize(ParentRect);
+			ParentRect = WorkableRect;
 		}
 		else
 		{
-			const D3D11_VIEWPORT& ViewportInfo = URenderer::GetInstance().GetDeviceResources()->GetViewportInfo();
-			FRect ScreenRect = { ViewportInfo.TopLeftX, ViewportInfo.TopLeftY, ViewportInfo.Width, ViewportInfo.Height };
 			if (DraggedSplitter == &LeftSplitter)
 			{
-				ParentRect.Left = ScreenRect.Left;
-				ParentRect.Top = ScreenRect.Top;
-				ParentRect.Width = ScreenRect.Width * RootSplitter.GetRatio();
-				ParentRect.Height = ScreenRect.Height;
+				ParentRect.Left = WorkableRect.Left;
+				ParentRect.Top = WorkableRect.Top;
+				ParentRect.Width = WorkableRect.Width * RootSplitter.GetRatio();
+				ParentRect.Height = WorkableRect.Height;
 			}
 			else if (DraggedSplitter == &RightSplitter)
 			{
-				ParentRect.Left = ScreenRect.Left + ScreenRect.Width * RootSplitter.GetRatio();
-				ParentRect.Top = ScreenRect.Top;
-				ParentRect.Width = ScreenRect.Width * (1.0f - RootSplitter.GetRatio());
-				ParentRect.Height = ScreenRect.Height;
+				ParentRect.Left = WorkableRect.Left + WorkableRect.Width * RootSplitter.GetRatio();
+				ParentRect.Top = WorkableRect.Top;
+				ParentRect.Width = WorkableRect.Width * (1.0f - RootSplitter.GetRatio());
+				ParentRect.Height = WorkableRect.Height;
 			}
 		}
 
