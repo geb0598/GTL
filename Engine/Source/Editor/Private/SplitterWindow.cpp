@@ -69,7 +69,7 @@ void SSplitterH::Resize(const FRect& ParentRect)
 	default:
 		Rect.Left = ParentRect.Left;
 		Rect.Width = ParentRect.Width;
-		Rect.Top = ParentRect.Top + (ParentRect.Height * Ratio) - (Thickness / 2.0f);
+		Rect.Top = ParentRect.Top + (ParentRect.Height * Ratio);
 		Rect.Height = Thickness;
 
 		RectTop = { ParentRect.Left, ParentRect.Top, ParentRect.Width, Rect.Top - ParentRect.Top };
@@ -121,7 +121,7 @@ void SSplitterV::Resize(const FRect& ParentRect)
 	default:
 		Rect.Top = ParentRect.Top;
 		Rect.Height = ParentRect.Height;
-		Rect.Left = ParentRect.Left + (ParentRect.Width * Ratio) - (Thickness / 2.0f);
+		Rect.Left = ParentRect.Left + (ParentRect.Width * Ratio);
 		Rect.Width = Thickness;
 
 		RectLeft = { ParentRect.Left, ParentRect.Top, Rect.Left - ParentRect.Left, ParentRect.Height };

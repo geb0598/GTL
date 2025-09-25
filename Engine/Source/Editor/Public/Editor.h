@@ -21,6 +21,13 @@ enum class EViewModeIndex : uint32
 	VMI_Wireframe,
 };
 
+enum class EViewportLayoutState
+{
+	Multi,
+	Single,
+	Animating,
+};
+
 class UEditor : public UObject
 {
 public:
@@ -48,6 +55,11 @@ private:
 	FVector GetGizmoDragRotation(UCamera* InActiveCamera, FRay& WorldRay);
 	FVector GetGizmoDragScale(UCamera* InActiveCamera, FRay& WorldRay);
 
+	inline float Lerp(const float A, const float B, const float Alpha)
+	{
+		return A * (1 - Alpha) + B * Alpha;
+	}
+
 	UObjectPicker ObjectPicker;
 
 	const float MinScale = 0.01f;
@@ -66,4 +78,16 @@ private:
 	FViewportClient* InteractionViewport = nullptr; // 뷰포트의 상호작용을 고정하는 포인터
 
 	EViewModeIndex CurrentViewMode = EViewModeIndex::VMI_Lit;
+
+	// Animation
+	EViewportLayoutState ViewportLayoutState = EViewportLayoutState::Multi;
+	EViewportLayoutState TargetViewportLayoutState = EViewportLayoutState::Multi;
+	float AnimationStartTime = 0.0f;
+	float AnimationDuration = 0.2f; 
+	float SourceRootRatio = 0.5f;
+	float SourceLeftRatio = 0.5f;
+	float SourceRightRatio = 0.5f;
+	float TargetRootRatio = 0.5f;
+	float TargetLeftRatio = 0.5f;
+	float TargetRightRatio = 0.5f;
 };
