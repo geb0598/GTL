@@ -12,6 +12,7 @@
 #include "Manager/UI/Public/UIManager.h"
 #include "Manager/Input/Public/InputManager.h"
 #include "Manager/Config/Public/ConfigManager.h"
+#include "Manager/Time/Public/TimeManager.h"
 #include "Component/Public/PrimitiveComponent.h"
 #include "Level/Public/Level.h"
 #include "Global/Quaternion.h"
@@ -120,35 +121,49 @@ void UEditor::RenderEditor(UCamera* InCamera)
 
 void UEditor::SetSingleViewportLayout(int InActiveIndex)
 {
-	// 1. 멀티뷰로 돌아가기 위해 현재 스플리터 비율을 저장합니다.
-	SavedRootRatio = RootSplitter.GetRatio();
-	SavedLeftRatio = LeftSplitter.GetRatio();
-	SavedRightRatio = RightSplitter.GetRatio();
+	if (ViewportLayoutState == EViewportLayoutState::Animating) return;
 
-	// 2. 인덱스에 따라 스플리터 비율을 조정하여 하나의 뷰포트만 보이게 합니다.
+	if (ViewportLayoutState == EViewportLayoutState::Multi)
+	{
+		SavedRootRatio = RootSplitter.GetRatio();
+		SavedLeftRatio = LeftSplitter.GetRatio();
+		SavedRightRatio = RightSplitter.GetRatio();
+	}
+
+	SourceRootRatio = RootSplitter.GetRatio();
+	SourceLeftRatio = LeftSplitter.GetRatio();
+	SourceRightRatio = RightSplitter.GetRatio();
+
+	TargetRootRatio = SourceRootRatio;
+	TargetLeftRatio = SourceLeftRatio;
+	TargetRightRatio = SourceRightRatio;
+
 	switch (InActiveIndex)
 	{
 	case 0: // 좌상단
-		RootSplitter.SetRatio(1.0f);
-		LeftSplitter.SetRatio(1.0f);
+		TargetRootRatio = 1.0f;
+		TargetLeftRatio = 1.0f;
 		break;
 	case 1: // 좌하단
-		RootSplitter.SetRatio(1.0f);
-		LeftSplitter.SetRatio(0.0f);
+		TargetRootRatio = 1.0f;
+		TargetLeftRatio = 0.0f;
 		break;
 	case 2: // 우상단
-		RootSplitter.SetRatio(0.0f);
-		RightSplitter.SetRatio(1.0f);
+		TargetRootRatio = 0.0f;
+		TargetRightRatio = 1.0f;
 		break;
 	case 3: // 우하단
-		RootSplitter.SetRatio(0.0f);
-		RightSplitter.SetRatio(0.0f);
+		TargetRootRatio = 0.0f;
+		TargetRightRatio = 0.0f;
 		break;
 	default:
-		// 유효하지 않은 인덱스의 경우, 기본 4분할 레이아웃으로 복원
 		RestoreMultiViewportLayout();
-		break;
+		return;
 	}
+
+	ViewportLayoutState = EViewportLayoutState::Animating;
+	TargetViewportLayoutState = EViewportLayoutState::Single;
+	AnimationStartTime = UTimeManager::GetInstance().GetGameTime();
 }
 
 /**
@@ -156,9 +171,19 @@ void UEditor::SetSingleViewportLayout(int InActiveIndex)
  */
 void UEditor::RestoreMultiViewportLayout()
 {
-	RootSplitter.SetRatio(SavedRootRatio);
-	LeftSplitter.SetRatio(SavedLeftRatio);
-	RightSplitter.SetRatio(SavedRightRatio);
+	if (ViewportLayoutState == EViewportLayoutState::Animating) return;
+
+	SourceRootRatio = RootSplitter.GetRatio();
+	SourceLeftRatio = LeftSplitter.GetRatio();
+	SourceRightRatio = RightSplitter.GetRatio();
+
+	TargetRootRatio = SavedRootRatio;
+	TargetLeftRatio = SavedLeftRatio;
+	TargetRightRatio = SavedRightRatio;
+
+	ViewportLayoutState = EViewportLayoutState::Animating;
+	TargetViewportLayoutState = EViewportLayoutState::Multi;
+	AnimationStartTime = UTimeManager::GetInstance().GetGameTime();
 }
 
 void UEditor::InitializeLayout()
@@ -182,6 +207,25 @@ void UEditor::UpdateLayout()
 	UInputManager& Input = UInputManager::GetInstance();
 	const FPoint MousePosition = { Input.GetMousePosition().X, Input.GetMousePosition().Y };
 	bool bIsHoveredOnSplitter = false;
+
+	if (ViewportLayoutState == EViewportLayoutState::Animating)
+	{
+		float ElapsedTime = UTimeManager::GetInstance().GetGameTime() - AnimationStartTime;
+		float Alpha = clamp(ElapsedTime / AnimationDuration, 0.0f, 1.0f);
+
+		float NewRootRatio = Lerp(SourceRootRatio, TargetRootRatio, Alpha);
+		float NewLeftRatio = Lerp(SourceLeftRatio, TargetLeftRatio, Alpha);
+		float NewRightRatio = Lerp(SourceRightRatio, TargetRightRatio, Alpha);
+
+		RootSplitter.SetRatio(NewRootRatio);
+		LeftSplitter.SetRatio(NewLeftRatio);
+		RightSplitter.SetRatio(NewRightRatio);
+
+		if (Alpha >= 1.0f)
+		{
+			ViewportLayoutState = TargetViewportLayoutState;
+		}
+	}
 
 	// 1. 드래그 상태가 아니라면 커서의 상태를 감지합니다.
 	if (DraggedSplitter == nullptr)
