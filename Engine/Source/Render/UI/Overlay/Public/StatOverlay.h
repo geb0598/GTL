@@ -47,6 +47,7 @@ private:
 	uint8 StatMask = static_cast<uint8>(EStatType::None);
 
 	// Helper methods
+	std::wstring ToWString(const FString& InStr);
 	void EnableStat(EStatType InStatType);
 	void DisableStat(EStatType InStatType);
 	void SetStatType(EStatType InStatType);
