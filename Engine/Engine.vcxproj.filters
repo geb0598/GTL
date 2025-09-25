@@ -341,6 +341,9 @@
     <ClCompile Include="Source\Utility\Private\UELogParser.cpp">
       <Filter>Source\Utility\Private</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Utility\Private\ActorTypeMapper.cpp">
+      <Filter>Source\Utility\Private</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -708,6 +711,9 @@
       <Filter>Source\Utility\Public</Filter>
     </ClInclude>
     <ClInclude Include="Source\Utility\Public\UELogParser.h">
+      <Filter>Source\Utility\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Utility\Public\ActorTypeMapper.h">
       <Filter>Source\Utility\Public</Filter>
     </ClInclude>
   </ItemGroup>

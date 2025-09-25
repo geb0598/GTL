@@ -17,6 +17,7 @@
 #include "Manager/Config/Public/ConfigManager.h"
 #include "Render/Renderer/Public/Renderer.h"
 #include "Editor/Public/Viewport.h"
+#include "Utility/Public/ActorTypeMapper.h"
 
 #include <json.hpp>
 
@@ -40,12 +41,13 @@ void ULevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 	// 불러오기
 	if (bInIsLoading)
 	{
-		uint32 Version = 0;
-		FJsonSerializer::ReadUint32(InOutHandle, "Version", Version);
+		// NOTE: Version 사용하지 않음
+		//uint32 Version = 0;
+		//FJsonSerializer::ReadUint32(InOutHandle, "Version", Version);
 
 		// NOTE: 레벨 로드 시 NextUUID를 변경하면 UUID 충돌이 발생하므로 관련 기능 구현을 보류합니다.
 		uint32 NextUUID = 0;
-		FJsonSerializer::ReadUint32(InOutHandle, "NextUUID", Version);
+		FJsonSerializer::ReadUint32(InOutHandle, "NextUUID", NextUUID);
 
 		JSON PerspectiveCameraData;
 		if (FJsonSerializer::ReadObject(InOutHandle, "PerspectiveCamera", PerspectiveCameraData))
@@ -67,7 +69,7 @@ void ULevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 				FString TypeString;
 				FJsonSerializer::ReadString(PrimitiveDataJson, "Type", TypeString);
 
-				UClass* NewClass = UClass::FindClass(TypeString);
+				UClass* NewClass = FActorTypeMapper::TypeToActor(TypeString);
 
 				AActor* NewActor = SpawnActorToLevel(NewClass, IdString);
 				if (NewActor)
@@ -77,10 +79,12 @@ void ULevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 			}
 		}
 	}
+
 	// 저장
 	else
 	{
-		InOutHandle["Version"] = 1;
+		// NOTE: Version 사용하지 않음
+		//InOutHandle["Version"] = 1;
 
 		// NOTE: 레벨 로드 시 NextUUID를 변경하면 UUID 충돌이 발생하므로 관련 기능 구현을 보류합니다.
 		InOutHandle["NextUUID"] = 0;
@@ -93,7 +97,7 @@ void ULevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		for (const TObjectPtr<AActor>& Actor : LevelActors)
 		{
 			JSON PrimitiveJson;
-			PrimitiveJson["Type"] = Actor->GetClass()->GetClassTypeName().ToString();
+			PrimitiveJson["Type"] = FActorTypeMapper::ActorToType(Actor->GetClass());;
 			Actor->Serialize(bInIsLoading, PrimitiveJson);
 
 			PrimitivesJson[std::to_string(Actor->GetUUID())] = PrimitiveJson;
