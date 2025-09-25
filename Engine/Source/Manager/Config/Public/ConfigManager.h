@@ -18,15 +18,31 @@ using JSON = json::JSON;
  * @param OrthoWidth 직교 투영 시야각
  * @param CameraType 카메라 모드
  */
+/**
+* @brief 현재 주석처리된 FViewportCameraData는 Week04 기준 코드입니다.
+*/
+//struct FViewportCameraData
+//{
+//	FVector Location{};
+//	FVector Rotation{};
+//	FVector FocusLocation{};
+//	float FovY{};
+//	float FarClip{};
+//	float NearClip{};
+//	float OrthoWidth{};
+//	EViewportCameraType ViewportCameraType = EViewportCameraType::Perspective;
+//};
+
+/**
+* @brief 해당 FViewportCameraData는 Week05 전용으로 설정된 구조체입니다. [PYB]
+*/
 struct FViewportCameraData
 {
 	FVector Location{};
 	FVector Rotation{};
-	FVector FocusLocation{};
 	float FovY{};
 	float FarClip{};
 	float NearClip{};
-	float OrthoWidth{};
 	EViewportCameraType ViewportCameraType = EViewportCameraType::Perspective;
 };
 
@@ -58,7 +74,11 @@ public:
 		return TArray<float>({ RootSplitterRatio, LeftSplitterRatio, RightSplitterRatio });
 	}
 
-	const FViewportCameraData& GetViewportCameraData(int InIndex) const { return ViewportCameraSettings[InIndex]; }
+	// 주석 처리된 SetViewportCameraData는 Week04 기준으로 작성된 코드입니다.
+	// const FViewportCameraData& GetViewportCameraData(int InIndex) const { return ViewportCameraSettings[InIndex]; }
+
+	// 현재 이 코드는 Week05 전용으로 사용되는 코드입니다.
+	const FViewportCameraData& GetViewportCameraData() const { return ViewportCameraSettings[0]; }
 
 	void SetCellSize(const float cellSize)
 	{
