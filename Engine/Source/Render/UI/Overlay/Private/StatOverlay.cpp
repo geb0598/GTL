@@ -135,7 +135,7 @@ void UStatOverlay::RenderText(const FString& Text, float X, float Y, float R, fl
 	if (!D2DRenderTarget || !TextBrush || !TextFormat) return;
 
 	TextBrush->SetColor(D2D1::ColorF(R, G, B));
-	std::wstring wText(Text.begin(), Text.end());
+	std::wstring wText = ToWString(Text);
 
 	D2D1_RECT_F layoutRect = D2D1::RectF(X, Y, X + 400.0f, Y + 20.0f);
 	D2DRenderTarget->DrawText(
@@ -145,6 +145,16 @@ void UStatOverlay::RenderText(const FString& Text, float X, float Y, float R, fl
 		&layoutRect,
 		TextBrush
 	);
+}
+
+std::wstring UStatOverlay::ToWString(const FString& InStr)
+{
+	if (InStr.empty()) return std::wstring();
+
+	int SizeNeeded = MultiByteToWideChar(CP_UTF8, 0, InStr.c_str(), (int)InStr.size(), NULL, 0);
+	std::wstring wStr(SizeNeeded, 0);
+	MultiByteToWideChar(CP_UTF8, 0, InStr.c_str(), (int)InStr.size(), &wStr[0], SizeNeeded);
+	return wStr;
 }
 
 void UStatOverlay::EnableStat(EStatType Type)
