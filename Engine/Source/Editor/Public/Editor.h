@@ -83,7 +83,11 @@ private:
 	EViewportLayoutState ViewportLayoutState = EViewportLayoutState::Multi;
 	EViewportLayoutState TargetViewportLayoutState = EViewportLayoutState::Multi;
 	float AnimationStartTime = 0.0f;
-	float AnimationDuration = 0.2f; // 0.2초
-	float SourceRootRatio = 0.5f, SourceLeftRatio = 0.5f, SourceRightRatio = 0.5f;
-	float TargetRootRatio = 0.5f, TargetLeftRatio = 0.5f, TargetRightRatio = 0.5f;
+	float AnimationDuration = 0.2f; 
+	float SourceRootRatio = 0.5f;
+	float SourceLeftRatio = 0.5f;
+	float SourceRightRatio = 0.5f;
+	float TargetRootRatio = 0.5f;
+	float TargetLeftRatio = 0.5f;
+	float TargetRightRatio = 0.5f;
 };

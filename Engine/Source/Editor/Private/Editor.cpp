@@ -208,6 +208,7 @@ void UEditor::UpdateLayout()
 	const FPoint MousePosition = { Input.GetMousePosition().X, Input.GetMousePosition().Y };
 	bool bIsHoveredOnSplitter = false;
 
+	// 뷰포트를 전환 중이라면 애니메이션을 적용합니다.
 	if (ViewportLayoutState == EViewportLayoutState::Animating)
 	{
 		float ElapsedTime = UTimeManager::GetInstance().GetGameTime() - AnimationStartTime;
