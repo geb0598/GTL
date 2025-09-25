@@ -98,24 +98,14 @@ JSON UConfigManager::GetCameraSettingsAsJson()
 	// 현재 이 코드는 Week05 전용으로 사용되는 코드입니다.
 	JSON RootJson = json::Object();
 
-	for (int32 Index = 0; Index < 4; ++Index)
-	{
-		const auto& Data = ViewportCameraSettings[0];
-		JSON ViewportJson = json::Object();
+	const auto& Data = ViewportCameraSettings[0];
 
-		ViewportJson["CameraType"] = static_cast<int>(Data.ViewportCameraType);
-
-		// FJsonSerializer 유틸리티 함수를 사용하여 FVector를 JSON 배열로 변환
-		ViewportJson["Location"] = FJsonSerializer::VectorToJson(Data.Location);
-		ViewportJson["Rotation"] = FJsonSerializer::VectorToJson(Data.Rotation);
-		ViewportJson["FarClip"] = Data.FarClip;
-		ViewportJson["NearClip"] = Data.NearClip;
-		ViewportJson["FovY"] = Data.FovY;
-
-		// Index를 FString 키로 변환 ("0", "1", "2", "3")
-		FString Key = std::to_string(Index);
-		RootJson[Key] = ViewportJson;
-	}
+	// FJsonSerializer 유틸리티 함수를 사용하여 FVector를 JSON 배열로 변환
+	RootJson["Location"] = FJsonSerializer::VectorToJson(Data.Location);
+	RootJson["Rotation"] = FJsonSerializer::VectorToJson(Data.Rotation);
+	RootJson["FarClip"] = FJsonSerializer::FloatToArrayJson(Data.FarClip);
+	RootJson["NearClip"] = FJsonSerializer::FloatToArrayJson(Data.NearClip);
+	RootJson["FOV"] = FJsonSerializer::FloatToArrayJson(Data.FovY);
 
 	return RootJson;
 }
@@ -159,27 +149,13 @@ void UConfigManager::SetCameraSettingsFromJson(const JSON& InData)
 
 	for (int32 Index = 0; Index < 4; ++Index)
 	{
-		// Index를 FString 키로 변환하여 데이터를 찾음
-		FString Key = std::to_string(Index);
-		JSON ViewportJson;
-
 		// ReadObject 유틸리티 함수로 해당 뷰포트의 JSON 데이터를 안전하게 가져옴
-		if (FJsonSerializer::ReadObject(InData, Key, ViewportJson))
-		{
-			// 유틸리티 함수를 사용하여 반복적인 검사 없이 간결하게 데이터 파싱
-			// 실패 시 각 함수 내부에서 로그를 남기고 기본값을 할당함
-			FJsonSerializer::ReadFloat(ViewportJson, "FovY", ViewportCameraSettings[Index].FovY);
-			FJsonSerializer::ReadFloat(ViewportJson, "FarClip", ViewportCameraSettings[Index].FarClip);
-			FJsonSerializer::ReadVector(ViewportJson, "Location", ViewportCameraSettings[Index].Location);
-			FJsonSerializer::ReadFloat(ViewportJson, "NearClip", ViewportCameraSettings[Index].NearClip);
-			FJsonSerializer::ReadVector(ViewportJson, "Rotation", ViewportCameraSettings[Index].Rotation);
-
-			// CameraType은 int로 읽은 후 Enum으로 캐스팅 (Enum은 동적 캐스팅이 안됨)
-			int32 CameraTypeInt;
-			if (FJsonSerializer::ReadInt32(ViewportJson, "CameraType", CameraTypeInt))
-			{
-				ViewportCameraSettings[Index].ViewportCameraType = ToClientCameraType(CameraTypeInt);
-			}
-		}
+		// 유틸리티 함수를 사용하여 반복적인 검사 없이 간결하게 데이터 파싱
+		// 실패 시 각 함수 내부에서 로그를 남기고 기본값을 할당함
+		FJsonSerializer::ReadArrayFloat(InData, "FOV", ViewportCameraSettings[Index].FovY);
+		FJsonSerializer::ReadArrayFloat(InData, "FarClip", ViewportCameraSettings[Index].FarClip);
+		FJsonSerializer::ReadVector(InData, "Location", ViewportCameraSettings[Index].Location);
+		FJsonSerializer::ReadArrayFloat(InData, "NearClip", ViewportCameraSettings[Index].NearClip);
+		FJsonSerializer::ReadVector(InData, "Rotation", ViewportCameraSettings[Index].Rotation);
 	}
 }
