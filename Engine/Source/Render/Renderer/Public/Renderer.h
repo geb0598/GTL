@@ -70,9 +70,9 @@ public:
 	void RenderBegin() const;
 	void RenderLevel(UCamera* InCurrentCamera);
 	void RenderEnd() const;
-	void RenderStaticMesh(UStaticMeshComponent* InMeshComp, ID3D11RasterizerState* InRasterizerState);
+	void RenderStaticMesh(UStaticMeshComponent* InMeshComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferMaterial);
 	void RenderBillboard(UBillBoardComponent* InBillBoardComp, UCamera* InCurrentCamera);
-	void RenderPrimitiveDefault(UPrimitiveComponent* InPrimitiveComp, ID3D11RasterizerState* InRasterizerState);
+	void RenderPrimitiveDefault(UPrimitiveComponent* InPrimitiveComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferColor);
 	void RenderPrimitive(const FEditorPrimitive& InPrimitive, const FRenderState& InRenderState);
 	void RenderPrimitiveIndexed(const FEditorPrimitive& InPrimitive, const FRenderState& InRenderState,
 	                            bool bInUseBaseConstantBuffer, uint32 InStride, uint32 InIndexBufferStride);

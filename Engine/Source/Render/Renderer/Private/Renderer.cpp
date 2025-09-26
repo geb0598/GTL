@@ -322,10 +322,10 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera)
 			BillBoard = Cast<UBillBoardComponent>(PrimitiveComponent);
 			break;
 		case EPrimitiveType::StaticMesh:
-			RenderStaticMesh(Cast<UStaticMeshComponent>(PrimitiveComponent), LoadedRasterizerState);
+			RenderStaticMesh(Cast<UStaticMeshComponent>(PrimitiveComponent), LoadedRasterizerState, ConstantBufferModels, ConstantBufferMaterial);
 			break;
 		default:
-			RenderPrimitiveDefault(PrimitiveComponent, LoadedRasterizerState);
+			RenderPrimitiveDefault(PrimitiveComponent, LoadedRasterizerState, ConstantBufferModels, ConstantBufferColor);
 			break;
 		}
 	}
@@ -433,94 +433,97 @@ void URenderer::RenderEnd() const
 	GetSwapChain()->Present(0, 0); // 1: VSync 활성화
 }
 
-void URenderer::RenderStaticMesh(UStaticMeshComponent* InMeshComp, ID3D11RasterizerState* InRasterizerState)
+void URenderer::RenderStaticMesh(UStaticMeshComponent* InMeshComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferMaterial)
 {
-	if (!InMeshComp->GetStaticMesh()) return;
+    if (!InMeshComp->GetStaticMesh()) return;
 
-	FStaticMesh* MeshAsset = InMeshComp->GetStaticMesh()->GetStaticMeshAsset();
-	if (!MeshAsset)	return;
+    FStaticMesh* MeshAsset = InMeshComp->GetStaticMesh()->GetStaticMeshAsset();
+    if (!MeshAsset)    return;
 
-	// Pipeline setting
-	FPipelineInfo PipelineInfo = {
-		TextureInputLayout,
-		TextureVertexShader,
-		InRasterizerState,
-		DefaultDepthStencilState,
-		TexturePixelShader,
-		nullptr,
-	};
-	Pipeline->UpdatePipeline(PipelineInfo);
+    // Pipeline setting
+    FPipelineInfo PipelineInfo = {
+        TextureInputLayout,
+        TextureVertexShader,
+        InRasterizerState,
+        DefaultDepthStencilState,
+        TexturePixelShader,
+        nullptr,
+    };
+    Pipeline->UpdatePipeline(PipelineInfo);
 
-	// Constant buffer & transform
-	Pipeline->SetConstantBuffer(0, true, ConstantBufferModels);
-	UpdateConstant(
-		ConstantBufferModels,
-		InMeshComp->GetRelativeLocation(),
-		InMeshComp->GetRelativeRotation(),
-		InMeshComp->GetRelativeScale3D()
-	);
+    // Constant buffer & transform
+    Pipeline->SetConstantBuffer(0, true, InConstantBufferModels);
+    UpdateConstant(
+        InConstantBufferModels,
+        InMeshComp->GetRelativeLocation(),
+        InMeshComp->GetRelativeRotation(),
+        InMeshComp->GetRelativeScale3D()
+    );
 
-	Pipeline->SetVertexBuffer(InMeshComp->GetVertexBuffer(), sizeof(FNormalVertex));
-	Pipeline->SetIndexBuffer(InMeshComp->GetIndexBuffer(), 0);
+    Pipeline->SetVertexBuffer(InMeshComp->GetVertexBuffer(), sizeof(FNormalVertex));
+    Pipeline->SetIndexBuffer(InMeshComp->GetIndexBuffer(), 0);
 
-	// If no material is assigned, render the entire mesh using the default shader
-	if (MeshAsset->MaterialInfo.empty() || InMeshComp->GetStaticMesh()->GetNumMaterials() == 0)
-	{
-		Pipeline->DrawIndexed(MeshAsset->Indices.size(), 0, 0);
-		return;
-	}
+    // If no material is assigned, render the entire mesh using the default shader
+    if (MeshAsset->MaterialInfo.empty() || InMeshComp->GetStaticMesh()->GetNumMaterials() == 0)
+    {
+        Pipeline->DrawIndexed(MeshAsset->Indices.size(), 0, 0);
+        return;
+    }
 
-	if (InMeshComp->IsScrollEnabled())
-	{
-		UTimeManager& TimeManager = UTimeManager::GetInstance();
-		InMeshComp->SetElapsedTime(InMeshComp->GetElapsedTime() + TimeManager.GetDeltaTime());
-	}
+    if (InMeshComp->IsScrollEnabled())
+    {
+        UTimeManager& TimeManager = UTimeManager::GetInstance();
+        InMeshComp->SetElapsedTime(InMeshComp->GetElapsedTime() + TimeManager.GetDeltaTime());
+    }
 
-	for (const FMeshSection& Section : MeshAsset->Sections)
-	{
-		UMaterial* Material = InMeshComp->GetMaterial(Section.MaterialSlot);
-		if (Material)
-		{
-			FMaterialConstants MaterialConstants = {};
-			FVector AmbientColor = Material->GetAmbientColor();
-			MaterialConstants.Ka = FVector4(AmbientColor.X, AmbientColor.Y, AmbientColor.Z, 1.0f);
-			FVector DiffuseColor = Material->GetDiffuseColor();
-			MaterialConstants.Kd = FVector4(DiffuseColor.X, DiffuseColor.Y, DiffuseColor.Z, 1.0f);
-			FVector SpecularColor = Material->GetSpecularColor();
-			MaterialConstants.Ks = FVector4(SpecularColor.X, SpecularColor.Y, SpecularColor.Z, 1.0f);
-			MaterialConstants.Ns = Material->GetSpecularExponent();
-			MaterialConstants.Ni = Material->GetRefractionIndex();
-			MaterialConstants.D = Material->GetDissolveFactor();
-			MaterialConstants.MaterialFlags = 0; // Placeholder
-			MaterialConstants.Time = InMeshComp->GetElapsedTime();
+    for (const FMeshSection& Section : MeshAsset->Sections)
+    {
+        UMaterial* Material = InMeshComp->GetMaterial(Section.MaterialSlot);
+        if (Material)
+        {
+            FMaterialConstants MaterialConstants = {};
+            FVector AmbientColor = Material->GetAmbientColor();
+            MaterialConstants.Ka = FVector4(AmbientColor.X, AmbientColor.Y, AmbientColor.Z, 1.0f);
+            FVector DiffuseColor = Material->GetDiffuseColor();
+            MaterialConstants.Kd = FVector4(DiffuseColor.X, DiffuseColor.Y, DiffuseColor.Z, 1.0f);
+            FVector SpecularColor = Material->GetSpecularColor();
+            MaterialConstants.Ks = FVector4(SpecularColor.X, SpecularColor.Y, SpecularColor.Z, 1.0f);
+            MaterialConstants.Ns = Material->GetSpecularExponent();
+            MaterialConstants.Ni = Material->GetRefractionIndex();
+            MaterialConstants.D = Material->GetDissolveFactor();
+            MaterialConstants.MaterialFlags = 0; // Placeholder
+            MaterialConstants.Time = InMeshComp->GetElapsedTime();
 
-			// Update Constant Buffer
-			UpdateConstant(ConstantBufferMaterial, MaterialConstants);
+            // Update Constant Buffer
+            UpdateConstant(InConstantBufferMaterial, MaterialConstants);
 
-			if (Material->GetDiffuseTexture())
-			{
-				auto* Proxy = Material->GetDiffuseTexture()->GetRenderProxy();
-				Pipeline->SetTexture(0, false, Proxy->GetSRV());
-				Pipeline->SetSamplerState(0, false, Proxy->GetSampler());
-			}
-			if (Material->GetAmbientTexture())
-			{
-				auto* Proxy = Material->GetAmbientTexture()->GetRenderProxy();
-				Pipeline->SetTexture(1, false, Proxy->GetSRV());
-			}
-			if (Material->GetSpecularTexture())
-			{
-				auto* Proxy = Material->GetSpecularTexture()->GetRenderProxy();
-				Pipeline->SetTexture(2, false, Proxy->GetSRV());
-			}
-			if (Material->GetAlphaTexture())
-			{
-				auto* Proxy = Material->GetAlphaTexture()->GetRenderProxy();
-				Pipeline->SetTexture(4, false, Proxy->GetSRV());
-			}
-		}
-		Pipeline->DrawIndexed(Section.IndexCount, Section.StartIndex, 0);
-	}
+            if (Material->GetDiffuseTexture())
+            {
+                auto* Proxy = Material->GetDiffuseTexture()->GetRenderProxy();
+                Pipeline->SetTexture(0, false, Proxy->GetSRV());
+                Pipeline->SetSamplerState(0, false, Proxy->GetSampler());
+            }
+            if (Material->GetAmbientTexture())
+            {
+                auto* Proxy = Material->GetAmbientTexture()->GetRenderProxy();
+                Pipeline->SetTexture(1, false, Proxy->GetSRV());
+                Pipeline->SetSamplerState(1, false, Proxy->GetSampler());
+            }
+            if (Material->GetSpecularTexture())
+            {
+                auto* Proxy = Material->GetSpecularTexture()->GetRenderProxy();
+                Pipeline->SetTexture(2, false, Proxy->GetSRV());
+                Pipeline->SetSamplerState(2, false, Proxy->GetSampler());
+            }
+            if (Material->GetAlphaTexture())
+            {
+                auto* Proxy = Material->GetAlphaTexture()->GetRenderProxy();
+                Pipeline->SetTexture(4, false, Proxy->GetSRV());
+                Pipeline->SetSamplerState(4, false, Proxy->GetSampler());
+            }
+        }
+        Pipeline->DrawIndexed(Section.IndexCount, Section.StartIndex, 0);
+    }
 }
 
 void URenderer::RenderBillboard(UBillBoardComponent* InBillBoardComp, UCamera* InCurrentCamera)
@@ -538,46 +541,45 @@ void URenderer::RenderBillboard(UBillBoardComponent* InBillBoardComp, UCamera* I
 	FontRenderer->RenderText(UUIDString.c_str(), RT, viewProjConstData);
 }
 
-void URenderer::RenderPrimitiveDefault(UPrimitiveComponent* InPrimitiveComp, ID3D11RasterizerState* InRasterizerState)
+void URenderer::RenderPrimitiveDefault(UPrimitiveComponent* InPrimitiveComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferColor)
 {
-	// Update pipeline info
-	FPipelineInfo PipelineInfo = {
-		DefaultInputLayout,
-		DefaultVertexShader,
-		InRasterizerState,
-		DefaultDepthStencilState,
-		DefaultPixelShader,
-		nullptr,
-	};
-	Pipeline->UpdatePipeline(PipelineInfo);
+    // Update pipeline info
+    FPipelineInfo PipelineInfo = {
+        DefaultInputLayout,
+        DefaultVertexShader,
+        InRasterizerState,
+        DefaultDepthStencilState,
+        DefaultPixelShader,
+        nullptr,
+    };
+    Pipeline->UpdatePipeline(PipelineInfo);
 
-	// Update pipeline buffers
-	Pipeline->SetConstantBuffer(0, true, ConstantBufferModels);
-	UpdateConstant(
-		ConstantBufferModels,
-		InPrimitiveComp->GetRelativeLocation(),
-		InPrimitiveComp->GetRelativeRotation(),
-		InPrimitiveComp->GetRelativeScale3D()
-	);
-	Pipeline->SetConstantBuffer(2, true, ConstantBufferColor);
-	UpdateConstant(ConstantBufferColor, InPrimitiveComp->GetColor());
+    // Update pipeline buffers
+    Pipeline->SetConstantBuffer(0, true, InConstantBufferModels);
+    UpdateConstant(
+        InConstantBufferModels,
+        InPrimitiveComp->GetRelativeLocation(),
+        InPrimitiveComp->GetRelativeRotation(),
+        InPrimitiveComp->GetRelativeScale3D()
+    );
+    Pipeline->SetConstantBuffer(2, true, InConstantBufferColor);
+    UpdateConstant(InConstantBufferColor, InPrimitiveComp->GetColor());
 
-	// Bind vertex buffer
-	Pipeline->SetVertexBuffer(InPrimitiveComp->GetVertexBuffer(), Stride);
+    // Bind vertex buffer
+    Pipeline->SetVertexBuffer(InPrimitiveComp->GetVertexBuffer(), Stride);
 
-	// Draw vertex + index
-	if (InPrimitiveComp->GetIndexBuffer() && InPrimitiveComp->GetIndicesData())
-	{
-		Pipeline->SetIndexBuffer(InPrimitiveComp->GetIndexBuffer(), 0);
-		Pipeline->DrawIndexed(InPrimitiveComp->GetNumIndices(), 0, 0);
-	}
-	// Draw vertex
-	else
-	{
-		Pipeline->Draw(static_cast<uint32>(InPrimitiveComp->GetNumVertices()), 0);
-	}
+    // Draw vertex + index
+    if (InPrimitiveComp->GetIndexBuffer() && InPrimitiveComp->GetIndicesData())
+    {
+        Pipeline->SetIndexBuffer(InPrimitiveComp->GetIndexBuffer(), 0);
+        Pipeline->DrawIndexed(InPrimitiveComp->GetNumIndices(), 0, 0);
+    }
+    // Draw vertex
+    else
+    {
+        Pipeline->Draw(static_cast<uint32>(InPrimitiveComp->GetNumVertices()), 0);
+    }
 }
-
 /**
  * @brief FVertex 타입용 정점 Buffer 생성 함수
  * @param InVertices 정점 데이터 포인터
