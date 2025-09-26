@@ -31,6 +31,10 @@ public:
 	void ShowMemory(bool bShow) { bShow ? EnableStat(EStatType::Memory) : DisableStat(EStatType::Memory); }
 	void ShowAll(bool bShow) { SetStatType(bShow ? EStatType::All : EStatType::None); }
 
+	uint64 LastPickingTime = 0;
+	uint32 NumPickingAttempts = 0;
+	uint64 CumulativePickingTime = 0;
+
 private:
 	void RenderFPS();
 	void RenderMemory();
@@ -56,7 +60,7 @@ private:
 	ID2D1RenderTarget* D2DRenderTarget = nullptr;
 	ID2D1SolidColorBrush* TextBrush = nullptr;
 	IDWriteTextFormat* TextFormat = nullptr;
-	
+
 	ID2D1Factory* D2DFactory = nullptr;
 	IDWriteFactory* DWriteFactory = nullptr;
 };

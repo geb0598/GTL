@@ -48,7 +48,7 @@ void UStatOverlay::Release()
 	if (TextBrush)		 { TextBrush->Release(); TextBrush = nullptr; }
 	if (D2DRenderTarget) { D2DRenderTarget->Release(); D2DRenderTarget = nullptr; }
 	if (TextFormat)		 { TextFormat->Release(); TextFormat = nullptr; }
-	
+
 	// Factories are managed by the Renderer
 	D2DFactory = nullptr;
 	DWriteFactory = nullptr;
@@ -116,6 +116,19 @@ void UStatOverlay::RenderFPS()
 	else if (CurrentFPS < 60.0f) { R = 1.0f; G = 1.0f; B = 0.0f; }
 
 	RenderText(FpsText, OverlayX, OverlayY, R, G, B);
+
+	// --- Picking Stats Text ---
+	char PickBuffer[128];
+	sprintf_s(PickBuffer, sizeof(PickBuffer),
+		"Picking Time %llu ms : Num Attempts %u : Cumulative Time %llu ms",
+		LastPickingTime,
+		NumPickingAttempts,
+		CumulativePickingTime);
+
+	FString PickText = PickBuffer;
+
+	// Render below the FPS text (shift Y down by ~20 pixels)
+	RenderText(PickText, OverlayX, OverlayY + 20.0f, 1.0f, 1.0f, 1.0f);
 }
 
 void UStatOverlay::RenderMemory()
