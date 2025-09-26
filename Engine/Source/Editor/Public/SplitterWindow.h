@@ -49,7 +49,7 @@ public:
 public:
 	SWindow* SideLT = nullptr; // Left 혹은 Top을 맡는 윈도우
 	SWindow* SideRB = nullptr; // Right 혹은 Bottom을 맡는 윈도우
-	float Ratio = 0.5f;		   // 부모 윈도우 영역 대비 위치 비율
+	float Ratio = 0.0f;		   // 부모 윈도우 영역 대비 위치 비율
 	const float Thickness = 10.0f;    // 드래그 판정이 가능한 범위
 	const float CollapseThreshold = 0.03f; // 스플리터가 화면 비율을 감지하는 기준
 	ECollapseState CollapseState = ECollapseState::Normal; // 스플리터 상태
