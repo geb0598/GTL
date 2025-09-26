@@ -42,8 +42,6 @@ UObject::UObject()
 
 	InternalIndex = static_cast<uint32>(GetUObjectArray().size());
 	GetUObjectArray().emplace_back(this);
-
-	// 증분 업데이트: 새 객체는 자동으로 LastProcessedIndex 이후에 추가됨
 }
 
 UObject::UObject(const FName& InName)
@@ -52,10 +50,8 @@ UObject::UObject(const FName& InName)
 {
 	UUID = UEngineStatics::GenUUID();
 
+	InternalIndex = static_cast<uint32>(GetUObjectArray().size());
 	GetUObjectArray().emplace_back(this);
-	InternalIndex = static_cast<uint32>(GetUObjectArray().size()) - 1;
-
-	// 증분 업데이트: 새 객체는 자동으로 LastProcessedIndex 이후에 추가됨
 }
 
 void UObject::SetOuter(UObject* InObject)
