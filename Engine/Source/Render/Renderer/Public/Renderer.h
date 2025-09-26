@@ -89,12 +89,12 @@ public:
 	void CreatePixelShader(const wstring& InFilePath, ID3D11PixelShader** InPixelShader) const;
 
 	bool UpdateVertexBuffer(ID3D11Buffer* InVertexBuffer, const TArray<FVector>& InVertices) const;
-	void UpdateConstant(const UPrimitiveComponent* InPrimitive) const;
-	void UpdateConstant(const FVector& InPosition, const FVector& InRotation, const FVector& InScale) const;
-	void UpdateConstant(const FViewProjConstants& InViewProjConstants) const;
-	void UpdateConstant(const FMatrix& InMatrix) const;
-	void UpdateConstant(const FVector4& InColor) const;
-	void UpdateConstant(const FMaterialConstants& InMaterial) const;
+	void UpdateConstant(ID3D11Buffer* InConstantBuffer, const UPrimitiveComponent* InPrimitive) const;
+	void UpdateConstant(ID3D11Buffer* InConstantBuffer, const FVector& InPosition, const FVector& InRotation, const FVector& InScale) const;
+	void UpdateConstant(ID3D11Buffer* InConstantBuffer, const FViewProjConstants& InViewProjConstants) const;
+	void UpdateConstant(ID3D11Buffer* InConstantBuffer, const FMatrix& InMatrix) const;
+	void UpdateConstant(ID3D11Buffer* InConstantBuffer, const FVector4& InColor) const;
+	void UpdateConstant(ID3D11Buffer* InConstantBuffer, const FMaterialConstants& InMaterial) const;
 
 	static void ReleaseVertexBuffer(ID3D11Buffer* InVertexBuffer);
 	static void ReleaseIndexBuffer(ID3D11Buffer* InIndexBuffer);

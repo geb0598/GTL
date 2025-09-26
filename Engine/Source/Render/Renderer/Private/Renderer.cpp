@@ -252,7 +252,7 @@ void URenderer::Update()
 
 		// 3. 해당 카메라의 View/Projection 행렬로 상수 버퍼를 업데이트합니다.
 		CurrentCamera->Update(ViewportClient.GetViewportInfo());
-		UpdateConstant(CurrentCamera->GetFViewProjConstants());
+		UpdateConstant(ConstantBufferViewProj, CurrentCamera->GetFViewProjConstants());
 
 		// 4. 씬(레벨, 에디터 요소 등)을 이 뷰포트와 카메라 기준으로 렌더링합니다.
 		RenderLevel(CurrentCamera);
@@ -364,10 +364,10 @@ void URenderer::RenderPrimitive(const FEditorPrimitive& InPrimitive, const FRend
 
 	// Update constant buffers
 	Pipeline->SetConstantBuffer(0, true, ConstantBufferModels);
-	UpdateConstant(InPrimitive.Location, InPrimitive.Rotation, InPrimitive.Scale);
+	UpdateConstant(ConstantBufferModels, InPrimitive.Location, InPrimitive.Rotation, InPrimitive.Scale);
 
 	Pipeline->SetConstantBuffer(2, true, ConstantBufferColor);
-	UpdateConstant(InPrimitive.Color);
+	UpdateConstant(ConstantBufferColor, InPrimitive.Color);
 
 	// Set vertex buffer and draw
 	Pipeline->SetVertexBuffer(InPrimitive.Vertexbuffer, Stride);
@@ -413,10 +413,10 @@ void URenderer::RenderPrimitiveIndexed(const FEditorPrimitive& InPrimitive, cons
 	if (bInUseBaseConstantBuffer)
 	{
 		Pipeline->SetConstantBuffer(0, true, ConstantBufferModels);
-		UpdateConstant(InPrimitive.Location, InPrimitive.Rotation, InPrimitive.Scale);
+		UpdateConstant(ConstantBufferModels, InPrimitive.Location, InPrimitive.Rotation, InPrimitive.Scale);
 
 		Pipeline->SetConstantBuffer(2, true, ConstantBufferColor);
-		UpdateConstant(InPrimitive.Color);
+		UpdateConstant(ConstantBufferColor, InPrimitive.Color);
 	}
 
 	// Set buffers and draw indexed
@@ -454,6 +454,7 @@ void URenderer::RenderStaticMesh(UStaticMeshComponent* InMeshComp, ID3D11Rasteri
 	// Constant buffer & transform
 	Pipeline->SetConstantBuffer(0, true, ConstantBufferModels);
 	UpdateConstant(
+		ConstantBufferModels,
 		InMeshComp->GetRelativeLocation(),
 		InMeshComp->GetRelativeRotation(),
 		InMeshComp->GetRelativeScale3D()
@@ -494,7 +495,7 @@ void URenderer::RenderStaticMesh(UStaticMeshComponent* InMeshComp, ID3D11Rasteri
 			MaterialConstants.Time = InMeshComp->GetElapsedTime();
 
 			// Update Constant Buffer
-			UpdateConstant(MaterialConstants);
+			UpdateConstant(ConstantBufferMaterial, MaterialConstants);
 
 			if (Material->GetDiffuseTexture())
 			{
@@ -553,12 +554,13 @@ void URenderer::RenderPrimitiveDefault(UPrimitiveComponent* InPrimitiveComp, ID3
 	// Update pipeline buffers
 	Pipeline->SetConstantBuffer(0, true, ConstantBufferModels);
 	UpdateConstant(
+		ConstantBufferModels,
 		InPrimitiveComp->GetRelativeLocation(),
 		InPrimitiveComp->GetRelativeRotation(),
 		InPrimitiveComp->GetRelativeScale3D()
 	);
 	Pipeline->SetConstantBuffer(2, true, ConstantBufferColor);
-	UpdateConstant(InPrimitiveComp->GetColor());
+	UpdateConstant(ConstantBufferColor, InPrimitiveComp->GetColor());
 
 	// Bind vertex buffer
 	Pipeline->SetVertexBuffer(InPrimitiveComp->GetVertexBuffer(), Stride);
@@ -869,123 +871,117 @@ void URenderer::ReleaseConstantBuffer()
 	}
 }
 
-void URenderer::UpdateConstant(const UPrimitiveComponent* InPrimitive) const
+void URenderer::UpdateConstant(ID3D11Buffer* InConstantBuffer, const UPrimitiveComponent* InPrimitive) const
 {
-	if (ConstantBufferModels)
-	{
-		D3D11_MAPPED_SUBRESOURCE constantbufferMSR;
+    if (InConstantBuffer)
+    {
+        D3D11_MAPPED_SUBRESOURCE constantbufferMSR;
 
-		GetDeviceContext()->Map(ConstantBufferModels, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR);
-		// update constant buffer every frame
-		FMatrix* Constants = static_cast<FMatrix*>(constantbufferMSR.pData);
-		{
-			*Constants = FMatrix::GetModelMatrix(InPrimitive->GetRelativeLocation(),
-				FVector::GetDegreeToRadian(InPrimitive->GetRelativeRotation()),
-				InPrimitive->GetRelativeScale3D());
-		}
-		GetDeviceContext()->Unmap(ConstantBufferModels, 0);
-	}
+        GetDeviceContext()->Map(InConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR);
+        // update constant buffer every frame
+        FMatrix* Constants = static_cast<FMatrix*>(constantbufferMSR.pData);
+        {
+            *Constants = FMatrix::GetModelMatrix(InPrimitive->GetRelativeLocation(),
+                FVector::GetDegreeToRadian(InPrimitive->GetRelativeRotation()),
+                InPrimitive->GetRelativeScale3D());
+        }
+        GetDeviceContext()->Unmap(InConstantBuffer, 0);
+    }
 }
-
 /**
  * @brief 상수 버퍼 업데이트 함수
  * @param InPosition
  * @param InRotation
  * @param InScale Ball Size
  */
-void URenderer::UpdateConstant(const FVector& InPosition, const FVector& InRotation, const FVector& InScale) const
+void URenderer::UpdateConstant(ID3D11Buffer* InConstantBuffer, const FVector& InPosition, const FVector& InRotation, const FVector& InScale) const
 {
-	if (ConstantBufferModels)
-	{
-		D3D11_MAPPED_SUBRESOURCE constantbufferMSR;
+    if (InConstantBuffer)
+    {
+        D3D11_MAPPED_SUBRESOURCE constantbufferMSR;
 
-		GetDeviceContext()->Map(ConstantBufferModels, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR);
+        GetDeviceContext()->Map(InConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR);
 
-		// update constant buffer every frame
-		FMatrix* Constants = static_cast<FMatrix*>(constantbufferMSR.pData);
-		{
-			*Constants = FMatrix::GetModelMatrix(InPosition, FVector::GetDegreeToRadian(InRotation), InScale);
-		}
-		GetDeviceContext()->Unmap(ConstantBufferModels, 0);
-	}
+        // update constant buffer every frame
+        FMatrix* Constants = static_cast<FMatrix*>(constantbufferMSR.pData);
+        {
+            *Constants = FMatrix::GetModelMatrix(InPosition, FVector::GetDegreeToRadian(InRotation), InScale);
+        }
+        GetDeviceContext()->Unmap(InConstantBuffer, 0);
+    }
 }
-
-void URenderer::UpdateConstant(const FViewProjConstants& InViewProjConstants) const
+void URenderer::UpdateConstant(ID3D11Buffer* InConstantBuffer, const FViewProjConstants& InViewProjConstants) const
 {
-	Pipeline->SetConstantBuffer(1, true, ConstantBufferViewProj);
+    Pipeline->SetConstantBuffer(1, true, InConstantBuffer);
 
-	if (ConstantBufferViewProj)
-	{
-		D3D11_MAPPED_SUBRESOURCE ConstantBufferMSR = {};
+    if (InConstantBuffer)
+    {
+        D3D11_MAPPED_SUBRESOURCE ConstantBufferMSR = {};
 
-		GetDeviceContext()->Map(ConstantBufferViewProj, 0, D3D11_MAP_WRITE_DISCARD, 0, &ConstantBufferMSR);
-		// update constant buffer every frame
-		FViewProjConstants* ViewProjectionConstants = static_cast<FViewProjConstants*>(ConstantBufferMSR.pData);
-		{
-			ViewProjectionConstants->View = InViewProjConstants.View;
-			ViewProjectionConstants->Projection = InViewProjConstants.Projection;
-		}
-		GetDeviceContext()->Unmap(ConstantBufferViewProj, 0);
-	}
+        GetDeviceContext()->Map(InConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &ConstantBufferMSR);
+        // update constant buffer every frame
+        FViewProjConstants* ViewProjectionConstants = static_cast<FViewProjConstants*>(ConstantBufferMSR.pData);
+        {
+            ViewProjectionConstants->View = InViewProjConstants.View;
+            ViewProjectionConstants->Projection = InViewProjConstants.Projection;
+        }
+        GetDeviceContext()->Unmap(InConstantBuffer, 0);
+    }
 }
-
-void URenderer::UpdateConstant(const FMatrix& InMatrix) const
+void URenderer::UpdateConstant(ID3D11Buffer* InConstantBuffer, const FMatrix& InMatrix) const
 {
-	if (ConstantBufferModels)
-	{
-		D3D11_MAPPED_SUBRESOURCE MappedSubResource;
-		GetDeviceContext()->Map(ConstantBufferModels, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedSubResource);
-		memcpy(MappedSubResource.pData, &InMatrix, sizeof(FMatrix));
-		GetDeviceContext()->Unmap(ConstantBufferModels, 0);
-	}
+    if (InConstantBuffer)
+    {
+        D3D11_MAPPED_SUBRESOURCE MappedSubResource;
+        GetDeviceContext()->Map(InConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedSubResource);
+        memcpy(MappedSubResource.pData, &InMatrix, sizeof(FMatrix));
+        GetDeviceContext()->Unmap(InConstantBuffer, 0);
+    }
 }
-
-void URenderer::UpdateConstant(const FVector4& InColor) const
+void URenderer::UpdateConstant(ID3D11Buffer* InConstantBuffer, const FVector4& InColor) const
 {
-	Pipeline->SetConstantBuffer(2, false, ConstantBufferColor);
+    Pipeline->SetConstantBuffer(2, false, InConstantBuffer);
 
-	if (ConstantBufferColor)
-	{
-		D3D11_MAPPED_SUBRESOURCE ConstantBufferMSR = {};
+    if (InConstantBuffer)
+    {
+        D3D11_MAPPED_SUBRESOURCE ConstantBufferMSR = {};
 
-		GetDeviceContext()->Map(ConstantBufferColor, 0, D3D11_MAP_WRITE_DISCARD, 0, &ConstantBufferMSR);
-		// update constant buffer every frame
-		FVector4* ColorConstants = static_cast<FVector4*>(ConstantBufferMSR.pData);
-		{
-			ColorConstants->X = InColor.X;
-			ColorConstants->Y = InColor.Y;
-			ColorConstants->Z = InColor.Z;
-			ColorConstants->W = InColor.W;
-		}
-		GetDeviceContext()->Unmap(ConstantBufferColor, 0);
-	}
+        GetDeviceContext()->Map(InConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &ConstantBufferMSR);
+        // update constant buffer every frame
+        FVector4* ColorConstants = static_cast<FVector4*>(ConstantBufferMSR.pData);
+        {
+            ColorConstants->X = InColor.X;
+            ColorConstants->Y = InColor.Y;
+            ColorConstants->Z = InColor.Z;
+            ColorConstants->W = InColor.W;
+        }
+        GetDeviceContext()->Unmap(InConstantBuffer, 0);
+    }
 }
-
-void URenderer::UpdateConstant(const FMaterialConstants& InMaterial) const
+void URenderer::UpdateConstant(ID3D11Buffer* InConstantBuffer, const FMaterialConstants& InMaterial) const
 {
-	Pipeline->SetConstantBuffer(2, false, ConstantBufferMaterial);
+    Pipeline->SetConstantBuffer(2, false, InConstantBuffer);
 
-	if (ConstantBufferMaterial)
-	{
-		D3D11_MAPPED_SUBRESOURCE ConstantBufferMSR = {};
+    if (InConstantBuffer)
+    {
+        D3D11_MAPPED_SUBRESOURCE ConstantBufferMSR = {};
 
-		GetDeviceContext()->Map(ConstantBufferMaterial, 0, D3D11_MAP_WRITE_DISCARD, 0, &ConstantBufferMSR);
+        GetDeviceContext()->Map(InConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &ConstantBufferMSR);
 
-		FMaterialConstants* MaterialConstants = static_cast<FMaterialConstants*>(ConstantBufferMSR.pData);
-		{
-			MaterialConstants->Ka = InMaterial.Ka;
-			MaterialConstants->Kd = InMaterial.Kd;
-			MaterialConstants->Ks = InMaterial.Ks;
-			MaterialConstants->Ns = InMaterial.Ns;
-			MaterialConstants->Ni = InMaterial.Ni;
-			MaterialConstants->D = InMaterial.D;
-			MaterialConstants->MaterialFlags = InMaterial.MaterialFlags;
-			MaterialConstants->Time = InMaterial.Time;
-		}
-		GetDeviceContext()->Unmap(ConstantBufferMaterial, 0);
-	}
+        FMaterialConstants* MaterialConstants = static_cast<FMaterialConstants*>(ConstantBufferMSR.pData);
+        {
+            MaterialConstants->Ka = InMaterial.Ka;
+            MaterialConstants->Kd = InMaterial.Kd;
+            MaterialConstants->Ks = InMaterial.Ks;
+            MaterialConstants->Ns = InMaterial.Ns;
+            MaterialConstants->Ni = InMaterial.Ni;
+            MaterialConstants->D = InMaterial.D;
+            MaterialConstants->MaterialFlags = InMaterial.MaterialFlags;
+            MaterialConstants->Time = InMaterial.Time;
+        }
+        GetDeviceContext()->Unmap(InConstantBuffer, 0);
+    }
 }
-
 bool URenderer::UpdateVertexBuffer(ID3D11Buffer* InVertexBuffer, const TArray<FVector>& InVertices) const
 {
 	if (!GetDeviceContext() || !InVertexBuffer || InVertices.empty())
