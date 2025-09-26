@@ -1,13 +1,18 @@
 #include "pch.h"
-#include "Editor/Public/ObjectPicker.h"
+
+#ifdef MULTI_THREADING
+#include "cpp-thread-pool/thread_pool.h"
+#endif
+
+#include "Component/Public/PrimitiveComponent.h"
+#include "Core/Public/AppWindow.h"
 #include "Editor/Public/Camera.h"
 #include "Editor/Public/Gizmo.h"
-#include "Component/Public/PrimitiveComponent.h"
-#include "Manager/Input/Public/InputManager.h"
-#include "Core/Public/AppWindow.h"
+#include "Editor/Public/ObjectPicker.h"
+#include "Global/Quaternion.h"
 #include "ImGui/imgui.h"
 #include "Level/Public/Level.h"
-#include "Global/Quaternion.h"
+#include "Manager/Input/Public/InputManager.h"
 #include "Physics/Public/AABB.h"
 
 FRay UObjectPicker::GetModelRay(const FRay& Ray, UPrimitiveComponent* Primitive)
@@ -23,6 +28,47 @@ FRay UObjectPicker::GetModelRay(const FRay& Ray, UPrimitiveComponent* Primitive)
 
 UPrimitiveComponent* UObjectPicker::PickPrimitive(UCamera* InActiveCamera, const FRay& WorldRay, TArray<UPrimitiveComponent*> Candidate, float* OutDistance)
 {
+#ifdef MULTI_THREADING
+	/** @todo: try-catch로 생성 시 예외 처리하기 */
+	ThreadPool Pool(4);
+
+	auto Transform = [&](UPrimitiveComponent* Primitive) -> std::pair<UPrimitiveComponent*, float>
+	{
+		if (!Primitive || Primitive->GetPrimitiveType() == EPrimitiveType::BillBoard)
+		{
+			return { nullptr, D3D11_FLOAT32_MAX };
+		}
+
+		float Distance = D3D11_FLOAT32_MAX;
+		if (DoesRayIntersectPrimitive(InActiveCamera, WorldRay, Primitive, Primitive->GetWorldTransformMatrix(), &Distance))
+		{
+			return { Primitive, Distance };
+		}
+
+		return { nullptr, D3D11_FLOAT32_MAX };
+	};
+
+	auto Reduce = [](const std::pair<UPrimitiveComponent*, float>& A, const std::pair<UPrimitiveComponent*, float>& B) -> std::pair<UPrimitiveComponent*, float>
+	{
+		if (A.second < B.second)
+		{
+			return A;
+		}
+		return B;
+	};
+
+	auto [ShortestPrimitive, ShortestDistance] = Pool.TransformReduce(
+		Candidate.begin(),
+		Candidate.end(),
+		std::make_pair(static_cast<UPrimitiveComponent*>(nullptr), D3D11_FLOAT32_MAX),
+		Transform,
+		Reduce
+	);
+
+	*OutDistance = ShortestDistance;
+
+	return ShortestPrimitive;
+#else
 	UPrimitiveComponent* ShortestPrimitive = nullptr;
 	float ShortestDistance = D3D11_FLOAT32_MAX;
 	float PrimitiveDistance = D3D11_FLOAT32_MAX;
@@ -47,6 +93,7 @@ UPrimitiveComponent* UObjectPicker::PickPrimitive(UCamera* InActiveCamera, const
 	*OutDistance = ShortestDistance;
 
 	return ShortestPrimitive;
+#endif
 }
 
 void UObjectPicker::PickGizmo(UCamera* InActiveCamera, const FRay& WorldRay, UGizmo& Gizmo, FVector& CollisionPoint)
