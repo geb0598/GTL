@@ -2,7 +2,7 @@
 #include "Widget.h"
 
 class UPrimitiveSpawnWidget
-	:public UWidget
+	: public UWidget
 {
 public:
 	void Initialize() override;

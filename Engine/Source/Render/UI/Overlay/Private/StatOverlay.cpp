@@ -1,9 +1,10 @@
 #include "pch.h"
-#include "Render/UI/Overlay/Public/StatOverlay.h"
+#include "Core/Public/PlatformTime.h"
+#include "Global/Memory.h"
 #include "Global/Types.h"
 #include "Manager/Time/Public/TimeManager.h"
-#include "Global/Memory.h"
 #include "Render/Renderer/Public/Renderer.h"
+#include "Render/UI/Overlay/Public/StatOverlay.h"
 
 IMPLEMENT_SINGLETON_CLASS_BASE(UStatOverlay)
 
@@ -120,10 +121,10 @@ void UStatOverlay::RenderFPS()
 	// --- Picking Stats Text ---
 	char PickBuffer[128];
 	sprintf_s(PickBuffer, sizeof(PickBuffer),
-		"Picking Time %llu ms : Num Attempts %u : Cumulative Time %llu ms",
-		LastPickingTime,
+		"Picking Time %f ms : Num Attempts %u : Cumulative Time %f ms",
+		FWindowsPlatformTime::ToMilliseconds(LastPickingTime),
 		NumPickingAttempts,
-		CumulativePickingTime);
+		FWindowsPlatformTime::ToMilliseconds(CumulativePickingTime));
 
 	FString PickText = PickBuffer;
 

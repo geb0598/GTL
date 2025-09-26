@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Core/Public/PlatformTime.h"
 
 struct TStatId
@@ -34,7 +34,7 @@ public:
 
 		// FThreadStats::AddMessage(UsedStatId, EStatOperation::Add, CycleDiff);
 
-		return FPlatformTime::ToMilliseconds(CycleDiff); // ms 변환 후 리턴
+		return CycleDiff;
 	}
 
 private:

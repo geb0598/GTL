@@ -30,7 +30,7 @@ UPrimitiveComponent* UObjectPicker::PickPrimitive(UCamera* InActiveCamera, const
 {
 #ifdef MULTI_THREADING
 	/** @todo: try-catch로 생성 시 예외 처리하기 */
-	ThreadPool Pool(4);
+	static ThreadPool Pool(4);
 
 	auto Transform = [&](UPrimitiveComponent* Primitive) -> std::pair<UPrimitiveComponent*, float>
 	{
