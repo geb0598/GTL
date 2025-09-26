@@ -226,18 +226,28 @@ protected:
 	UObject* GetObject() const
 	{
 		/** @todo: Index가 -1일 때 nullptr을 리턴해도 괜찮은가 */
-		if (Index == -1)
+		if (Index == -1 || Index >= ObjectArray.size())
 		{
 			return nullptr;
 		}
-		return ObjectArray[Index];
+
+		UObject* obj = ObjectArray[Index];
+		// 삭제된 객체 체크 (안전성 보장)
+		if (obj == nullptr)
+		{
+			return nullptr;
+		}
+
+		return obj;
 	}
 
 	bool Advance()
 	{
 		while (++Index < ObjectArray.size())
 		{
-			if (GetObject())
+			// 안전한 객체 확인 (nullptr 및 삭제된 객체 스킵)
+			UObject* obj = GetObject();
+			if (obj && obj != nullptr)
 			{
 				return true;
 			}

@@ -26,7 +26,8 @@ UObject::~UObject()
 		GetUObjectArray()[InternalIndex] = nullptr;
 	}
 
-	// 증분 업데이트: 더 이상 전체 무효화 없음 (nullptr로 마킹됨)
+	// 객체 삭제 시 모든 캐시 무효화 (안전성 우선)
+	ObjectCacheManager::InvalidateCache();
 }
 
 void UObject::Serialize(const bool bInIsLoading, JSON& InOutHandle)
