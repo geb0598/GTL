@@ -2,6 +2,7 @@
 #include "Core/Public/Object.h"
 #include "Core/Public/EngineStatics.h"
 #include "Core/Public/Name.h"
+#include "Core/Public/ObjectIterator.h"
 
 #include <json.hpp>
 
@@ -24,6 +25,9 @@ UObject::~UObject()
 	{
 		GetUObjectArray()[InternalIndex] = nullptr;
 	}
+
+	// 객체 삭제 시 모든 캐시 무효화 (안전성 우선)
+	FObjectCacheManager::InvalidateCache();
 }
 
 void UObject::Serialize(const bool bInIsLoading, JSON& InOutHandle)
@@ -36,8 +40,8 @@ UObject::UObject()
 	UUID = UEngineStatics::GenUUID();
 	Name = FName("Object_" + to_string(UUID));
 
+	InternalIndex = static_cast<uint32>(GetUObjectArray().size());
 	GetUObjectArray().emplace_back(this);
-	InternalIndex = static_cast<uint32>(GetUObjectArray().size()) - 1;
 }
 
 UObject::UObject(const FName& InName)
@@ -46,8 +50,8 @@ UObject::UObject(const FName& InName)
 {
 	UUID = UEngineStatics::GenUUID();
 
+	InternalIndex = static_cast<uint32>(GetUObjectArray().size());
 	GetUObjectArray().emplace_back(this);
-	InternalIndex = static_cast<uint32>(GetUObjectArray().size()) - 1;
 }
 
 void UObject::SetOuter(UObject* InObject)
