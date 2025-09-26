@@ -255,6 +255,8 @@
     <ClInclude Include="Source\Component\Mesh\Public\VertexDatas.h" />
     <ClInclude Include="Source\Core\Public\Archive.h" />
     <ClInclude Include="Source\Core\Public\ObjectIterator.h" />
+    <ClInclude Include="Source\Core\Public\PlatformTime.h" />
+    <ClInclude Include="Source\Core\Public\ScopeCycleCounter.h" />
     <ClInclude Include="Source\Core\Public\WindowsBinReader.h" />
     <ClInclude Include="Source\Core\Public\WindowsBinWriter.h" />
     <ClInclude Include="Source\Editor\Public\SplitterWindow.h" />
@@ -400,6 +402,8 @@
     <ClCompile Include="Source\Component\Mesh\Private\VertexDatas.cpp" />
     <ClCompile Include="Source\Core\Private\Archive.cpp" />
     <ClCompile Include="Source\Core\Private\ObjectIterator.cpp" />
+    <ClCompile Include="Source\Core\Private\PlatformTime.cpp" />
+    <ClCompile Include="Source\Core\Private\ScopeCycleCounter.cpp" />
     <ClCompile Include="Source\Core\Private\WindowsBinWriter.cpp" />
     <ClCompile Include="Source\Core\Public\WindowsBinReader.cpp" />
     <ClCompile Include="Source\Editor\Private\SplitterWindow.cpp" />

@@ -11,6 +11,6 @@ class IBoundingVolume
 {
 public:
 	virtual ~IBoundingVolume() = default;
-	virtual bool RaycastHit() const = 0;
+	virtual bool RaycastHit(const FRay& Ray, float* OutDistance) const = 0;
 	virtual EBoundingVolumeType GetType() const = 0;
 };
