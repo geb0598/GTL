@@ -27,7 +27,7 @@ UObject::~UObject()
 	}
 
 	// 객체 삭제 시 모든 캐시 무효화 (안전성 우선)
-	ObjectCacheManager::InvalidateCache();
+	FObjectCacheManager::InvalidateCache();
 }
 
 void UObject::Serialize(const bool bInIsLoading, JSON& InOutHandle)

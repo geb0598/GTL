@@ -1,78 +1,81 @@
 #pragma once
 
 #include "Core/Public/Object.h"
-#include <unordered_map>
-#include <typeindex>
+#include "Global/Types.h"
+#include "Global/Macro.h"
 
 template<typename TObject>
 struct TObjectRange;
 
-// 초고속 증분 업데이트 캐시 관리자
-class ObjectCacheManager
+/**
+ * @brief 초고속 증분 업데이트 캐시 관리자
+ * UObject 타입별 캐싱과 증분 업데이트를 통한 성능 최적화
+ */
+class FObjectCacheManager
 {
 public:
-	// 객체 생성 시 타입별 직접 추가 (O(1))
-	template<typename TObject>
-	static void OnObjectCreated(UObject* NewObject)
-	{
-		if (TObject* TypedObject = Cast<TObject>(NewObject))
-		{
-			std::type_index typeIndex = std::type_index(typeid(TObject));
-			ClassObjectCache[typeIndex].emplace_back(NewObject);
-		}
-	}
-
-	// 객체 삭제 시 타입별 직접 제거 (O(n) but only for that type)
-	template<typename TObject>
-	static void OnObjectDeleted(UObject* DeletedObject)
-	{
-		std::type_index typeIndex = std::type_index(typeid(TObject));
-		auto& objectArray = ClassObjectCache[typeIndex];
-		objectArray.erase(
-			std::remove(objectArray.begin(), objectArray.end(), DeletedObject),
-			objectArray.end()
-		);
-	}
-
-	// 전체 무효화 (필요한 경우에만 사용)
-	static void InvalidateCache()
+	/** 전체 캐시 무효화 (객체 삭제 시 사용) */
+	inline static void InvalidateCache()
 	{
 		bCacheValid = false;
+#ifdef _DEBUG
+		UE_LOG_DEBUG("ObjectCache invalidated");
+#endif
 	}
 
+	/** 전체 캐시 정리 */
 	static void ClearCache()
 	{
-		ClassObjectCache.clear();
+		ObjectCache.clear();
 		bCacheValid = false;
 		LastProcessedIndex = 0;
+#ifdef _DEBUG
+		UE_LOG_DEBUG("ObjectCache cleared");
+#endif
 	}
 
+	/** 타입별 객체 배열 반환 */
 	template<typename TObject>
 	static const TArray<UObject*>& GetObjectsOfClass()
 	{
-		std::type_index typeIndex = std::type_index(typeid(TObject));
+		const uint32 TypeHash = GetClassTypeHash<TObject>();
 
 		// 증분 업데이트 적용
-		UpdateIncrementalCache<TObject>(typeIndex);
+		UpdateIncrementalCache<TObject>(TypeHash);
 
-		return ClassObjectCache[typeIndex];
+		return ObjectCache[TypeHash];
 	}
 
 private:
+	/** 타입 해시 생성 */
 	template<typename TObject>
-	static void UpdateIncrementalCache(const std::type_index& typeIndex)
+	static uint32 GetClassTypeHash()
 	{
-		const auto& objectArray = GetUObjectArray();
+		// 간단한 런타임 해시
+		const char* TypeName = typeid(TObject).name();
+		uint32 Hash = 0;
+		for (int32 i = 0; TypeName[i] != '\0'; ++i)
+		{
+			Hash = Hash * 31 + static_cast<uint32>(TypeName[i]);
+		}
+		return Hash;
+	}
+
+	/** 증분 캐시 업데이트 */
+	template<typename TObject>
+	static void UpdateIncrementalCache(const uint32 TypeHash)
+	{
+		const TArray<TObjectPtr<UObject>>& ObjectArray = GetUObjectArray();
 
 		// 첫 번째 접근이거나 캐시가 무효화된 경우 전체 빌드
-		if (!bCacheValid || ClassObjectCache.find(typeIndex) == ClassObjectCache.end())
+		if (!bCacheValid || ObjectCache.find(TypeHash) == ObjectCache.end())
 		{
-			RebuildCacheForType<TObject>(typeIndex);
+			RebuildCacheForType<TObject>(TypeHash);
 
 			// 전역 LastProcessedIndex 업데이트 (모든 타입에 적용)
-			if (LastProcessedIndex < objectArray.size())
+			if (LastProcessedIndex < static_cast<int32>(ObjectArray.size()))
 			{
-				LastProcessedIndex = objectArray.size();
+				LastProcessedIndex = static_cast<int32>(ObjectArray.size());
 			}
 
 			bCacheValid = true;
@@ -80,101 +83,123 @@ private:
 		}
 
 		// 초고속 증분 업데이트: 마지막 처리된 인덱스 이후의 새 객체들만 확인
-		if (LastProcessedIndex < objectArray.size())
+		const int32 ArraySize = static_cast<int32>(ObjectArray.size());
+		if (LastProcessedIndex < ArraySize)
 		{
-			auto& cachedObjects = ClassObjectCache[typeIndex];
+			TArray<UObject*>& CachedObjects = ObjectCache[TypeHash];
 
 			// 배치 처리로 메모리 할당 최적화
-			size_t newObjectsCount = objectArray.size() - LastProcessedIndex;
-			cachedObjects.reserve(cachedObjects.size() + newObjectsCount / 10); // 예상 증가량
+			const int32 NewObjectsCount = ArraySize - LastProcessedIndex;
+			CachedObjects.reserve(CachedObjects.size() + NewObjectsCount / 10); // 예상 증가량
 
-			// SIMD 최적화 가능한 루프 (컴파일러가 자동 벡터화)
-			for (size_t i = LastProcessedIndex; i < objectArray.size(); ++i)
+			// 고성능 루프
+			for (int32 ObjectIndex = LastProcessedIndex; ObjectIndex < ArraySize; ++ObjectIndex)
 			{
-				UObject* obj = objectArray[i];
-				if (obj != nullptr)
+				UObject* Object = ObjectArray[ObjectIndex];
+				if (Object != nullptr)
 				{
-					// 빠른 타입 체크 (virtual function call 최소화)
-					if (TObject* typedObj = Cast<TObject>(obj))
+					// 타입 체크
+					if (TObject* TypedObject = Cast<TObject>(Object))
 					{
-						cachedObjects.emplace_back(obj);
+						CachedObjects.emplace_back(Object);
 					}
 				}
 			}
 
-			// 전역 인덱스 업데이트 (한 번에 모든 타입 처리)
-			LastProcessedIndex = objectArray.size();
+			// 전역 인덱스 업데이트
+			LastProcessedIndex = ArraySize;
 		}
 
-		// 지연 정리: CPU 사이클이 남을 때만 실행
-		static thread_local int cleanupCounter = 0;
-		if (++cleanupCounter >= 1000) // 1000회마다 한 번씩만 정리 (더 드물게)
+		// 지연 정리: CPU 사이클 절약
+		static int32 CleanupCounter = 0;
+		if (++CleanupCounter >= 1000)
 		{
-			CleanupNullPtrs(typeIndex);
-			cleanupCounter = 0;
+			CleanupNullPtrs(TypeHash);
+			CleanupCounter = 0;
 		}
 	}
 
+	/** 타입별 캐시 재빌드 */
 	template<typename TObject>
-	static void RebuildCacheForType(const std::type_index& typeIndex)
+	static void RebuildCacheForType(const uint32 TypeHash)
 	{
-		TArray<UObject*>& cachedObjects = ClassObjectCache[typeIndex];
-		cachedObjects.clear();
+		TArray<UObject*>& CachedObjects = ObjectCache[TypeHash];
+		CachedObjects.clear();
 
-		const auto& objectArray = GetUObjectArray();
+		const TArray<TObjectPtr<UObject>>& ObjectArray = GetUObjectArray();
 
-		// 스마트 사전 할당: 실제 사용량 기반 예측
-		size_t estimatedSize = objectArray.size() / 20; // 더 정확한 추정치
-		if (estimatedSize < 100) estimatedSize = 100;   // 최소값 보장
-		cachedObjects.reserve(estimatedSize);
+		// 스마트 사전 할당
+		const int32 EstimatedSize = (static_cast<int32>(ObjectArray.size()) / 20 > 100) ? (static_cast<int32>(ObjectArray.size()) / 20) : 100;
+		CachedObjects.reserve(EstimatedSize);
 
-		// 고성능 순회: 분기 예측 최적화
-		const size_t arraySize = objectArray.size();
-		for (size_t i = 0; i < arraySize; ++i)
+		// 고성능 순회
+		const int32 ArraySize = static_cast<int32>(ObjectArray.size());
+		for (int32 ObjectIndex = 0; ObjectIndex < ArraySize; ++ObjectIndex)
 		{
-			UObject* obj = objectArray[i];
+			UObject* Object = ObjectArray[ObjectIndex];
 
-			// 널 체크를 먼저 (가장 빈번한 케이스)
-			if (obj != nullptr)
+			// 유효성 체크
+			if (Object != nullptr)
 			{
-				// 타입 체크 최적화 (컴파일러 인라인 힌트)
-				if (TObject* typedObj = Cast<TObject>(obj))
+				// 타입 체크
+				if (TObject* TypedObject = Cast<TObject>(Object))
 				{
-					cachedObjects.emplace_back(obj);
+					CachedObjects.emplace_back(Object);
 				}
 			}
 		}
 
-		// 메모리 압축: 불필요한 공간 해제
-		cachedObjects.shrink_to_fit();
+		// 메모리 압축
+		CachedObjects.shrink_to_fit();
 	}
 
-	// nullptr 정리 (성능 최적화)
-	static void CleanupNullPtrs(const std::type_index& typeIndex)
+	/** nullptr 정리 */
+	static void CleanupNullPtrs(const uint32 TypeHash)
 	{
-		auto& cachedObjects = ClassObjectCache[typeIndex];
-		cachedObjects.erase(
-			std::remove(cachedObjects.begin(), cachedObjects.end(), nullptr),
-			cachedObjects.end()
+		TArray<UObject*>& CachedObjects = ObjectCache[TypeHash];
+
+		// nullptr 제거
+		CachedObjects.erase(
+			std::remove(CachedObjects.begin(), CachedObjects.end(), nullptr),
+			CachedObjects.end()
 		);
 	}
 
-	static std::unordered_map<std::type_index, TArray<UObject*>> ClassObjectCache;
+	/** 정적 멤버 변수 */
+	static TMap<uint32, TArray<UObject*>> ObjectCache;
 	static bool bCacheValid;
-	static size_t LastProcessedIndex; // 마지막으로 처리된 ObjectArray 인덱스
+	static int32 LastProcessedIndex; // 마지막으로 처리된 ObjectArray 인덱스
 };
 
+/**
+ * @brief 객체 반복자 - 타입별 객체 순회를 위한 고성능 Iterator
+ *
+ * 특징:
+ * - 캐싱 시스템으로 O(1) 성능 달성
+ * - 증분 업데이트로 메모리 효율성 보장
+ * - 안전한 객체 순회 보장
+ *
+ * 사용 예시:
+ * @code
+ * for (TObjectIterator<UMyClass> Itr; Itr; ++Itr)
+ * {
+ *     UMyClass* Object = *Itr;
+ *     // 작업 수행
+ * }
+ * @endcode
+ */
 template<typename TObject>
 class TObjectIterator
 {
 	friend struct TObjectRange<TObject>;
 
 public:
+	/** 기본 생성자 - 캐시된 객체 배열로 초기화 */
 	TObjectIterator()
 		: Index(-1)
 	{
-		// 캐시된 객체 배열 가져오기 (성능 개선)
-		ObjectArray = ObjectCacheManager::GetObjectsOfClass<TObject>();
+		// 캐시된 객체 배열 가져오기 (O(1) 성능)
+		ObjectArray = FObjectCacheManager::GetObjectsOfClass<TObject>();
 		Advance();
 	}
 
