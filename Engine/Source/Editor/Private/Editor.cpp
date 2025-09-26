@@ -190,10 +190,12 @@ void UEditor::InitializeLayout()
 {
 	// 1. 루트 스플리터의 자식으로 2개의 수평 스플리터를 '주소'로 연결합니다.
 	RootSplitter.SetChildren(&LeftSplitter, &RightSplitter);
-
+	RootSplitter.SetRatio(0.f);
 	// 2. 각 수평 스플리터의 자식으로 뷰포트 윈도우들을 '주소'로 연결합니다.
 	LeftSplitter.SetChildren(&ViewportWindows[0], &ViewportWindows[1]);
+	LeftSplitter.SetRatio(0.f);
 	RightSplitter.SetChildren(&ViewportWindows[2], &ViewportWindows[3]);
+	RightSplitter.SetRatio(0.f);
 
 	// 3. 초기 레이아웃 계산
 	const D3D11_VIEWPORT& ViewportInfo = URenderer::GetInstance().GetDeviceResources()->GetViewportInfo();
@@ -302,7 +304,7 @@ void UEditor::UpdateLayout()
 	}
 
 	// 4. 매 프레임 현재 비율에 맞게 전체 레이아웃 크기를 다시 계산하고, 그 결과를 실제 FViewport에 반영합니다.
-	const ImGuiViewport* Viewport = ImGui::GetMainViewport(); // 사용자에게만 보이는 영역의 정보를 가져옵니다. 
+	const ImGuiViewport* Viewport = ImGui::GetMainViewport(); // 사용자에게만 보이는 영역의 정보를 가져옵니다.
 	FRect WorkableRect = { Viewport->WorkPos.x, Viewport->WorkPos.y, Viewport->WorkSize.x, Viewport->WorkSize.y };
 	RootSplitter.Resize(WorkableRect);
 
