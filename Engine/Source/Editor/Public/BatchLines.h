@@ -42,7 +42,7 @@ public:
 
 	//void Update();
 
-	void Render();
+	void Render(ID3D11DeviceContext* InDeviceContext);
 
 private:
 	void SetIndices();

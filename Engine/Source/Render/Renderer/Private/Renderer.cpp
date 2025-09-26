@@ -18,6 +18,10 @@
 #include "Texture/Public/TextureRenderProxy.h"
 #include "Source/Component/Mesh/Public/StaticMesh.h"
 
+#ifdef MULTI_THREADING
+#include "cpp-thread-pool/thread_pool.h"
+#endif
+
 IMPLEMENT_SINGLETON_CLASS_BASE(URenderer)
 
 URenderer::URenderer() = default;
@@ -46,6 +50,47 @@ void URenderer::Init(HWND InWindowHandle)
 	}
 
 	ViewportClient->InitializeLayout(DeviceResources->GetViewportInfo());
+
+#ifdef MULTI_THREADING
+	// Create deferred contexts and thread-specific constant buffers
+	for (uint32 i = 0; i < NUM_WORKER_THREADS; ++i)
+	{
+		ID3D11DeviceContext* DeferredContext = nullptr;
+		GetDevice()->CreateDeferredContext(0, &DeferredContext);
+		DeferredContexts.push_back(DeferredContext);
+
+		ID3D11Buffer* ThreadCBModels = nullptr;
+		ID3D11Buffer* ThreadCBColors = nullptr;
+		ID3D11Buffer* ThreadCBMaterials = nullptr;
+
+		// Create Model Constant Buffer
+		D3D11_BUFFER_DESC ModelConstantBufferDescription = {};
+		ModelConstantBufferDescription.ByteWidth = sizeof(FMatrix) + 0xf & 0xfffffff0;
+		ModelConstantBufferDescription.Usage = D3D11_USAGE_DYNAMIC;
+		ModelConstantBufferDescription.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		ModelConstantBufferDescription.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		GetDevice()->CreateBuffer(&ModelConstantBufferDescription, nullptr, &ThreadCBModels);
+		ThreadConstantBufferModels.push_back(ThreadCBModels);
+
+		// Create Color Constant Buffer
+		D3D11_BUFFER_DESC ColorConstantBufferDescription = {};
+		ColorConstantBufferDescription.ByteWidth = sizeof(FVector4) + 0xf & 0xfffffff0;
+		ColorConstantBufferDescription.Usage = D3D11_USAGE_DYNAMIC;
+		ColorConstantBufferDescription.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		ColorConstantBufferDescription.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		GetDevice()->CreateBuffer(&ColorConstantBufferDescription, nullptr, &ThreadCBColors);
+		ThreadConstantBufferColors.push_back(ThreadCBColors);
+
+		// Create Material Constant Buffer
+		D3D11_BUFFER_DESC MaterialConstantBufferDescription = {};
+		MaterialConstantBufferDescription.ByteWidth = sizeof(FMaterial) + 0xf & 0xfffffff0;
+		MaterialConstantBufferDescription.Usage = D3D11_USAGE_DYNAMIC;
+		MaterialConstantBufferDescription.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		MaterialConstantBufferDescription.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		GetDevice()->CreateBuffer(&MaterialConstantBufferDescription, nullptr, &ThreadCBMaterials);
+		ThreadConstantBufferMaterials.push_back(ThreadCBMaterials);
+	}
+#endif
 }
 
 void URenderer::Release()
@@ -62,6 +107,53 @@ void URenderer::Release()
 
 	SafeDelete(Pipeline);
 	SafeDelete(DeviceResources);
+
+#ifdef MULTI_THREADING
+	for (ID3D11DeviceContext* Context : DeferredContexts)
+	{
+		if (Context)
+		{
+			Context->Release();
+		}
+	}
+	DeferredContexts.clear();
+
+	for (ID3D11Buffer* Buffer : ThreadConstantBufferModels)
+	{
+		if (Buffer)
+		{
+			Buffer->Release();
+		}
+	}
+	ThreadConstantBufferModels.clear();
+
+	for (ID3D11Buffer* Buffer : ThreadConstantBufferColors)
+	{
+		if (Buffer)
+		{
+			Buffer->Release();
+		}
+	}
+	ThreadConstantBufferColors.clear();
+
+	for (ID3D11Buffer* Buffer : ThreadConstantBufferMaterials)
+	{
+		if (Buffer)
+		{
+			Buffer->Release();
+		}
+	}
+	ThreadConstantBufferMaterials.clear();
+
+	for (ID3D11CommandList* CommandList : CommandLists)
+	{
+		if (CommandList)
+		{
+			CommandList->Release();
+		}
+	}
+	CommandLists.clear();
+#endif
 }
 
 /**
@@ -252,13 +344,13 @@ void URenderer::Update()
 
 		// 3. 해당 카메라의 View/Projection 행렬로 상수 버퍼를 업데이트합니다.
 		CurrentCamera->Update(ViewportClient.GetViewportInfo());
-		UpdateConstant(ConstantBufferViewProj, CurrentCamera->GetFViewProjConstants());
+		UpdateConstant(GetDeviceContext(), ConstantBufferViewProj, CurrentCamera->GetFViewProjConstants());
 
 		// 4. 씬(레벨, 에디터 요소 등)을 이 뷰포트와 카메라 기준으로 렌더링합니다.
 		RenderLevel(CurrentCamera);
 
 		// 5. 에디터를 렌더링합니다.
-		ULevelManager::GetInstance().GetEditor()->RenderEditor(CurrentCamera);
+		ULevelManager::GetInstance().GetEditor()->RenderEditor(GetDeviceContext(), CurrentCamera);
 	}
 
 	// 최상위 에디터/GUI는 프레임에 1회만
@@ -297,6 +389,84 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera)
 	}
 
 	TObjectPtr<UBillBoardComponent> BillBoard = nullptr;
+
+#ifdef MULTI_THREADING
+	static ThreadPool Pool(NUM_WORKER_THREADS);
+
+	const auto& PrimitiveComponents = ULevelManager::GetInstance().GetCurrentLevel()->GetLevelPrimitiveComponents();
+	const size_t NumPrimitives = PrimitiveComponents.size();
+	const size_t ChunkSize = (NumPrimitives + NUM_WORKER_THREADS - 1) / NUM_WORKER_THREADS;
+
+	CommandLists.clear();
+	CommandLists.resize(NUM_WORKER_THREADS);
+
+	std::vector<std::future<void>> Futures;
+	for (size_t i = 0; i < NUM_WORKER_THREADS; ++i)
+	{
+		const size_t StartIndex = i * ChunkSize;
+		const size_t EndIndex = std::min(StartIndex + ChunkSize, NumPrimitives);
+
+		if (StartIndex >= EndIndex) continue;
+
+		Futures.emplace_back(Pool.Enqueue([this, StartIndex, EndIndex, &PrimitiveComponents, InCurrentCamera, i]()
+		{
+			ID3D11DeviceContext* DeferredContext = DeferredContexts[i];
+			UPipeline ThreadPipeline(DeferredContext);
+
+			ID3D11Buffer* ThreadCBModels = ThreadConstantBufferModels[i];
+			ID3D11Buffer* ThreadCBColors = ThreadConstantBufferColors[i];
+			ID3D11Buffer* ThreadCBMaterials = ThreadConstantBufferMaterials[i];
+
+			for (size_t j = StartIndex; j < EndIndex; ++j)
+			{
+				UPrimitiveComponent* PrimitiveComponent = PrimitiveComponents[j];
+				if (!PrimitiveComponent || !PrimitiveComponent->IsVisible())
+				{
+					continue;
+				}
+
+				FRenderState RenderState = PrimitiveComponent->GetRenderState();
+				const EViewModeIndex ViewMode = ULevelManager::GetInstance().GetEditor()->GetViewMode();
+				if (ViewMode == EViewModeIndex::VMI_Wireframe)
+				{
+					RenderState.CullMode = ECullMode::None;
+					RenderState.FillMode = EFillMode::WireFrame;
+				}
+				ID3D11RasterizerState* LoadedRasterizerState = GetRasterizerState(RenderState);
+
+				switch (PrimitiveComponent->GetPrimitiveType())
+				{
+				case EPrimitiveType::BillBoard:
+					// Billboards are rendered on the main thread after all other primitives
+					break;
+				case EPrimitiveType::StaticMesh:
+					RenderStaticMesh(DeferredContext, Cast<UStaticMeshComponent>(PrimitiveComponent), LoadedRasterizerState, ThreadCBModels, ThreadCBMaterials);
+					break;
+				default:
+					RenderPrimitiveDefault(DeferredContext, PrimitiveComponent, LoadedRasterizerState, ThreadCBModels, ThreadCBColors);
+					break;
+				}
+			}
+			DeferredContext->FinishCommandList(FALSE, &CommandLists[i]);
+		}));
+	}
+
+	for (auto& Future : Futures)
+	{
+		Future.get();
+	}
+
+	for (ID3D11CommandList* CommandList : CommandLists)
+	{
+		if (CommandList)
+		{
+			GetDeviceContext()->ExecuteCommandList(CommandList, FALSE);
+			CommandList->Release();
+		}
+	}
+	CommandLists.clear();
+
+#else
 	// Render Primitive
 	for (auto& PrimitiveComponent : ULevelManager::GetInstance().GetCurrentLevel()->GetLevelPrimitiveComponents())
 	{
@@ -322,14 +492,14 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera)
 			BillBoard = Cast<UBillBoardComponent>(PrimitiveComponent);
 			break;
 		case EPrimitiveType::StaticMesh:
-			RenderStaticMesh(Cast<UStaticMeshComponent>(PrimitiveComponent), LoadedRasterizerState, ConstantBufferModels, ConstantBufferMaterial);
+			RenderStaticMesh(GetDeviceContext(), Cast<UStaticMeshComponent>(PrimitiveComponent), LoadedRasterizerState, ConstantBufferModels, ConstantBufferMaterial);
 			break;
 		default:
-			RenderPrimitiveDefault(PrimitiveComponent, LoadedRasterizerState, ConstantBufferModels, ConstantBufferColor);
+			RenderPrimitiveDefault(GetDeviceContext(), PrimitiveComponent, LoadedRasterizerState, ConstantBufferModels, ConstantBufferColor);
 			break;
 		}
 	}
-
+#endif
 	if (BillBoard)
 	{
 		RenderBillboard(BillBoard, InCurrentCamera);
@@ -341,39 +511,39 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera)
  * @param InPrimitive 렌더링할 에디터 프리미티브
  * @param InRenderState 렌더링 상태
  */
-void URenderer::RenderPrimitive(const FEditorPrimitive& InPrimitive, const FRenderState& InRenderState)
+void URenderer::RenderPrimitive(ID3D11DeviceContext* InDeviceContext, const FEditorPrimitive& InPrimitive, const FRenderState& InRenderState)
 {
-	// Always visible 옵션에 따라 Depth 테스트 여부 결정
-	ID3D11DepthStencilState* DepthStencilState =
-		InPrimitive.bShouldAlwaysVisible ? DisabledDepthStencilState : DefaultDepthStencilState;
+    // Always visible 옵션에 따라 Depth 테스트 여부 결정
+    ID3D11DepthStencilState* DepthStencilState =
+        InPrimitive.bShouldAlwaysVisible ? DisabledDepthStencilState : DefaultDepthStencilState;
 
-	ID3D11RasterizerState* RasterizerState = GetRasterizerState(InRenderState);
+    ID3D11RasterizerState* RasterizerState = GetRasterizerState(InRenderState);
 
-	// Pipeline 정보 구성
-	FPipelineInfo PipelineInfo = {
-		DefaultInputLayout,
-		DefaultVertexShader,
-		RasterizerState,
-		DepthStencilState,
-		DefaultPixelShader,
-		nullptr,
-		InPrimitive.Topology
-	};
+    // Pipeline 정보 구성
+    FPipelineInfo PipelineInfo = {
+        DefaultInputLayout,
+        DefaultVertexShader,
+        RasterizerState,
+        DepthStencilState,
+        DefaultPixelShader,
+        nullptr,
+        InPrimitive.Topology
+    };
 
-	Pipeline->UpdatePipeline(PipelineInfo);
+    UPipeline LocalPipeline(InDeviceContext);
+    LocalPipeline.UpdatePipeline(PipelineInfo);
 
-	// Update constant buffers
-	Pipeline->SetConstantBuffer(0, true, ConstantBufferModels);
-	UpdateConstant(ConstantBufferModels, InPrimitive.Location, InPrimitive.Rotation, InPrimitive.Scale);
+    // Update constant buffers
+    LocalPipeline.SetConstantBuffer(0, true, ConstantBufferModels);
+    UpdateConstant(InDeviceContext, ConstantBufferModels, InPrimitive.Location, InPrimitive.Rotation, InPrimitive.Scale);
 
-	Pipeline->SetConstantBuffer(2, true, ConstantBufferColor);
-	UpdateConstant(ConstantBufferColor, InPrimitive.Color);
+    LocalPipeline.SetConstantBuffer(2, true, ConstantBufferColor);
+    UpdateConstant(InDeviceContext, ConstantBufferColor, InPrimitive.Color);
 
-	// Set vertex buffer and draw
-	Pipeline->SetVertexBuffer(InPrimitive.Vertexbuffer, Stride);
-	Pipeline->Draw(InPrimitive.NumVertices, 0);
+    // Set vertex buffer and draw
+    LocalPipeline.SetVertexBuffer(InPrimitive.Vertexbuffer, Stride);
+    LocalPipeline.Draw(InPrimitive.NumVertices, 0);
 }
-
 /**
  * @brief Index Buffer를 사용하는 Editor Primitive 렌더링 함수
  * @param InPrimitive 렌더링할 에디터 프리미티브
@@ -382,49 +552,49 @@ void URenderer::RenderPrimitive(const FEditorPrimitive& InPrimitive, const FRend
  * @param InStride 정점 스트라이드
  * @param InIndexBufferStride 인덱스 버퍼 스트라이드
  */
-void URenderer::RenderPrimitiveIndexed(const FEditorPrimitive& InPrimitive, const FRenderState& InRenderState,
-	bool bInUseBaseConstantBuffer, uint32 InStride, uint32 InIndexBufferStride)
+void URenderer::RenderPrimitiveIndexed(ID3D11DeviceContext* InDeviceContext, const FEditorPrimitive& InPrimitive, const FRenderState& InRenderState,
+    bool bInUseBaseConstantBuffer, uint32 InStride, uint32 InIndexBufferStride)
 {
-	// Always visible 옵션에 따라 Depth 테스트 여부 결정
-	ID3D11DepthStencilState* DepthStencilState =
-		InPrimitive.bShouldAlwaysVisible ? DisabledDepthStencilState : DefaultDepthStencilState;
+    // Always visible 옵션에 따라 Depth 테스트 여부 결정
+    ID3D11DepthStencilState* DepthStencilState =
+        InPrimitive.bShouldAlwaysVisible ? DisabledDepthStencilState : DefaultDepthStencilState;
 
-	ID3D11RasterizerState* RasterizerState = GetRasterizerState(InRenderState);
+    ID3D11RasterizerState* RasterizerState = GetRasterizerState(InRenderState);
 
-	// 커스텀 셰이더가 있으면 사용, 없으면 기본 셰이더 사용
-	ID3D11InputLayout* InputLayout = InPrimitive.InputLayout ? InPrimitive.InputLayout : DefaultInputLayout;
-	ID3D11VertexShader* VertexShader = InPrimitive.VertexShader ? InPrimitive.VertexShader : DefaultVertexShader;
-	ID3D11PixelShader* PixelShader = InPrimitive.PixelShader ? InPrimitive.PixelShader : DefaultPixelShader;
+    // 커스텀 셰이더가 있으면 사용, 없으면 기본 셰이더 사용
+    ID3D11InputLayout* InputLayout = InPrimitive.InputLayout ? InPrimitive.InputLayout : DefaultInputLayout;
+    ID3D11VertexShader* VertexShader = InPrimitive.VertexShader ? InPrimitive.VertexShader : DefaultVertexShader;
+    ID3D11PixelShader* PixelShader = InPrimitive.PixelShader ? InPrimitive.PixelShader : DefaultPixelShader;
 
-	// Pipeline 정보 구성
-	FPipelineInfo PipelineInfo = {
-		InputLayout,
-		VertexShader,
-		RasterizerState,
-		DepthStencilState,
-		PixelShader,
-		nullptr,
-		InPrimitive.Topology
-	};
+    // Pipeline 정보 구성
+    FPipelineInfo PipelineInfo = {
+        InputLayout,
+        VertexShader,
+        RasterizerState,
+        DepthStencilState,
+        PixelShader,
+        nullptr,
+        InPrimitive.Topology
+    };
 
-	Pipeline->UpdatePipeline(PipelineInfo);
+    UPipeline LocalPipeline(InDeviceContext);
+    LocalPipeline.UpdatePipeline(PipelineInfo);
 
-	// 기본 상수 버퍼 사용하는 경우에만 업데이트
-	if (bInUseBaseConstantBuffer)
-	{
-		Pipeline->SetConstantBuffer(0, true, ConstantBufferModels);
-		UpdateConstant(ConstantBufferModels, InPrimitive.Location, InPrimitive.Rotation, InPrimitive.Scale);
+    // 기본 상수 버퍼 사용하는 경우에만 업데이트
+    if (bInUseBaseConstantBuffer)
+    {
+        LocalPipeline.SetConstantBuffer(0, true, ConstantBufferModels);
+        UpdateConstant(InDeviceContext, ConstantBufferModels, InPrimitive.Location, InPrimitive.Rotation, InPrimitive.Scale);
 
-		Pipeline->SetConstantBuffer(2, true, ConstantBufferColor);
-		UpdateConstant(ConstantBufferColor, InPrimitive.Color);
-	}
+        LocalPipeline.SetConstantBuffer(2, true, ConstantBufferColor);
+        UpdateConstant(InDeviceContext, ConstantBufferColor, InPrimitive.Color);
+    }
 
-	// Set buffers and draw indexed
-	Pipeline->SetIndexBuffer(InPrimitive.IndexBuffer, InIndexBufferStride);
-	Pipeline->SetVertexBuffer(InPrimitive.Vertexbuffer, InStride);
-	Pipeline->DrawIndexed(InPrimitive.NumIndices, 0, 0);
+    // Set buffers and draw indexed
+    LocalPipeline.SetIndexBuffer(InPrimitive.IndexBuffer, InIndexBufferStride);
+    LocalPipeline.SetVertexBuffer(InPrimitive.Vertexbuffer, InStride);
+    LocalPipeline.DrawIndexed(InPrimitive.NumIndices, 0, 0);
 }
-
 /**
  * @brief 스왑 체인의 백 버퍼와 프론트 버퍼를 교체하여 화면에 출력
  */
@@ -433,12 +603,14 @@ void URenderer::RenderEnd() const
 	GetSwapChain()->Present(0, 0); // 1: VSync 활성화
 }
 
-void URenderer::RenderStaticMesh(UStaticMeshComponent* InMeshComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferMaterial)
+void URenderer::RenderStaticMesh(ID3D11DeviceContext* InDeviceContext, UStaticMeshComponent* InMeshComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferMaterial)
 {
     if (!InMeshComp->GetStaticMesh()) return;
 
     FStaticMesh* MeshAsset = InMeshComp->GetStaticMesh()->GetStaticMeshAsset();
     if (!MeshAsset)    return;
+
+    UPipeline LocalPipeline(InDeviceContext);
 
     // Pipeline setting
     FPipelineInfo PipelineInfo = {
@@ -449,24 +621,25 @@ void URenderer::RenderStaticMesh(UStaticMeshComponent* InMeshComp, ID3D11Rasteri
         TexturePixelShader,
         nullptr,
     };
-    Pipeline->UpdatePipeline(PipelineInfo);
+    LocalPipeline.UpdatePipeline(PipelineInfo);
 
     // Constant buffer & transform
-    Pipeline->SetConstantBuffer(0, true, InConstantBufferModels);
+    LocalPipeline.SetConstantBuffer(0, true, InConstantBufferModels);
     UpdateConstant(
+        InDeviceContext,
         InConstantBufferModels,
         InMeshComp->GetRelativeLocation(),
         InMeshComp->GetRelativeRotation(),
         InMeshComp->GetRelativeScale3D()
     );
 
-    Pipeline->SetVertexBuffer(InMeshComp->GetVertexBuffer(), sizeof(FNormalVertex));
-    Pipeline->SetIndexBuffer(InMeshComp->GetIndexBuffer(), 0);
+    LocalPipeline.SetVertexBuffer(InMeshComp->GetVertexBuffer(), sizeof(FNormalVertex));
+    LocalPipeline.SetIndexBuffer(InMeshComp->GetIndexBuffer(), 0);
 
     // If no material is assigned, render the entire mesh using the default shader
     if (MeshAsset->MaterialInfo.empty() || InMeshComp->GetStaticMesh()->GetNumMaterials() == 0)
     {
-        Pipeline->DrawIndexed(MeshAsset->Indices.size(), 0, 0);
+        LocalPipeline.DrawIndexed(MeshAsset->Indices.size(), 0, 0);
         return;
     }
 
@@ -495,34 +668,30 @@ void URenderer::RenderStaticMesh(UStaticMeshComponent* InMeshComp, ID3D11Rasteri
             MaterialConstants.Time = InMeshComp->GetElapsedTime();
 
             // Update Constant Buffer
-            UpdateConstant(InConstantBufferMaterial, MaterialConstants);
+            UpdateConstant(InDeviceContext, InConstantBufferMaterial, MaterialConstants);
 
-            if (Material->GetDiffuseTexture())
-            {
+            if (Material->GetDiffuseTexture()){
                 auto* Proxy = Material->GetDiffuseTexture()->GetRenderProxy();
-                Pipeline->SetTexture(0, false, Proxy->GetSRV());
-                Pipeline->SetSamplerState(0, false, Proxy->GetSampler());
+                LocalPipeline.SetTexture(0, false, Proxy->GetSRV());
+                LocalPipeline.SetSamplerState(0, false, Proxy->GetSampler());
             }
-            if (Material->GetAmbientTexture())
-            {
+            if (Material->GetAmbientTexture()){
                 auto* Proxy = Material->GetAmbientTexture()->GetRenderProxy();
-                Pipeline->SetTexture(1, false, Proxy->GetSRV());
-                Pipeline->SetSamplerState(1, false, Proxy->GetSampler());
+                LocalPipeline.SetTexture(1, false, Proxy->GetSRV());
+                LocalPipeline.SetSamplerState(1, false, Proxy->GetSampler());
             }
-            if (Material->GetSpecularTexture())
-            {
+            if (Material->GetSpecularTexture()){
                 auto* Proxy = Material->GetSpecularTexture()->GetRenderProxy();
-                Pipeline->SetTexture(2, false, Proxy->GetSRV());
-                Pipeline->SetSamplerState(2, false, Proxy->GetSampler());
+                LocalPipeline.SetTexture(2, false, Proxy->GetSRV());
+                LocalPipeline.SetSamplerState(2, false, Proxy->GetSampler());
             }
-            if (Material->GetAlphaTexture())
-            {
+            if (Material->GetAlphaTexture()){
                 auto* Proxy = Material->GetAlphaTexture()->GetRenderProxy();
-                Pipeline->SetTexture(4, false, Proxy->GetSRV());
-                Pipeline->SetSamplerState(4, false, Proxy->GetSampler());
+                LocalPipeline.SetTexture(4, false, Proxy->GetSRV());
+                LocalPipeline.SetSamplerState(4, false, Proxy->GetSampler());
             }
         }
-        Pipeline->DrawIndexed(Section.IndexCount, Section.StartIndex, 0);
+        LocalPipeline.DrawIndexed(Section.IndexCount, Section.StartIndex, 0);
     }
 }
 
@@ -541,8 +710,10 @@ void URenderer::RenderBillboard(UBillBoardComponent* InBillBoardComp, UCamera* I
 	FontRenderer->RenderText(UUIDString.c_str(), RT, viewProjConstData);
 }
 
-void URenderer::RenderPrimitiveDefault(UPrimitiveComponent* InPrimitiveComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferColor)
+void URenderer::RenderPrimitiveDefault(ID3D11DeviceContext* InDeviceContext, UPrimitiveComponent* InPrimitiveComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferColor)
 {
+    UPipeline LocalPipeline(InDeviceContext);
+
     // Update pipeline info
     FPipelineInfo PipelineInfo = {
         DefaultInputLayout,
@@ -552,32 +723,33 @@ void URenderer::RenderPrimitiveDefault(UPrimitiveComponent* InPrimitiveComp, ID3
         DefaultPixelShader,
         nullptr,
     };
-    Pipeline->UpdatePipeline(PipelineInfo);
+    LocalPipeline.UpdatePipeline(PipelineInfo);
 
     // Update pipeline buffers
-    Pipeline->SetConstantBuffer(0, true, InConstantBufferModels);
+    LocalPipeline.SetConstantBuffer(0, true, InConstantBufferModels);
     UpdateConstant(
+        InDeviceContext,
         InConstantBufferModels,
         InPrimitiveComp->GetRelativeLocation(),
         InPrimitiveComp->GetRelativeRotation(),
         InPrimitiveComp->GetRelativeScale3D()
     );
-    Pipeline->SetConstantBuffer(2, true, InConstantBufferColor);
-    UpdateConstant(InConstantBufferColor, InPrimitiveComp->GetColor());
+    LocalPipeline.SetConstantBuffer(2, true, InConstantBufferColor);
+    UpdateConstant(InDeviceContext, InConstantBufferColor, InPrimitiveComp->GetColor());
 
     // Bind vertex buffer
-    Pipeline->SetVertexBuffer(InPrimitiveComp->GetVertexBuffer(), Stride);
+    LocalPipeline.SetVertexBuffer(InPrimitiveComp->GetVertexBuffer(), Stride);
 
     // Draw vertex + index
     if (InPrimitiveComp->GetIndexBuffer() && InPrimitiveComp->GetIndicesData())
     {
-        Pipeline->SetIndexBuffer(InPrimitiveComp->GetIndexBuffer(), 0);
-        Pipeline->DrawIndexed(InPrimitiveComp->GetNumIndices(), 0, 0);
+        LocalPipeline.SetIndexBuffer(InPrimitiveComp->GetIndexBuffer(), 0);
+        LocalPipeline.DrawIndexed(InPrimitiveComp->GetNumIndices(), 0, 0);
     }
     // Draw vertex
     else
     {
-        Pipeline->Draw(static_cast<uint32>(InPrimitiveComp->GetNumVertices()), 0);
+        LocalPipeline.Draw(static_cast<uint32>(InPrimitiveComp->GetNumVertices()), 0);
     }
 }
 /**
@@ -873,13 +1045,13 @@ void URenderer::ReleaseConstantBuffer()
 	}
 }
 
-void URenderer::UpdateConstant(ID3D11Buffer* InConstantBuffer, const UPrimitiveComponent* InPrimitive) const
+void URenderer::UpdateConstant(ID3D11DeviceContext* InDeviceContext, ID3D11Buffer* InConstantBuffer, const UPrimitiveComponent* InPrimitive) const
 {
     if (InConstantBuffer)
     {
         D3D11_MAPPED_SUBRESOURCE constantbufferMSR;
 
-        GetDeviceContext()->Map(InConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR);
+        InDeviceContext->Map(InConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR);
         // update constant buffer every frame
         FMatrix* Constants = static_cast<FMatrix*>(constantbufferMSR.pData);
         {
@@ -887,7 +1059,7 @@ void URenderer::UpdateConstant(ID3D11Buffer* InConstantBuffer, const UPrimitiveC
                 FVector::GetDegreeToRadian(InPrimitive->GetRelativeRotation()),
                 InPrimitive->GetRelativeScale3D());
         }
-        GetDeviceContext()->Unmap(InConstantBuffer, 0);
+        InDeviceContext->Unmap(InConstantBuffer, 0);
     }
 }
 /**
@@ -896,23 +1068,23 @@ void URenderer::UpdateConstant(ID3D11Buffer* InConstantBuffer, const UPrimitiveC
  * @param InRotation
  * @param InScale Ball Size
  */
-void URenderer::UpdateConstant(ID3D11Buffer* InConstantBuffer, const FVector& InPosition, const FVector& InRotation, const FVector& InScale) const
+void URenderer::UpdateConstant(ID3D11DeviceContext* InDeviceContext, ID3D11Buffer* InConstantBuffer, const FVector& InPosition, const FVector& InRotation, const FVector& InScale) const
 {
     if (InConstantBuffer)
     {
         D3D11_MAPPED_SUBRESOURCE constantbufferMSR;
 
-        GetDeviceContext()->Map(InConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR);
+        InDeviceContext->Map(InConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR);
 
         // update constant buffer every frame
         FMatrix* Constants = static_cast<FMatrix*>(constantbufferMSR.pData);
         {
             *Constants = FMatrix::GetModelMatrix(InPosition, FVector::GetDegreeToRadian(InRotation), InScale);
         }
-        GetDeviceContext()->Unmap(InConstantBuffer, 0);
+        InDeviceContext->Unmap(InConstantBuffer, 0);
     }
 }
-void URenderer::UpdateConstant(ID3D11Buffer* InConstantBuffer, const FViewProjConstants& InViewProjConstants) const
+void URenderer::UpdateConstant(ID3D11DeviceContext* InDeviceContext, ID3D11Buffer* InConstantBuffer, const FViewProjConstants& InViewProjConstants) const
 {
     Pipeline->SetConstantBuffer(1, true, InConstantBuffer);
 
@@ -920,27 +1092,27 @@ void URenderer::UpdateConstant(ID3D11Buffer* InConstantBuffer, const FViewProjCo
     {
         D3D11_MAPPED_SUBRESOURCE ConstantBufferMSR = {};
 
-        GetDeviceContext()->Map(InConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &ConstantBufferMSR);
+        InDeviceContext->Map(InConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &ConstantBufferMSR);
         // update constant buffer every frame
         FViewProjConstants* ViewProjectionConstants = static_cast<FViewProjConstants*>(ConstantBufferMSR.pData);
         {
             ViewProjectionConstants->View = InViewProjConstants.View;
             ViewProjectionConstants->Projection = InViewProjConstants.Projection;
         }
-        GetDeviceContext()->Unmap(InConstantBuffer, 0);
+        InDeviceContext->Unmap(InConstantBuffer, 0);
     }
 }
-void URenderer::UpdateConstant(ID3D11Buffer* InConstantBuffer, const FMatrix& InMatrix) const
+void URenderer::UpdateConstant(ID3D11DeviceContext* InDeviceContext, ID3D11Buffer* InConstantBuffer, const FMatrix& InMatrix) const
 {
     if (InConstantBuffer)
     {
         D3D11_MAPPED_SUBRESOURCE MappedSubResource;
-        GetDeviceContext()->Map(InConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedSubResource);
+        InDeviceContext->Map(InConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedSubResource);
         memcpy(MappedSubResource.pData, &InMatrix, sizeof(FMatrix));
-        GetDeviceContext()->Unmap(InConstantBuffer, 0);
+        InDeviceContext->Unmap(InConstantBuffer, 0);
     }
 }
-void URenderer::UpdateConstant(ID3D11Buffer* InConstantBuffer, const FVector4& InColor) const
+void URenderer::UpdateConstant(ID3D11DeviceContext* InDeviceContext, ID3D11Buffer* InConstantBuffer, const FVector4& InColor) const
 {
     Pipeline->SetConstantBuffer(2, false, InConstantBuffer);
 
@@ -948,7 +1120,7 @@ void URenderer::UpdateConstant(ID3D11Buffer* InConstantBuffer, const FVector4& I
     {
         D3D11_MAPPED_SUBRESOURCE ConstantBufferMSR = {};
 
-        GetDeviceContext()->Map(InConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &ConstantBufferMSR);
+        InDeviceContext->Map(InConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &ConstantBufferMSR);
         // update constant buffer every frame
         FVector4* ColorConstants = static_cast<FVector4*>(ConstantBufferMSR.pData);
         {
@@ -957,10 +1129,10 @@ void URenderer::UpdateConstant(ID3D11Buffer* InConstantBuffer, const FVector4& I
             ColorConstants->Z = InColor.Z;
             ColorConstants->W = InColor.W;
         }
-        GetDeviceContext()->Unmap(InConstantBuffer, 0);
+        InDeviceContext->Unmap(InConstantBuffer, 0);
     }
 }
-void URenderer::UpdateConstant(ID3D11Buffer* InConstantBuffer, const FMaterialConstants& InMaterial) const
+void URenderer::UpdateConstant(ID3D11DeviceContext* InDeviceContext, ID3D11Buffer* InConstantBuffer, const FMaterialConstants& InMaterial) const
 {
     Pipeline->SetConstantBuffer(2, false, InConstantBuffer);
 
@@ -968,7 +1140,7 @@ void URenderer::UpdateConstant(ID3D11Buffer* InConstantBuffer, const FMaterialCo
     {
         D3D11_MAPPED_SUBRESOURCE ConstantBufferMSR = {};
 
-        GetDeviceContext()->Map(InConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &ConstantBufferMSR);
+        InDeviceContext->Map(InConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &ConstantBufferMSR);
 
         FMaterialConstants* MaterialConstants = static_cast<FMaterialConstants*>(ConstantBufferMSR.pData);
         {
@@ -981,7 +1153,7 @@ void URenderer::UpdateConstant(ID3D11Buffer* InConstantBuffer, const FMaterialCo
             MaterialConstants->MaterialFlags = InMaterial.MaterialFlags;
             MaterialConstants->Time = InMaterial.Time;
         }
-        GetDeviceContext()->Unmap(InConstantBuffer, 0);
+        InDeviceContext->Unmap(InConstantBuffer, 0);
     }
 }
 bool URenderer::UpdateVertexBuffer(ID3D11Buffer* InVertexBuffer, const TArray<FVector>& InVertices) const

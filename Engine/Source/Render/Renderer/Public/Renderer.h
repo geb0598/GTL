@@ -70,11 +70,11 @@ public:
 	void RenderBegin() const;
 	void RenderLevel(UCamera* InCurrentCamera);
 	void RenderEnd() const;
-	void RenderStaticMesh(UStaticMeshComponent* InMeshComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferMaterial);
+	void RenderStaticMesh(ID3D11DeviceContext* InDeviceContext, UStaticMeshComponent* InMeshComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferMaterial);
 	void RenderBillboard(UBillBoardComponent* InBillBoardComp, UCamera* InCurrentCamera);
-	void RenderPrimitiveDefault(UPrimitiveComponent* InPrimitiveComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferColor);
-	void RenderPrimitive(const FEditorPrimitive& InPrimitive, const FRenderState& InRenderState);
-	void RenderPrimitiveIndexed(const FEditorPrimitive& InPrimitive, const FRenderState& InRenderState,
+	void RenderPrimitiveDefault(ID3D11DeviceContext* InDeviceContext, UPrimitiveComponent* InPrimitiveComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferColor);
+	void RenderPrimitive(ID3D11DeviceContext* InDeviceContext, const FEditorPrimitive& InPrimitive, const FRenderState& InRenderState);
+	void RenderPrimitiveIndexed(ID3D11DeviceContext* InDeviceContext, const FEditorPrimitive& InPrimitive, const FRenderState& InRenderState,
 	                            bool bInUseBaseConstantBuffer, uint32 InStride, uint32 InIndexBufferStride);
 
 	void OnResize(uint32 Inwidth = 0, uint32 InHeight = 0) const;
@@ -89,12 +89,12 @@ public:
 	void CreatePixelShader(const wstring& InFilePath, ID3D11PixelShader** InPixelShader) const;
 
 	bool UpdateVertexBuffer(ID3D11Buffer* InVertexBuffer, const TArray<FVector>& InVertices) const;
-	void UpdateConstant(ID3D11Buffer* InConstantBuffer, const UPrimitiveComponent* InPrimitive) const;
-	void UpdateConstant(ID3D11Buffer* InConstantBuffer, const FVector& InPosition, const FVector& InRotation, const FVector& InScale) const;
-	void UpdateConstant(ID3D11Buffer* InConstantBuffer, const FViewProjConstants& InViewProjConstants) const;
-	void UpdateConstant(ID3D11Buffer* InConstantBuffer, const FMatrix& InMatrix) const;
-	void UpdateConstant(ID3D11Buffer* InConstantBuffer, const FVector4& InColor) const;
-	void UpdateConstant(ID3D11Buffer* InConstantBuffer, const FMaterialConstants& InMaterial) const;
+	void UpdateConstant(ID3D11DeviceContext* InDeviceContext, ID3D11Buffer* InConstantBuffer, const UPrimitiveComponent* InPrimitive) const;
+	void UpdateConstant(ID3D11DeviceContext* InDeviceContext, ID3D11Buffer* InConstantBuffer, const FVector& InPosition, const FVector& InRotation, const FVector& InScale) const;
+	void UpdateConstant(ID3D11DeviceContext* InDeviceContext, ID3D11Buffer* InConstantBuffer, const FViewProjConstants& InViewProjConstants) const;
+	void UpdateConstant(ID3D11DeviceContext* InDeviceContext, ID3D11Buffer* InConstantBuffer, const FMatrix& InMatrix) const;
+	void UpdateConstant(ID3D11DeviceContext* InDeviceContext, ID3D11Buffer* InConstantBuffer, const FVector4& InColor) const;
+	void UpdateConstant(ID3D11DeviceContext* InDeviceContext, ID3D11Buffer* InConstantBuffer, const FMaterialConstants& InMaterial) const;
 
 	static void ReleaseVertexBuffer(ID3D11Buffer* InVertexBuffer);
 	static void ReleaseIndexBuffer(ID3D11Buffer* InIndexBuffer);
@@ -171,8 +171,19 @@ private:
 	};
 
 	TMap<FRasterKey, ID3D11RasterizerState*, FRasterKeyHasher> RasterCache;
+	mutable std::mutex RasterCacheMutex;
 
 	ID3D11RasterizerState* GetRasterizerState(const FRenderState& InRenderState);
 
 	bool bIsResizing = false;
+
+#ifdef MULTI_THREADING
+	constexpr static size_t NUM_WORKER_THREADS = 4;
+
+	TArray<ID3D11DeviceContext*> DeferredContexts;
+	TArray<ID3D11Buffer*> ThreadConstantBufferModels;
+	TArray<ID3D11Buffer*> ThreadConstantBufferColors;
+	TArray<ID3D11Buffer*> ThreadConstantBufferMaterials;
+	TArray<ID3D11CommandList*> CommandLists;
+#endif
 };

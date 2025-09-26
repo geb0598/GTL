@@ -8,7 +8,7 @@ class UAxis : public UObject
 public:
 	UAxis();
 	~UAxis() override;
-	void Render();
+	void Render(ID3D11DeviceContext* InDeviceContext);
 
 private:
 	FEditorPrimitive Primitive;

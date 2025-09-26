@@ -108,17 +108,17 @@ void UEditor::Update()
 	UpdateLayout();
 }
 
-void UEditor::RenderEditor(UCamera* InCamera)
+void UEditor::RenderEditor(ID3D11DeviceContext* InDeviceContext, UCamera* InCamera)
 {
 	// Grid, Axis 등 에디터 요소를 렌더링합니다.
-	BatchLines.Render();
-	Axis.Render();
+	BatchLines.Render(InDeviceContext);
+	Axis.Render(InDeviceContext);
 
 	// Gizmo 렌더링 시, 현재 활성화된 카메라의 위치를 전달해야 합니다.
 	if (InCamera)
 	{
 		AActor* SelectedActor = ULevelManager::GetInstance().GetCurrentLevel()->GetSelectedActor();
-		Gizmo.RenderGizmo(SelectedActor, InCamera);
+		Gizmo.RenderGizmo(InDeviceContext, SelectedActor, InCamera);
 	}
 }
 

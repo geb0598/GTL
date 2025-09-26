@@ -51,7 +51,7 @@ public:
 	UGizmo();
 	~UGizmo() override;
 	void UpdateScale(UCamera* InCamera);
-	void RenderGizmo(AActor* Actor, UCamera* InCamera);
+	void RenderGizmo(ID3D11DeviceContext* InDeviceContext, AActor* Actor, UCamera* InCamera);
 	void ChangeGizmoMode();
 
 	/* *
