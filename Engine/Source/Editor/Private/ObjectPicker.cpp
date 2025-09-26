@@ -21,7 +21,7 @@ FRay UObjectPicker::GetModelRay(const FRay& Ray, UPrimitiveComponent* Primitive)
 	return ModelRay;
 }
 
-UPrimitiveComponent* UObjectPicker::PickPrimitive(UCamera* InActiveCamera, const FRay& WorldRay, TArray<UPrimitiveComponent*> Candidate, float* Distance)
+UPrimitiveComponent* UObjectPicker::PickPrimitive(UCamera* InActiveCamera, const FRay& WorldRay, TArray<UPrimitiveComponent*> Candidate, float* OutDistance)
 {
 	UPrimitiveComponent* ShortestPrimitive = nullptr;
 	float ShortestDistance = D3D11_FLOAT32_MAX;
@@ -34,7 +34,7 @@ UPrimitiveComponent* UObjectPicker::PickPrimitive(UCamera* InActiveCamera, const
 			continue;
 		}
 		FMatrix ModelMat = Primitive->GetWorldTransformMatrix();
-		if (IsRayPrimitiveCollided(InActiveCamera, WorldRay, Primitive, ModelMat, &PrimitiveDistance))
+		if (DoesRayIntersectPrimitive(InActiveCamera, WorldRay, Primitive, ModelMat, &PrimitiveDistance))
 			//Ray와 Primitive가 충돌했다면 거리 테스트 후 가까운 Actor Picking
 		{
 			if (PrimitiveDistance < ShortestDistance)
@@ -44,7 +44,7 @@ UPrimitiveComponent* UObjectPicker::PickPrimitive(UCamera* InActiveCamera, const
 			}
 		}
 	}
-	*Distance = ShortestDistance;
+	*OutDistance = ShortestDistance;
 
 	return ShortestPrimitive;
 }
@@ -144,7 +144,7 @@ void UObjectPicker::PickGizmo(UCamera* InActiveCamera, const FRay& WorldRay, UGi
 	{
 		for (int a = 0; a < 3; a++)
 		{
-			if (IsRayCollideWithPlane(WorldRay, GizmoLocation, GizmoAxises[a], CollisionPoint))
+			if (DoesRayIntersectPlane(WorldRay, GizmoLocation, GizmoAxises[a], CollisionPoint))
 			{
 				FVector RadiusVector = CollisionPoint - GizmoLocation;
 				if (Gizmo.IsInRadius(RadiusVector.Length()))
@@ -165,40 +165,36 @@ void UObjectPicker::PickGizmo(UCamera* InActiveCamera, const FRay& WorldRay, UGi
 	Gizmo.SetGizmoDirection(EGizmoDirection::None);
 }
 
-bool UObjectPicker::IsRayPrimitiveCollided(
+bool UObjectPicker::DoesRayIntersectPrimitive(
     UCamera* InActiveCamera,
-    const FRay& WorldRay,
-    UPrimitiveComponent* Primitive,
-    const FMatrix& ModelMatrix,
-    float* ShortestDistance)
+    const FRay& InWorldRay,
+    UPrimitiveComponent* InPrimitive,
+    const FMatrix& InModelMatrix,
+    float* OutShortestDistance)
 {
     // --- Broad phase: world-space AABB vs world ray ---
-    FVector aabbMin, aabbMax;
-    Primitive->GetWorldAABB(aabbMin, aabbMax);
-    const FAABB worldAABB(aabbMin, aabbMax);
+    FVector AabbMin, AabbMax;
+    InPrimitive->GetWorldAABB(AabbMin, AabbMax);
+    const FAABB worldAABB(AabbMin, AabbMax);
 
-    float aabbDist;
-    if (!worldAABB.RaycastHit(WorldRay, &aabbDist))
+    float AabbDist;
+    if (!worldAABB.RaycastHit(InWorldRay, &AabbDist))
         return false;
 
-    // If you want AABB-only picking, uncomment:
-    // *ShortestDistance = std::min(*ShortestDistance, aabbDist);
-    // return true;
-
     // --- Narrow phase: only if AABB hit ---
-    FRay modelRay = GetModelRay(WorldRay, Primitive);
-    return IsRayMollerTrumboreCollided(InActiveCamera, modelRay, Primitive, ModelMatrix, ShortestDistance);
+    FRay ModelRay = GetModelRay(InWorldRay, InPrimitive);
+    return DoesRayIntersectPrimitive_MollerTrumbore(InActiveCamera, ModelRay, InPrimitive, InModelMatrix, OutShortestDistance);
 }
 
 //개별 primitive와 ray 충돌 검사
-bool UObjectPicker::IsRayMollerTrumboreCollided(UCamera* InActiveCamera, const FRay& ModelRay, UPrimitiveComponent* Primitive, const FMatrix& ModelMatrix, float* ShortestDistance)
+bool UObjectPicker::DoesRayIntersectPrimitive_MollerTrumbore(UCamera* InActiveCamera, const FRay& InModelRay, UPrimitiveComponent* InPrimitive, const FMatrix& InModelMatrix, float* OutShortestDistance)
 
 {
-	const uint32 NumVertices = Primitive->GetNumVertices();
-	const uint32 NumIndices = Primitive->GetNumIndices();
+	const uint32 NumVertices = InPrimitive->GetNumVertices();
+	const uint32 NumIndices = InPrimitive->GetNumIndices();
 
-	const TArray<FNormalVertex>* Vertices = Primitive->GetVerticesData();
-	const TArray<uint32>* Indices = Primitive->GetIndicesData();
+	const TArray<FNormalVertex>* Vertices = InPrimitive->GetVerticesData();
+	const TArray<uint32>* Indices = InPrimitive->GetIndicesData();
 
 	float Distance = D3D11_FLOAT32_MAX; //Distance 초기화
 	bool bIsHit = false;
@@ -223,12 +219,12 @@ bool UObjectPicker::IsRayMollerTrumboreCollided(UCamera* InActiveCamera, const F
 			TriangleVertices[2] = (*Vertices)[TriIndex * 3 + 2].Position;
 		}
 
-		if (IsRayTriangleCollided(InActiveCamera, ModelRay, TriangleVertices[0], TriangleVertices[1], TriangleVertices[2], ModelMatrix, &Distance)) //Ray와 삼각형이 충돌하면 거리 비교 후 최단거리 갱신
+		if (DoesRayIntersectTriangle(InActiveCamera, InModelRay, TriangleVertices[0], TriangleVertices[1], TriangleVertices[2], InModelMatrix, &Distance)) //Ray와 삼각형이 충돌하면 거리 비교 후 최단거리 갱신
 		{
 			bIsHit = true;
-			if (Distance < *ShortestDistance)
+			if (Distance < *OutShortestDistance)
 			{
-				*ShortestDistance = Distance;
+				*OutShortestDistance = Distance;
 			}
 		}
 	}
@@ -236,8 +232,8 @@ bool UObjectPicker::IsRayMollerTrumboreCollided(UCamera* InActiveCamera, const F
 	return bIsHit;
 }
 
-bool UObjectPicker::IsRayTriangleCollided(UCamera* InActiveCamera, const FRay& Ray, const FVector& Vertex1, const FVector& Vertex2, const FVector& Vertex3,
-                           const FMatrix& ModelMatrix, float* Distance)
+bool UObjectPicker::DoesRayIntersectTriangle(UCamera* InActiveCamera, const FRay& InRay, const FVector& Vertex1, const FVector& Vertex2, const FVector& Vertex3,
+                           const FMatrix& ModelMatrix, float* OutDistance)
 {
 	FVector CameraForward = InActiveCamera->GetForward(); //카메라 정보 필요
 	float NearZ = InActiveCamera->GetNearZ();
@@ -249,8 +245,8 @@ bool UObjectPicker::IsRayTriangleCollided(UCamera* InActiveCamera, const FRay& R
 	//Ray.Direction * T + Ray.Origin = E1*V + E2*U + Vertex1.Position을 만족하는 T U V값을 구해야 함.
 	//[E1 E2 RayDirection][V U T] = [RayOrigin-Vertex1.Position]에서 cramer's rule을 이용해서 T U V값을 구하고
 	//U V값이 저 위의 조건을 만족하고 T값이 카메라의 near값 이상이어야 함.
-	FVector RayDirection{Ray.Direction.X, Ray.Direction.Y, Ray.Direction.Z};
-	FVector RayOrigin{Ray.Origin.X, Ray.Origin.Y, Ray.Origin.Z};
+	FVector RayDirection{InRay.Direction.X, InRay.Direction.Y, InRay.Direction.Z};
+	FVector RayOrigin{InRay.Origin.X, InRay.Origin.Y, InRay.Origin.Z};
 	FVector E1 = Vertex2 - Vertex1;
 	FVector E2 = Vertex3 - Vertex1;
 	FVector Result = (RayOrigin - Vertex1); //[E1 E2 -RayDirection]x = [RayOrigin - Vertex1.Position] 의 result임.
@@ -288,18 +284,18 @@ bool UObjectPicker::IsRayTriangleCollided(UCamera* InActiveCamera, const FRay& R
 	//이제 이것을 월드 좌표계로 변환해서 view Frustum안에 들어가는지 판단할 것임.(near, far plane만 테스트하면 됨)
 
 	FVector4 HitPointWorld = HitPoint4 * ModelMatrix;
-	FVector4 RayOriginWorld = Ray.Origin * ModelMatrix;
+	FVector4 RayOriginWorld = InRay.Origin * ModelMatrix;
 
 	FVector4 DistanceVec = HitPointWorld - RayOriginWorld;
 	if (DistanceVec.Dot3(CameraForward) >= NearZ && DistanceVec.Dot3(CameraForward) <= FarZ)
 	{
-		*Distance = DistanceVec.Length();
+		*OutDistance = DistanceVec.Length();
 		return true;
 	}
 	return false;
 }
 
-bool UObjectPicker::IsRayCollideWithPlane(const FRay& WorldRay, FVector PlanePoint, FVector Normal, FVector& PointOnPlane)
+bool UObjectPicker::DoesRayIntersectPlane(const FRay& WorldRay, FVector PlanePoint, FVector Normal, FVector& PointOnPlane)
 {
 	FVector WorldRayOrigin{ WorldRay.Origin.X, WorldRay.Origin.Y ,WorldRay.Origin.Z };
 

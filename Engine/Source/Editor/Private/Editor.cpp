@@ -482,7 +482,7 @@ FVector UEditor::GetGizmoDragLocation(UCamera* InActiveCamera, FRay& WorldRay)
 		GizmoAxis = GizmoAxis4 * FMatrix::RotationMatrix(RadRotation);
 	}
 
-	if (ObjectPicker.IsRayCollideWithPlane(WorldRay, PlaneOrigin, InActiveCamera->CalculatePlaneNormal(GizmoAxis).Cross(GizmoAxis), MouseWorld))
+	if (ObjectPicker.DoesRayIntersectPlane(WorldRay, PlaneOrigin, InActiveCamera->CalculatePlaneNormal(GizmoAxis).Cross(GizmoAxis), MouseWorld))
 	{
 		FVector MouseDistance = MouseWorld - Gizmo.GetDragStartMouseLocation();
 		return Gizmo.GetDragStartActorLocation() + GizmoAxis * MouseDistance.Dot(GizmoAxis);
@@ -503,7 +503,7 @@ FVector UEditor::GetGizmoDragRotation(UCamera* InActiveCamera, FRay& WorldRay)
 		GizmoAxis = GizmoAxis4 * FMatrix::RotationMatrix(RadRotation);
 	}
 
-	if (ObjectPicker.IsRayCollideWithPlane(WorldRay, PlaneOrigin, GizmoAxis, MouseWorld))
+	if (ObjectPicker.DoesRayIntersectPlane(WorldRay, PlaneOrigin, GizmoAxis, MouseWorld))
 	{
 		FVector PlaneOriginToMouse = MouseWorld - PlaneOrigin;
 		FVector PlaneOriginToMouseStart = Gizmo.GetDragStartMouseLocation() - PlaneOrigin;
@@ -543,7 +543,7 @@ FVector UEditor::GetGizmoDragScale(UCamera* InActiveCamera, FRay& WorldRay)
 
 
 	FVector PlaneNormal = InActiveCamera->CalculatePlaneNormal(GizmoAxis).Cross(GizmoAxis);
-	if (ObjectPicker.IsRayCollideWithPlane(WorldRay, PlaneOrigin, PlaneNormal, MouseWorld))
+	if (ObjectPicker.DoesRayIntersectPlane(WorldRay, PlaneOrigin, PlaneNormal, MouseWorld))
 	{
 		FVector PlaneOriginToMouse = MouseWorld - PlaneOrigin;
 		FVector PlaneOriginToMouseStart = Gizmo.GetDragStartMouseLocation() - PlaneOrigin;
