@@ -94,6 +94,15 @@ FVector& FVector::operator*=(const float InRatio)
 	return *this;
 }
 
+FVector& FVector::operator/=(const float InRatio)
+{
+	X /= InRatio;
+	Y /= InRatio;
+	Z /= InRatio;
+
+	return *this;
+}
+
 bool FVector::operator==(const FVector& InOther) const
 {
 	if (X == InOther.X && Y == InOther.Y && Z == InOther.Z)

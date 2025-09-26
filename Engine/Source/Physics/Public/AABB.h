@@ -29,6 +29,23 @@ struct FAABB : public IBoundingVolume
 
 	bool RaycastHit(const FRay& Ray, float* OutDistance) const override;
 	EBoundingVolumeType GetType() const override { return EBoundingVolumeType::AABB; }
+
+	FAABB Union(const FAABB& A, const FAABB& B) const
+	{
+		FVector NewMin(
+			std::min(A.Min.X, B.Min.X),
+			std::min(A.Min.Y, B.Min.Y),
+			std::min(A.Min.Z, B.Min.Z)
+		);
+
+		FVector NewMax(
+			std::max(A.Max.X, B.Max.X),
+			std::max(A.Max.Y, B.Max.Y),
+			std::max(A.Max.Z, B.Max.Z)
+		);
+
+		return FAABB(NewMin, NewMax);
+	}
 };
 
 FORCEINLINE bool FAABB::RaycastHit(const FRay& Ray, float* OutDistance) const
