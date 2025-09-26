@@ -88,12 +88,12 @@ void UBatchLines::UpdateVertexBuffer()
 	bChangedVertices = false;
 }
 
-void UBatchLines::Render(ID3D11DeviceContext* InDeviceContext)
+void UBatchLines::Render(UPipeline& InPipeline)
 {
 	URenderer& Renderer = URenderer::GetInstance();
 
 	// to do: 아래 함수를 batch에 맞게 수정해야 함.
-	Renderer.RenderPrimitiveIndexed(InDeviceContext, Primitive, Primitive.RenderState, false, sizeof(FVector), sizeof(uint32));
+	Renderer.RenderPrimitiveIndexed(InPipeline, Primitive, Primitive.RenderState, false, sizeof(FVector), sizeof(uint32));
 }
 
 void UBatchLines::SetIndices()

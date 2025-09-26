@@ -32,8 +32,8 @@ UAxis::~UAxis()
 	URenderer::ReleaseVertexBuffer(Primitive.Vertexbuffer);
 }
 
-void UAxis::Render(ID3D11DeviceContext* InDeviceContext)
+void UAxis::Render(UPipeline& InPipeline)
 {
 	URenderer& Renderer = URenderer::GetInstance();
-	Renderer.RenderPrimitive(InDeviceContext, Primitive, Primitive.RenderState);
+	Renderer.RenderPrimitive(InPipeline, Primitive, Primitive.RenderState);
 }

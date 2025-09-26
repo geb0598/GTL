@@ -1,4 +1,9 @@
 #pragma once
+
+#ifdef MULTI_THREADING
+#include <mutex>
+#endif
+
 #include "DeviceResources.h"
 #include "Core/Public/Object.h"
 #include "Component/Public/PrimitiveComponent.h"
@@ -70,11 +75,11 @@ public:
 	void RenderBegin() const;
 	void RenderLevel(UCamera* InCurrentCamera);
 	void RenderEnd() const;
-	void RenderStaticMesh(ID3D11DeviceContext* InDeviceContext, UStaticMeshComponent* InMeshComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferMaterial);
+	void RenderStaticMesh(UPipeline& InPipeline, UStaticMeshComponent* InMeshComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferMaterial);
 	void RenderBillboard(UBillBoardComponent* InBillBoardComp, UCamera* InCurrentCamera);
-	void RenderPrimitiveDefault(ID3D11DeviceContext* InDeviceContext, UPrimitiveComponent* InPrimitiveComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferColor);
-	void RenderPrimitive(ID3D11DeviceContext* InDeviceContext, const FEditorPrimitive& InPrimitive, const FRenderState& InRenderState);
-	void RenderPrimitiveIndexed(ID3D11DeviceContext* InDeviceContext, const FEditorPrimitive& InPrimitive, const FRenderState& InRenderState,
+	void RenderPrimitiveDefault(UPipeline& InPipeline, UPrimitiveComponent* InPrimitiveComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferColor);
+	void RenderPrimitive(UPipeline& InPipeline, const FEditorPrimitive& InPrimitive, const FRenderState& InRenderState);
+	void RenderPrimitiveIndexed(UPipeline& InPipeline, const FEditorPrimitive& InPrimitive, const FRenderState& InRenderState,
 	                            bool bInUseBaseConstantBuffer, uint32 InStride, uint32 InIndexBufferStride);
 
 	void OnResize(uint32 Inwidth = 0, uint32 InHeight = 0) const;
@@ -171,7 +176,6 @@ private:
 	};
 
 	TMap<FRasterKey, ID3D11RasterizerState*, FRasterKeyHasher> RasterCache;
-	mutable std::mutex RasterCacheMutex;
 
 	ID3D11RasterizerState* GetRasterizerState(const FRenderState& InRenderState);
 
@@ -179,6 +183,8 @@ private:
 
 #ifdef MULTI_THREADING
 	constexpr static size_t NUM_WORKER_THREADS = 4;
+
+	mutable std::mutex RasterCacheMutex;
 
 	TArray<ID3D11DeviceContext*> DeferredContexts;
 	TArray<ID3D11Buffer*> ThreadConstantBufferModels;

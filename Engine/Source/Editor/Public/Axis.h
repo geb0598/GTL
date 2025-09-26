@@ -2,13 +2,14 @@
 #include "Core/Public/Object.h"
 #include "Editor/Public/EditorPrimitive.h"
 #include "Global/CoreTypes.h"
+#include "Render/Renderer/Public/Pipeline.h"
 
 class UAxis : public UObject
 {
 public:
 	UAxis();
 	~UAxis() override;
-	void Render(ID3D11DeviceContext* InDeviceContext);
+	void Render(UPipeline& InPipeline);
 
 private:
 	FEditorPrimitive Primitive;
