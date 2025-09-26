@@ -2,6 +2,7 @@
 #include "Core/Public/Object.h"
 #include "Core/Public/EngineStatics.h"
 #include "Core/Public/Name.h"
+#include "Core/Public/ObjectIterator.h"
 
 #include <json.hpp>
 
@@ -24,6 +25,8 @@ UObject::~UObject()
 	{
 		GetUObjectArray()[InternalIndex] = nullptr;
 	}
+
+	// 증분 업데이트: 더 이상 전체 무효화 없음 (nullptr로 마킹됨)
 }
 
 void UObject::Serialize(const bool bInIsLoading, JSON& InOutHandle)
@@ -36,8 +39,10 @@ UObject::UObject()
 	UUID = UEngineStatics::GenUUID();
 	Name = FName("Object_" + to_string(UUID));
 
+	InternalIndex = static_cast<uint32>(GetUObjectArray().size());
 	GetUObjectArray().emplace_back(this);
-	InternalIndex = static_cast<uint32>(GetUObjectArray().size()) - 1;
+
+	// 증분 업데이트: 새 객체는 자동으로 LastProcessedIndex 이후에 추가됨
 }
 
 UObject::UObject(const FName& InName)
@@ -48,6 +53,8 @@ UObject::UObject(const FName& InName)
 
 	GetUObjectArray().emplace_back(this);
 	InternalIndex = static_cast<uint32>(GetUObjectArray().size()) - 1;
+
+	// 증분 업데이트: 새 객체는 자동으로 LastProcessedIndex 이후에 추가됨
 }
 
 void UObject::SetOuter(UObject* InObject)
