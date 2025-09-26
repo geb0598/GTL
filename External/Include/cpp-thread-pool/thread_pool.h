@@ -1,12 +1,10 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Junyong Lee
-
 #pragma once
 
 #include <condition_variable>
 #include <functional>
 #include <future>
 #include <mutex>
+#include <optional>
 #include <queue>
 #include <thread>
 #include <type_traits>
@@ -84,7 +82,7 @@ public:
      * @param func The function to be applied to each element.
      */
     template<typename Iterator, typename Func>
-    void ForEach(Iterator first, Iterator last, Func func);
+    void ForEach(Iterator first, Iterator last, Func func, std::optional<size_t> num_chunks = std::nullopt);
 
     /**
      * @brief Applies a transform function to each element in a range and then reduces the results in parallel.
@@ -106,7 +104,7 @@ public:
      * @return The result of the transform-reduce operation.
      */
     template<typename Iterator, typename T, typename TransformFunc, typename ReduceFunc>
-    T TransformReduce(Iterator first, Iterator last, T init, TransformFunc transform, ReduceFunc reduce);
+    T TransformReduce(Iterator first, Iterator last, T init, TransformFunc transform, ReduceFunc reduce, std::optional<size_t> num_chunks = std::nullopt);
 
 private:
     std::vector<std::thread> threads_;
@@ -140,7 +138,7 @@ inline std::future<std::invoke_result_t<Func, Args...>> ThreadPool::Enqueue(Func
 }
 
 template<typename Iterator, typename Func>
-inline void ThreadPool::ForEach(Iterator first, Iterator last, Func func) {
+inline void ThreadPool::ForEach(Iterator first, Iterator last, Func func, std::optional<size_t> num_chunks) {
     static_assert(
         std::is_base_of_v<std::input_iterator_tag, typename std::iterator_traits<Iterator>::iterator_category>,
         "Iterator must be at least an input iterator."
@@ -156,10 +154,14 @@ inline void ThreadPool::ForEach(Iterator first, Iterator last, Func func) {
         return;
     }
 
-    size_t chunk_size = (total_size + num_threads_ - 1) / num_threads_;
+    if (!num_chunks) {
+        num_chunks = num_threads_;
+    } 
+
+    size_t chunk_size = (total_size + *num_chunks - 1) / *num_chunks;
 
     std::vector<std::future<void>> task_futures;
-    task_futures.reserve(num_threads_);
+    task_futures.reserve(*num_chunks);
 
     Iterator begin = first;
     while (begin != last) {
@@ -182,7 +184,7 @@ inline void ThreadPool::ForEach(Iterator first, Iterator last, Func func) {
 }
 
 template<typename Iterator, typename T, typename TransformFunc, typename ReduceFunc>
-inline T ThreadPool::TransformReduce(Iterator first, Iterator last, T init, TransformFunc transform, ReduceFunc reduce) {
+inline T ThreadPool::TransformReduce(Iterator first, Iterator last, T init, TransformFunc transform, ReduceFunc reduce, std::optional<size_t> num_chunks) {
     static_assert(
         std::is_base_of_v<std::input_iterator_tag, typename std::iterator_traits<Iterator>::iterator_category>,
         "Iterator must be at least an input iterator."
@@ -204,10 +206,14 @@ inline T ThreadPool::TransformReduce(Iterator first, Iterator last, T init, Tran
         return init;
     }
 
-    size_t chunk_size = (total_size + num_threads_ - 1) / num_threads_;
+    if (!num_chunks) {
+        num_chunks = num_threads_;
+    }
+
+    size_t chunk_size = (total_size + *num_chunks - 1) / *num_chunks;
 
     std::vector<std::future<T>> task_futures;
-    task_futures.reserve(num_threads_);
+    task_futures.reserve(*num_chunks);
 
     Iterator begin = first;
     while (begin != last) {
