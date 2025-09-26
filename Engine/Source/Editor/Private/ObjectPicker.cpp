@@ -8,6 +8,7 @@
 #include "ImGui/imgui.h"
 #include "Level/Public/Level.h"
 #include "Global/Quaternion.h"
+#include "Physics/Public/AABB.h"
 
 FRay UObjectPicker::GetModelRay(const FRay& Ray, UPrimitiveComponent* Primitive)
 {
@@ -33,8 +34,7 @@ UPrimitiveComponent* UObjectPicker::PickPrimitive(UCamera* InActiveCamera, const
 			continue;
 		}
 		FMatrix ModelMat = Primitive->GetWorldTransformMatrix();
-		FRay ModelRay = GetModelRay(WorldRay, Primitive);
-		if (IsRayPrimitiveCollided(InActiveCamera, ModelRay, Primitive, ModelMat, &PrimitiveDistance))
+		if (IsRayPrimitiveCollided(InActiveCamera, WorldRay, Primitive, ModelMat, &PrimitiveDistance))
 			//Ray와 Primitive가 충돌했다면 거리 테스트 후 가까운 Actor Picking
 		{
 			if (PrimitiveDistance < ShortestDistance)
@@ -165,8 +165,33 @@ void UObjectPicker::PickGizmo(UCamera* InActiveCamera, const FRay& WorldRay, UGi
 	Gizmo.SetGizmoDirection(EGizmoDirection::None);
 }
 
+bool UObjectPicker::IsRayPrimitiveCollided(
+    UCamera* InActiveCamera,
+    const FRay& WorldRay,
+    UPrimitiveComponent* Primitive,
+    const FMatrix& ModelMatrix,
+    float* ShortestDistance)
+{
+    // --- Broad phase: world-space AABB vs world ray ---
+    FVector aabbMin, aabbMax;
+    Primitive->GetWorldAABB(aabbMin, aabbMax);
+    const FAABB worldAABB(aabbMin, aabbMax);
+
+    float aabbDist;
+    if (!worldAABB.RaycastHit(WorldRay, &aabbDist))
+        return false;
+
+    // If you want AABB-only picking, uncomment:
+    // *ShortestDistance = std::min(*ShortestDistance, aabbDist);
+    // return true;
+
+    // --- Narrow phase: only if AABB hit ---
+    FRay modelRay = GetModelRay(WorldRay, Primitive);
+    return IsRayMollerTrumboreCollided(InActiveCamera, modelRay, Primitive, ModelMatrix, ShortestDistance);
+}
+
 //개별 primitive와 ray 충돌 검사
-bool UObjectPicker::IsRayPrimitiveCollided(UCamera* InActiveCamera, const FRay& ModelRay, UPrimitiveComponent* Primitive, const FMatrix& ModelMatrix, float* ShortestDistance)
+bool UObjectPicker::IsRayMollerTrumboreCollided(UCamera* InActiveCamera, const FRay& ModelRay, UPrimitiveComponent* Primitive, const FMatrix& ModelMatrix, float* ShortestDistance)
 
 {
 	const uint32 NumVertices = Primitive->GetNumVertices();
