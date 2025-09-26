@@ -9,6 +9,8 @@
 
 #include <json.hpp>
 
+#include "Manager/BVH/public/BVHManager.h"
+
 using JSON = json::JSON;
 
 IMPLEMENT_SINGLETON_CLASS_BASE(ULevelManager)
@@ -54,6 +56,8 @@ void ULevelManager::Update() const
 	{
 		Editor->Update();
 	}
+
+	UBVHManager::GetInstance().Refit();
 }
 
 bool ULevelManager::SaveCurrentLevel(const FString& InFilePath) const
@@ -182,4 +186,9 @@ void ULevelManager::SwitchToLevel(ULevel* InNewLevel)
 	{
 		UE_LOG("LevelManager: Switched to null level.");
 	}
+
+	CurrentLevel->Update();
+	TArray<FBVHPrimitive> BVHPrimitives;
+	UBVHManager::GetInstance().ConvertComponentsToPrimitives(CurrentLevel->GetLevelPrimitiveComponents(), BVHPrimitives);
+	UBVHManager::GetInstance().Build(BVHPrimitives);
 }

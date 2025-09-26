@@ -1,7 +1,16 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Manager/BVH/public/BVHManager.h"
+IMPLEMENT_SINGLETON_CLASS_BASE(UBVHManager)
 
-#include "Editor/Public/BatchLines.h"
+UBVHManager::UBVHManager() : Boxes()
+{
+}
+UBVHManager::~UBVHManager() = default;
+
+void UBVHManager::Initialize()
+{
+
+}
 
 void UBVHManager::Build(TArray<FBVHPrimitive>& InPrimitives, int MaxLeafSize)
 {
@@ -11,10 +20,16 @@ void UBVHManager::Build(TArray<FBVHPrimitive>& InPrimitives, int MaxLeafSize)
 	if (Primitives->size() == 0)
 	{
 		RootIndex = -1;
+
+		if (bDebugDrawEnabled)
+		{
+			DebugDraw.Clear();
+		}
+
 		return;
 	}
 
-	RootIndex = BuildRecursive(0, Primitives->size(), MaxLeafSize);
+	RootIndex = BuildRecursive(0, static_cast<int>(Primitives->size()), MaxLeafSize);
 }
 
 int UBVHManager::BuildRecursive(int Start, int Count, int MaxLeafSize)
@@ -22,15 +37,18 @@ int UBVHManager::BuildRecursive(int Start, int Count, int MaxLeafSize)
 	FBVHNode Node;
 
 	// 1. Compute bounds for this node
-	FAABB Bounds = FAABB();
+	FAABB Bounds = FAABB(
+		FVector(+FLT_MAX, +FLT_MAX, +FLT_MAX),
+		FVector(-FLT_MAX, -FLT_MAX, -FLT_MAX)
+		);
 	for (int i = 0; i < Count; i++)
 	{
 		int Index = Start + i;
-		Bounds = Bounds.Union(Bounds, (*Primitives)[Index].Bounds);
+		FAABB primitiveBounds = (*Primitives)[Index].Bounds;
+		Bounds = Bounds.Union(Bounds, primitiveBounds);
 	}
 	Node.Bounds = Bounds;
-
-
+	// UE_LOG("Bounds now: (%f, %f), (%f, %f)", Bounds.Min.X, Bounds.Max.X, Bounds.Min.Y, Bounds.Max.Y);
 
 	// 2. Leaf condition
 	if (Count <= MaxLeafSize)
@@ -86,9 +104,58 @@ int UBVHManager::BuildRecursive(int Start, int Count, int MaxLeafSize)
 	return NodeIndex;
 }
 
+void UBVHManager::Refit()
+{
+	if (Nodes.empty() || !Primitives) return;
+	if (Primitives->size() == 0)
+	{
+		RootIndex = -1;
+
+		if (bDebugDrawEnabled)
+		{
+			DebugDraw.Clear();
+		}
+
+		return;
+	}
+
+	// don't do refitting for now. i want to just draw the debug lines.
+
+	// // For each leaf node
+	// for (FBVHNode& node : Nodes)
+	// {
+	// 	if (node.bIsLeaf)
+	// 	{
+	// 		// Recompute bounds from primitives
+	// 		FAABB bounds = FAABB();
+	// 		for (int i = 0; i < node.Count; i++)
+	// 		{
+	// 			int idx = node.Start + i;
+	// 			bounds = bounds.Union(bounds, (*Primitives)[idx].Bounds);
+	// 		}
+	// 		node.Bounds = bounds;
+	// 	}
+	// }
+	//
+	// // Refit internal nodes (reverse order so children updated first)
+	// for (int i = Nodes.size() - 1; i >= 0; i--)
+	// {
+	// 	FBVHNode& node = Nodes[i];
+	// 	if (!node.bIsLeaf)
+	// 	{
+	// 		node.Bounds = node.Bounds.Union(Nodes[node.LeftChild].Bounds,Nodes[node.RightChild].Bounds);
+	// 	}
+	// }
+
+	if (bDebugDrawEnabled)
+	{
+		RefreshDebugDraw();
+	}
+}
+
 bool UBVHManager::Raycast(const FRay& InRay, int& HitObject, float& HitT) const
 {
-
+	return false;
 }
 
 void UBVHManager::RaycastRecursive(int NodeIndex, const FRay& InRay, float& OutClosestHit, int& OutHitObject) const
@@ -96,3 +163,86 @@ void UBVHManager::RaycastRecursive(int NodeIndex, const FRay& InRay, float& OutC
 
 }
 
+
+void UBVHManager::ConvertComponentsToPrimitives(const TArray<TObjectPtr<UPrimitiveComponent>>& InComponents, TArray<FBVHPrimitive>& OutPrimitives)
+{
+	OutPrimitives.clear();
+	OutPrimitives.reserve(InComponents.size());
+
+	for (UPrimitiveComponent* Component : InComponents)
+	{
+		if (!Component || !Component->IsVisible())
+		{
+			continue;
+		}
+		FVector WorldMin, WorldMax;
+		Component->GetWorldAABB(WorldMin, WorldMax);
+
+		FBVHPrimitive Primitive;
+		Primitive.Bounds = FAABB(WorldMin, WorldMax);
+		Primitive.Center = (WorldMin + WorldMax) * 0.5f;
+		Primitive.Primitive = Component;
+
+		OutPrimitives.push_back(Primitive);
+	}
+}
+
+void UBVHManager::SetDebugDrawEnabled(bool bEnabled)
+{
+	if (bDebugDrawEnabled == bEnabled)
+	{
+		return;
+	}
+
+	bDebugDrawEnabled = bEnabled;
+
+	if (bDebugDrawEnabled)
+	{
+		RefreshDebugDraw();
+	}
+	else
+	{
+		DebugDraw.Clear();
+	}
+}
+
+void UBVHManager::RenderDebug(const TArray<FAABB>& InBoxes) const
+{
+	if (!bDebugDrawEnabled)
+	{
+		return;
+	}
+
+	DebugDraw.Render(InBoxes);
+}
+
+void UBVHManager::RefreshDebugDraw()
+{
+	if (!bDebugDrawEnabled)
+	{
+		return;
+	}
+
+	if (Nodes.empty())
+	{
+		DebugDraw.Clear();
+		return;
+	}
+
+	TArray<FAABB> NodeBounds;
+	CollectNodeBounds(NodeBounds);
+	// DebugDraw.SetBoxes(NodeBounds);
+	RenderDebug(NodeBounds);
+	Boxes = NodeBounds;
+}
+
+void UBVHManager::CollectNodeBounds(TArray<FAABB>& OutBounds) const
+{
+	OutBounds.clear();
+	OutBounds.reserve(Nodes.size());
+
+	for (const FBVHNode& Node : Nodes)
+	{
+		OutBounds.push_back(Node.Bounds);
+	}
+}

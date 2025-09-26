@@ -6,6 +6,7 @@
 #include "Manager/Input/Public/InputManager.h"
 #include "Manager/Level/Public/LevelManager.h"
 #include "Manager/Asset/Public/AssetManager.h"
+#include "Manager/BVH/public/BVHManager.h"
 #include "Manager/Time/Public/TimeManager.h"
 
 #include "Manager/UI/Public/UIManager.h"
@@ -109,6 +110,9 @@ int FClientApp::InitializeSystem() const
 	{
 		ULevelManager::GetInstance().CreateNewLevel();
 	}
+
+	auto& BVHManager = UBVHManager::GetInstance();
+	BVHManager.Initialize();
 
 	return S_OK;
 }

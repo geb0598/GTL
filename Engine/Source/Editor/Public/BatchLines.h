@@ -16,6 +16,7 @@ public:
 	// 종류별 Vertices 업데이트
 	void UpdateUGridVertices(const float newCellSize);
 	void UpdateBoundingBoxVertices(const FAABB& newBoundingBoxInfo);
+	void SetBoundingBoxes(const TArray<FAABB>& InBoxes);
 
 	// 전체 업데이트
 	void UpdateBatchLineVertices(const float newCellSize, const FAABB& newBoundingBoxInfo);
@@ -35,7 +36,8 @@ public:
 
 	void DisableRenderBoundingBox()
 	{
-		UpdateBoundingBoxVertices({ {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} });
+		TArray<FAABB> Empty;
+		SetBoundingBoxes(Empty);
 	}
 
 	//void UpdateConstant(FBoundingBox boundingBoxInfo);
@@ -51,6 +53,9 @@ private:
 	void AddBoundingBoxVertices();*/
 
 	bool bChangedVertices = false;
+	bool bChangedIndices = false;
+	uint32 VertexCapacity = 0;
+	uint32 IndexCapacity = 0;
 
 	TArray<FVector> Vertices; // 그리드 라인 정보 + (offset 후)디폴트 바운딩 박스 라인 정보(minx, miny가 0,0에 정의된 크기가 1인 cube)
 	TArray<uint32> Indices; // 월드 그리드는 그냥 정점 순서, 바운딩 박스는 실제 인덱싱

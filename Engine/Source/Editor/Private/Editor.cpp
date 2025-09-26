@@ -17,6 +17,7 @@
 #include "Core/Public/ScopeCycleCounter.h"
 #include "Level/Public/Level.h"
 #include "Global/Quaternion.h"
+#include "Manager/BVH/public/BVHManager.h"
 #include "Render/UI/Overlay/Public/StatOverlay.h"
 
 UEditor::UEditor()
@@ -75,6 +76,7 @@ void UEditor::Update()
 
 	if (AActor* SelectedActor = ULevelManager::GetInstance().GetCurrentLevel()->GetSelectedActor())
 	{
+		TArray<FAABB> AllBoxes;
 		for (const auto& Component : SelectedActor->GetOwnedComponents())
 		{
 			if (auto PrimitiveComponent = Cast<UPrimitiveComponent>(Component))
@@ -83,17 +85,20 @@ void UEditor::Update()
 				PrimitiveComponent->GetWorldAABB(WorldMin, WorldMax);
 
 				uint64 ShowFlags = ULevelManager::GetInstance().GetCurrentLevel()->GetShowFlags();
-
-				if ((ShowFlags & EEngineShowFlags::SF_Primitives) && (ShowFlags & EEngineShowFlags::SF_Bounds))
-				{
-					BatchLines.UpdateBoundingBoxVertices(FAABB(WorldMin, WorldMax));
-				}
-				else
-				{
-					BatchLines.UpdateBoundingBoxVertices({ { 0.0f,0.0f,0.0f }, { 0.0f, 0.0f, 0.0f } });
-				}
+				// if ((ShowFlags & EEngineShowFlags::SF_Primitives) && (ShowFlags & EEngineShowFlags::SF_Bounds))
+				// {
+				// 	BatchLines.UpdateBoundingBoxVertices(FAABB(WorldMin, WorldMax));
+				// }
+				// else
+				// {
+				// 	BatchLines.UpdateBoundingBoxVertices({ { 0.0f,0.0f,0.0f }, { 0.0f, 0.0f, 0.0f } });
+				// }
+				AllBoxes.push_back(FAABB(WorldMin, WorldMax));
 			}
 		}
+		TArray<FAABB>& Boxes = UBVHManager::GetInstance().GetBoxes();
+		AllBoxes.insert(AllBoxes.end(), Boxes.begin(), Boxes.end());
+		BatchLines.SetBoundingBoxes(AllBoxes);
 	}
 	else
 	{
