@@ -3,6 +3,7 @@
 #include "Global/Types.h"
 #include "Component/Public/PrimitiveComponent.h"
 #include "Editor/Public/BatchLines.h"
+#include "Editor/Public/ObjectPicker.h"
 #include "Physics/Public/AABB.h"
 #include "Manager/BVH/public/BVHDebugDraw.h"
 
@@ -31,9 +32,9 @@ class UBVHManager : UObject
 public:
 	void Initialize();
 
-	void Build(TArray<FBVHPrimitive>& InPrimitives, int MaxLeafSize = 2);
+	void Build(const TArray<FBVHPrimitive>& InPrimitives, int MaxLeafSize = 2);
 	// void QueryFrustum(const Frustum& frustum, TArray<int>& outVisible) const;
-	bool Raycast(const FRay& InRay, int& HitObject, float& HitT) const;
+	bool Raycast(const FRay& InRay, UPrimitiveComponent*& HitComponent, float& HitT) const;
 	void SetDebugDrawEnabled(bool bEnabled);
 	bool IsDebugDrawEnabled() const { return bDebugDrawEnabled; }
 	void RenderDebug(const TArray<FAABB>& InBoxes) const;
@@ -52,10 +53,12 @@ private:
 	void CollectNodeBounds(TArray<FAABB>& OutBounds) const;
 
 	TArray<FBVHNode> Nodes;
-	TArray<FBVHPrimitive>* Primitives = nullptr; // pointer to external array
+	TArray<FBVHPrimitive> Primitives;
 	int RootIndex = -1;
 	UBVHDebugDraw DebugDraw;
 	bool bDebugDrawEnabled = true;
 
 	TArray<FAABB> Boxes;
+
+	UObjectPicker ObjectPicker;
 };

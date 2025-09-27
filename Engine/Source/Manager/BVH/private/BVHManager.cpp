@@ -1,5 +1,7 @@
 #include "pch.h"
 #include "Manager/BVH/public/BVHManager.h"
+
+#include "Editor/Public/ObjectPicker.h"
 IMPLEMENT_SINGLETON_CLASS_BASE(UBVHManager)
 
 UBVHManager::UBVHManager() : Boxes()
@@ -12,12 +14,12 @@ void UBVHManager::Initialize()
 
 }
 
-void UBVHManager::Build(TArray<FBVHPrimitive>& InPrimitives, int MaxLeafSize)
+void UBVHManager::Build(const TArray<FBVHPrimitive>& InPrimitives, int MaxLeafSize)
 {
 	Nodes.clear();
-	Primitives = &InPrimitives;
+	Primitives = InPrimitives;
 
-	if (Primitives->size() == 0)
+	if (Primitives.empty())
 	{
 		RootIndex = -1;
 
@@ -29,7 +31,7 @@ void UBVHManager::Build(TArray<FBVHPrimitive>& InPrimitives, int MaxLeafSize)
 		return;
 	}
 
-	RootIndex = BuildRecursive(0, static_cast<int>(Primitives->size()), MaxLeafSize);
+	RootIndex = BuildRecursive(0, static_cast<int>(Primitives.size()), MaxLeafSize);
 }
 
 int UBVHManager::BuildRecursive(int Start, int Count, int MaxLeafSize)
@@ -44,7 +46,7 @@ int UBVHManager::BuildRecursive(int Start, int Count, int MaxLeafSize)
 	for (int i = 0; i < Count; i++)
 	{
 		int Index = Start + i;
-		FAABB primitiveBounds = (*Primitives)[Index].Bounds;
+		FAABB primitiveBounds = Primitives[Index].Bounds;
 		Bounds = Bounds.Union(Bounds, primitiveBounds);
 	}
 	Node.Bounds = Bounds;
@@ -65,12 +67,12 @@ int UBVHManager::BuildRecursive(int Start, int Count, int MaxLeafSize)
 	// 3. Choose split axis (largest variance of centers)
 	FVector Mean(0,0,0), Var(0,0,0);
 	for (int i = 0; i < Count; i++)
-		Mean += (*Primitives)[Start + i].Center;
+		Mean += Primitives[Start + i].Center;
 	Mean /= (float)Count;
 
 	for (int i = 0; i < Count; i++)
 	{
-		FVector d = (*Primitives)[Start + i].Center - Mean;
+		FVector d = Primitives[Start + i].Center - Mean;
 		Var.X += d.X * d.X;
 		Var.Y += d.Y * d.Y;
 		Var.Z += d.Z * d.Z;
@@ -82,8 +84,8 @@ int UBVHManager::BuildRecursive(int Start, int Count, int MaxLeafSize)
 
 	// 4. Sort primitives along chosen axis
 	std::sort(
-	Primitives->begin() + Start,
-	Primitives->begin() + Start + Count,
+	Primitives.begin() + Start,
+	Primitives.begin() + Start + Count,
 	[Axis](const FBVHPrimitive& A, const FBVHPrimitive& B)
 		{
 			return A.Center[Axis] < B.Center[Axis];
@@ -106,8 +108,8 @@ int UBVHManager::BuildRecursive(int Start, int Count, int MaxLeafSize)
 
 void UBVHManager::Refit()
 {
-	if (Nodes.empty() || !Primitives) return;
-	if (Primitives->size() == 0)
+	if (Nodes.empty()) return;
+	if (Primitives.empty())
 	{
 		RootIndex = -1;
 
@@ -131,7 +133,7 @@ void UBVHManager::Refit()
 	// 		for (int i = 0; i < node.Count; i++)
 	// 		{
 	// 			int idx = node.Start + i;
-	// 			bounds = bounds.Union(bounds, (*Primitives)[idx].Bounds);
+	// 			bounds = bounds.Union(bounds, Primitives[idx].Bounds);
 	// 		}
 	// 		node.Bounds = bounds;
 	// 	}
@@ -153,14 +155,71 @@ void UBVHManager::Refit()
 	}
 }
 
-bool UBVHManager::Raycast(const FRay& InRay, int& HitObject, float& HitT) const
+bool UBVHManager::Raycast(const FRay& InRay, UPrimitiveComponent*& HitComponent, float& HitT) const
 {
-	return false;
+	HitComponent = nullptr;
+
+	if (RootIndex < 0 || Nodes.empty())
+		return false;
+
+	HitT = FLT_MAX;
+	int HitObjectIndex = -1;
+
+	RaycastRecursive(RootIndex, InRay, HitT, HitObjectIndex);
+	if (HitObjectIndex == -1)
+	{
+		UE_LOG("Raycast: No hit");
+		return false;
+	}
+
+	HitComponent = Primitives[HitObjectIndex].Primitive;
+	UE_LOG("Raycast: Hit Object Index=%d", HitObjectIndex);
+	return true;
 }
 
 void UBVHManager::RaycastRecursive(int NodeIndex, const FRay& InRay, float& OutClosestHit, int& OutHitObject) const
 {
+	if (NodeIndex < 0 || NodeIndex >= (int)Nodes.size())
+	{
+		UE_LOG("Invalid NodeIndex: %d (Nodes.size()=%d)", NodeIndex, (int)Nodes.size());
+		return;
+	}
 
+	const FBVHNode& Node = Nodes[NodeIndex];
+
+	// UE_LOG("BuildRecursive: Start=%d Count=%d -> NodeIndex=%d Leaf=%d",
+	//    Node.Start, Node.Count, NodeIndex, Node.bIsLeaf);
+
+	float tmin;
+	if (!Node.Bounds.RaycastHit(InRay, &tmin))
+		return;
+
+	// Prune farther intersections
+	if (tmin > OutClosestHit)
+		return;
+
+	if (Node.bIsLeaf)
+	{
+		for (int i = 0; i < Node.Count; i++)
+		{
+			const FBVHPrimitive& Prim = Primitives[Node.Start + i];
+			float t;
+			if (Prim.Bounds.RaycastHit(InRay, &t)
+				&& ObjectPicker.DoesRayIntersectPrimitive_MollerTrumbore(InRay, Prim.Primitive, &t))
+			{
+				if (t < OutClosestHit)
+				{
+					OutClosestHit = t;
+					OutHitObject = Node.Start + i;
+				}
+			}
+		}
+	}
+	else
+	{
+		RaycastRecursive(Node.LeftChild, InRay, OutClosestHit, OutHitObject);
+		RaycastRecursive(Node.RightChild, InRay, OutClosestHit, OutHitObject);
+	}
 }
 
 
@@ -246,3 +305,4 @@ void UBVHManager::CollectNodeBounds(TArray<FAABB>& OutBounds) const
 		OutBounds.push_back(Node.Bounds);
 	}
 }
+

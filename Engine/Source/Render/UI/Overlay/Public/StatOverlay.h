@@ -31,9 +31,9 @@ public:
 	void ShowMemory(bool bShow) { bShow ? EnableStat(EStatType::Memory) : DisableStat(EStatType::Memory); }
 	void ShowAll(bool bShow) { SetStatType(bShow ? EStatType::All : EStatType::None); }
 
-	uint64 LastPickingTime = 0;
+	double LastPickingTime = 0.0;
 	uint32 NumPickingAttempts = 0;
-	uint64 CumulativePickingTime = 0;
+	double CumulativePickingTime = 0.0;
 
 private:
 	void RenderFPS();

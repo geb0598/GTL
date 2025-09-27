@@ -27,7 +27,7 @@ public:
 		Finish();
 	}
 
-	uint64 Finish()
+	double Finish()
 	{
 		const uint64 EndCycles = FPlatformTime::Cycles64();
 		const uint64 CycleDiff = EndCycles - StartCycles;
