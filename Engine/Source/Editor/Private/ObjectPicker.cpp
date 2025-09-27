@@ -91,11 +91,13 @@ void UObjectPicker::PickGizmo(UCamera* InActiveCamera, const FRay& WorldRay, UGi
 		for (int a = 0; a < 3; a++)
 		{
 			FVector GizmoAxis = GizmoAxises[a];
-			A = 1 - static_cast<float>(pow(WorldRay.Direction.Dot3(GizmoAxis), 2));
+			float dDotA = WorldRay.Direction.Dot3(GizmoAxis);
+			A = 1 - (dDotA * dDotA);
 			B = WorldRay.Direction.Dot3(GizmoDistanceVector) - WorldRay.Direction.Dot3(GizmoAxis) * GizmoDistanceVector.
 				Dot(GizmoAxis); //B가 2의 배수이므로 미리 약분
-			C = static_cast<float>(GizmoDistanceVector.Dot(GizmoDistanceVector) -
-				pow(GizmoDistanceVector.Dot(GizmoAxis), 2)) - GizmoRadius * GizmoRadius;
+			float distDotA = GizmoDistanceVector.Dot(GizmoAxis);
+			C = (GizmoDistanceVector.Dot(GizmoDistanceVector) -
+				distDotA * distDotA) - GizmoRadius * GizmoRadius;
 
 			Det = B * B - A * C;
 			if (Det >= 0) //판별식 0이상 => 근 존재. 높이테스트만 통과하면 충돌

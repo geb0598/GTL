@@ -34,19 +34,20 @@ struct FAABB : public IBoundingVolume
 
 inline FAABB FAABB::Union(const FAABB& A, const FAABB& B) const
 {
-	FVector NewMin(
-		std::min(A.Min.X, B.Min.X),
-		std::min(A.Min.Y, B.Min.Y),
-		std::min(A.Min.Z, B.Min.Z)
-	);
+	__m128 aMin = _mm_setr_ps(A.Min.X, A.Min.Y, A.Min.Z, 0.0f);
+	__m128 bMin = _mm_setr_ps(B.Min.X, B.Min.Y, B.Min.Z, 0.0f);
+	__m128 aMax = _mm_setr_ps(A.Max.X, A.Max.Y, A.Max.Z, 0.0f);
+	__m128 bMax = _mm_setr_ps(B.Max.X, B.Max.Y, B.Max.Z, 0.0f);
 
-	FVector NewMax(
-		std::max(A.Max.X, B.Max.X),
-		std::max(A.Max.Y, B.Max.Y),
-		std::max(A.Max.Z, B.Max.Z)
-	);
+	__m128 outMin = _mm_min_ps(aMin, bMin);
+	__m128 outMax = _mm_max_ps(aMax, bMax);
 
-	return FAABB(NewMin, NewMax);
+	alignas(16) float tmpMin[4], tmpMax[4];
+	_mm_store_ps(tmpMin, outMin);
+	_mm_store_ps(tmpMax, outMax);
+
+	return FAABB(FVector(tmpMin[0], tmpMin[1], tmpMin[2]),
+				 FVector(tmpMax[0], tmpMax[1], tmpMax[2]));
 }
 
 FORCEINLINE bool FAABB::RaycastHit(const FRay& Ray, float* OutDistance) const

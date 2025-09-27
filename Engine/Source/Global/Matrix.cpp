@@ -319,16 +319,20 @@ FVector FMatrix::VectorMultiply(const FVector& v, const FMatrix& m)
 
 FMatrix FMatrix::Transpose() const
 {
-	FMatrix result = {};
-	for (int i = 0; i < 4; i++)
-	{
-		for (int j = 0; j < 4; j++)
-		{
-			result.Data[i][j] = Data[j][i];
-		}
-	}
+	FMatrix out;
 
-	return result;
+	__m128 row0 = _mm_loadu_ps(Data[0]);
+	__m128 row1 = _mm_loadu_ps(Data[1]);
+	__m128 row2 = _mm_loadu_ps(Data[2]);
+	__m128 row3 = _mm_loadu_ps(Data[3]);
+
+	_MM_TRANSPOSE4_PS(row0, row1, row2, row3);
+
+	_mm_storeu_ps(out.Data[0], row0);
+	_mm_storeu_ps(out.Data[1], row1);
+	_mm_storeu_ps(out.Data[2], row2);
+	_mm_storeu_ps(out.Data[3], row3);
+
+	return out;
 }
-
 
