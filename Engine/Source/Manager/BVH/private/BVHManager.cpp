@@ -64,13 +64,20 @@ int UBVHManager::BuildRecursive(int Start, int Count, int MaxLeafSize)
 		Mean += Primitives[Start + i].Center;
 	Mean /= (float)Count;
 
-	for (int i = 0; i < Count; i++)
-	{
-		FVector d = Primitives[Start + i].Center - Mean;
-		Var.X += d.X * d.X;
-		Var.Y += d.Y * d.Y;
-		Var.Z += d.Z * d.Z;
+	__m128 var = _mm_setzero_ps();
+	__m128 mean = _mm_setr_ps(Mean.X, Mean.Y, Mean.Z, 0.0f);
+
+	for (int i = 0; i < Count; i++) {
+		__m128 c = _mm_setr_ps(Primitives[Start + i].Center.X,
+							   Primitives[Start + i].Center.Y,
+							   Primitives[Start + i].Center.Z, 0.0f);
+		__m128 d = _mm_sub_ps(c, mean);
+		var = _mm_add_ps(var, _mm_mul_ps(d,d));
 	}
+
+	alignas(16) float tmp[4];
+	_mm_store_ps(tmp, var);
+	Var = FVector(tmp[0], tmp[1], tmp[2]);
 
 	int Axis = 0;
 	if (Var.Y > Var.X) Axis = 1;

@@ -89,44 +89,79 @@ struct FVector
 	 * @brief 벡터의 길이 연산 함수
 	 * @return 벡터의 길이
 	 */
-	float Length() const { return sqrtf(X * X + Y * Y + Z * Z); }
+	float LengthSquared() const
+	{
+		__m128 v = _mm_set_ps(0, Z, Y, X);
+		__m128 mul = _mm_mul_ps(v, v);
+		__m128 sum1 = _mm_hadd_ps(mul, mul);
+		__m128 sum2 = _mm_hadd_ps(sum1, sum1);
+		return _mm_cvtss_f32(sum2);
+	}
 
-	/**
-	 * @brief 자신의 벡터의 각 성분을 제곱하여 더한 값을 반환하는 함수 (루트 사용 X)
-	 */
-	float LengthSquared() const { return (X * X) + (Y * Y) + (Z * Z); }
+	float Length() const
+	{
+		return sqrtf(LengthSquared());
+	}
 
 	/**
 	 * @brief 두 벡터를 내적하여 결과의 스칼라 값을 반환하는 함수
 	 */
-	float Dot(const FVector& InOtherVector) const
+	float Dot(const FVector& b) const
 	{
-		return (X * InOtherVector.X) + (Y * InOtherVector.Y) + (Z * InOtherVector.Z);
+		__m128 v1 = _mm_set_ps(0, Z, Y, X);
+		__m128 v2 = _mm_set_ps(0, b.Z, b.Y, b.X);
+		__m128 dp = _mm_dp_ps(v1, v2, 0x71);
+		return _mm_cvtss_f32(dp);
 	}
 
 	/**
 	 * @brief 두 벡터를 외적한 결과의 벡터 값을 반환하는 함수
 	 */
-	inline FVector Cross(const FVector& InOtherVector) const
+	FVector Cross(const FVector& b) const
 	{
-		return FVector(
-			Z * InOtherVector.Y - Y * InOtherVector.Z,
-			X * InOtherVector.Z - Z * InOtherVector.X,
-			Y * InOtherVector.X - X * InOtherVector.Y
-		);
+		__m128 a = _mm_set_ps(0.0f, Z, Y, X);
+		__m128 bvec = _mm_set_ps(0.0f, b.Z, b.Y, b.X);
+
+		// Shuffle to get (Y,Z,X) pattern
+		__m128 a_yzx = _mm_shuffle_ps(a, a, _MM_SHUFFLE(3,0,2,1));
+		__m128 b_yzx = _mm_shuffle_ps(bvec, bvec, _MM_SHUFFLE(3,0,2,1));
+
+		// Compute right-handed cross
+		__m128 c = _mm_sub_ps(_mm_mul_ps(a, b_yzx), _mm_mul_ps(a_yzx, bvec));
+		__m128 rh = _mm_shuffle_ps(c, c, _MM_SHUFFLE(3,0,2,1));
+
+		// Negate for left-handed system
+		__m128 lh = _mm_xor_ps(rh, _mm_set1_ps(-0.0f)); // flip sign bit
+
+		FVector out;
+		_mm_storeu_ps(&out.X, lh);
+		return out;
 	}
 
 	/**
 	 * @brief 단위 벡터로 변경하는 함수
 	 */
+	static inline void store3(__m128 v, float& x, float& y, float& z) {
+		alignas(16) float tmp[4];
+		_mm_store_ps(tmp, v); // requires 16B alignment of tmp (stack is fine)
+		x = tmp[0]; y = tmp[1]; z = tmp[2];
+	}
 	void Normalize()
 	{
-		float Length = sqrt(LengthSquared());
-		if (Length > 0.00000001f)
-		{
-			X /= Length;
-			Y /= Length;
-			Z /= Length;
+		// Load as [X, Y, Z, 0]
+		__m128 v = _mm_setr_ps(X, Y, Z, 0.0f);
+
+		// Length^2 (XYZ only). If you lack SSE4.1, replace with mul+hadd fallback.
+		__m128 dp = _mm_dp_ps(v, v, 0x71);
+		float lenSq = _mm_cvtss_f32(dp);
+
+		if (lenSq > 1e-16f) {
+			// Compute scalar 1/sqrt(lenSq), then broadcast to all lanes
+			float invLenScalar = 1.0f / std::sqrt(lenSq);
+			__m128 invLen = _mm_set1_ps(invLenScalar);
+
+			__m128 n = _mm_mul_ps(v, invLen);
+			store3(n, X, Y, Z);
 		}
 	}
 
@@ -134,18 +169,30 @@ struct FVector
 	 * @brief 각도를 라디안으로 변환한 값을 반환하는 함수
 	 */
 	static float GetDegreeToRadian(const float InDegree) { return (InDegree * PI) / 180.f; }
-	static FVector GetDegreeToRadian(const FVector& InRotation)
+	static FVector GetDegreeToRadian(const FVector& deg)
 	{
-		return FVector{(InRotation.X * PI) / 180.f, (InRotation.Y * PI) / 180.f, (InRotation.Z * PI) / 180.f};
+		__m128 v = _mm_set_ps(0.0f, deg.Z, deg.Y, deg.X);
+		__m128 scale = _mm_set1_ps(PI / 180.0f);
+		__m128 rad = _mm_mul_ps(v, scale);
+
+		FVector out;
+		_mm_storeu_ps(&out.X, rad);
+		return out;
 	}
 
 	/**
 	 * @brief 라디안를 각도로 변환한 값을 반환하는 함수
 	 */
 	static float GetRadianToDegree(const float Radian) { return (Radian * 180.f) / PI; }
-	static FVector GetRadianToDegree(const FVector& Rad)
+	static FVector GetRadianToDegree(const FVector& rad)
 	{
-		return FVector{ Rad.X * (180.0f / PI), Rad.Y * (180.0f / PI), Rad.Z * (180.0f / PI) };
+		__m128 v = _mm_set_ps(0.0f, rad.Z, rad.Y, rad.X);
+		__m128 scale = _mm_set1_ps(180.0f / PI);
+		__m128 deg = _mm_mul_ps(v, scale);
+
+		FVector out;
+		_mm_storeu_ps(&out.X, deg);
+		return out;
 	}
 
 	// Constant Vector (definition from UE5)

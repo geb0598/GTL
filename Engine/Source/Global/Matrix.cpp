@@ -77,17 +77,29 @@ FMatrix FMatrix::operator*(const FMatrix& InOtherMatrix)
 {
 	FMatrix Result;
 
-	for (int32 i = 0; i < 4; ++i)
+	for (int i = 0; i < 4; ++i)
 	{
-		for (int32 j = 0; j < 4; ++j)
-		{
-			for (int32 k = 0; k < 4; ++k)
-			{
-				Result.Data[i][j] += Data[i][k] * InOtherMatrix.Data[k][j];
-			}
-		}
-	}
+		// Load the row from the left matrix (this)
+		__m128 a = _mm_loadu_ps(Data[i]); // row i
 
+		// Broadcast each element of row 'i'
+		__m128 a0 = _mm_shuffle_ps(a, a, _MM_SHUFFLE(0,0,0,0));
+		__m128 a1 = _mm_shuffle_ps(a, a, _MM_SHUFFLE(1,1,1,1));
+		__m128 a2 = _mm_shuffle_ps(a, a, _MM_SHUFFLE(2,2,2,2));
+		__m128 a3 = _mm_shuffle_ps(a, a, _MM_SHUFFLE(3,3,3,3));
+
+		// Multiply each broadcast with the corresponding row of the right matrix
+		__m128 r0 = _mm_mul_ps(a0, _mm_loadu_ps(InOtherMatrix.Data[0]));
+		__m128 r1 = _mm_mul_ps(a1, _mm_loadu_ps(InOtherMatrix.Data[1]));
+		__m128 r2 = _mm_mul_ps(a2, _mm_loadu_ps(InOtherMatrix.Data[2]));
+		__m128 r3 = _mm_mul_ps(a3, _mm_loadu_ps(InOtherMatrix.Data[3]));
+
+		// Sum them together
+		__m128 res = _mm_add_ps(_mm_add_ps(r0, r1), _mm_add_ps(r2, r3));
+
+		// Store into Result row
+		_mm_storeu_ps(Result.Data[i], res);
+	}
 	return Result;
 }
 
@@ -253,40 +265,74 @@ FMatrix FMatrix::GetModelMatrixInverse(const FVector& Location, const FVector& R
 
 FVector4 FMatrix::VectorMultiply(const FVector4& v, const FMatrix& m)
 {
-	FVector4 result = {};
-	result.X = (v.X * m.Data[0][0]) + (v.Y * m.Data[1][0]) + (v.Z * m.Data[2][0]) + (v.W * m.Data[3][0]);
-	result.Y = (v.X * m.Data[0][1]) + (v.Y * m.Data[1][1]) + (v.Z * m.Data[2][1]) + (v.W * m.Data[3][1]);
-	result.Z = (v.X * m.Data[0][2]) + (v.Y * m.Data[1][2]) + (v.Z * m.Data[2][2]) + (v.W * m.Data[3][2]);
-	result.W = (v.X * m.Data[0][3]) + (v.Y * m.Data[1][3]) + (v.Z * m.Data[2][3]) + (v.W * m.Data[3][3]);
+	FVector4 out;
 
+	// Load the vector [X,Y,Z,W]
+	__m128 vec = _mm_loadu_ps(&v.X);
 
-	return result;
+	// Broadcast each component
+	__m128 vx = _mm_shuffle_ps(vec, vec, _MM_SHUFFLE(0,0,0,0)); // X
+	__m128 vy = _mm_shuffle_ps(vec, vec, _MM_SHUFFLE(1,1,1,1)); // Y
+	__m128 vz = _mm_shuffle_ps(vec, vec, _MM_SHUFFLE(2,2,2,2)); // Z
+	__m128 vw = _mm_shuffle_ps(vec, vec, _MM_SHUFFLE(3,3,3,3)); // W
+
+	// Multiply with each row of the matrix
+	__m128 r0 = _mm_mul_ps(vx, _mm_loadu_ps(m.Data[0])); // X * row0
+	__m128 r1 = _mm_mul_ps(vy, _mm_loadu_ps(m.Data[1])); // Y * row1
+	__m128 r2 = _mm_mul_ps(vz, _mm_loadu_ps(m.Data[2])); // Z * row2
+	__m128 r3 = _mm_mul_ps(vw, _mm_loadu_ps(m.Data[3])); // W * row3
+
+	// Sum them together
+	__m128 res = _mm_add_ps(_mm_add_ps(r0, r1), _mm_add_ps(r2, r3));
+
+	// Store result
+	_mm_storeu_ps(&out.X, res);
+
+	return out;
 }
 
 FVector FMatrix::VectorMultiply(const FVector& v, const FMatrix& m)
 {
-	FVector result = {};
-	result.X = (v.X * m.Data[0][0]) + (v.Y * m.Data[1][0]) + (v.Z * m.Data[2][0]);
-	result.Y = (v.X * m.Data[0][1]) + (v.Y * m.Data[1][1]) + (v.Z * m.Data[2][1]);
-	result.Z = (v.X * m.Data[0][2]) + (v.Y * m.Data[1][2]) + (v.Z * m.Data[2][2]);
-	//result.W = (v.X * m.Data[0][3]) + (v.Y * m.Data[1][3]) + (v.Z * m.Data[2][3]) + (v.W * m.Data[3][3]);
+	FVector out;
 
+	// Load vector [X, Y, Z, 0]
+	__m128 vec = _mm_set_ps(0.0f, v.Z, v.Y, v.X);
 
-	return result;
+	// Broadcast each component
+	__m128 vx = _mm_shuffle_ps(vec, vec, _MM_SHUFFLE(0,0,0,0)); // X
+	__m128 vy = _mm_shuffle_ps(vec, vec, _MM_SHUFFLE(1,1,1,1)); // Y
+	__m128 vz = _mm_shuffle_ps(vec, vec, _MM_SHUFFLE(2,2,2,2)); // Z
+
+	// Multiply with the first 3 rows of the matrix
+	__m128 r0 = _mm_mul_ps(vx, _mm_loadu_ps(m.Data[0])); // X * row0
+	__m128 r1 = _mm_mul_ps(vy, _mm_loadu_ps(m.Data[1])); // Y * row1
+	__m128 r2 = _mm_mul_ps(vz, _mm_loadu_ps(m.Data[2])); // Z * row2
+
+	// Sum them
+	__m128 res = _mm_add_ps(_mm_add_ps(r0, r1), r2);
+
+	// Store result (only XYZ matter)
+	_mm_storeu_ps(&out.X, res);
+
+	return out;
 }
 
 FMatrix FMatrix::Transpose() const
 {
-	FMatrix result = {};
-	for (int i = 0; i < 4; i++)
-	{
-		for (int j = 0; j < 4; j++)
-		{
-			result.Data[i][j] = Data[j][i];
-		}
-	}
+	FMatrix out;
 
-	return result;
+	__m128 row0 = _mm_loadu_ps(Data[0]);
+	__m128 row1 = _mm_loadu_ps(Data[1]);
+	__m128 row2 = _mm_loadu_ps(Data[2]);
+	__m128 row3 = _mm_loadu_ps(Data[3]);
+
+	_MM_TRANSPOSE4_PS(row0, row1, row2, row3);
+
+	_mm_storeu_ps(out.Data[0], row0);
+	_mm_storeu_ps(out.Data[1], row1);
+	_mm_storeu_ps(out.Data[2], row2);
+	_mm_storeu_ps(out.Data[3], row3);
+
+	return out;
 }
-
 

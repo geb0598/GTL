@@ -91,11 +91,13 @@ void UObjectPicker::PickGizmo(UCamera* InActiveCamera, const FRay& WorldRay, UGi
 		for (int a = 0; a < 3; a++)
 		{
 			FVector GizmoAxis = GizmoAxises[a];
-			A = 1 - static_cast<float>(pow(WorldRay.Direction.Dot3(GizmoAxis), 2));
+			float dDotA = WorldRay.Direction.Dot3(GizmoAxis);
+			A = 1 - (dDotA * dDotA);
 			B = WorldRay.Direction.Dot3(GizmoDistanceVector) - WorldRay.Direction.Dot3(GizmoAxis) * GizmoDistanceVector.
 				Dot(GizmoAxis); //B가 2의 배수이므로 미리 약분
-			C = static_cast<float>(GizmoDistanceVector.Dot(GizmoDistanceVector) -
-				pow(GizmoDistanceVector.Dot(GizmoAxis), 2)) - GizmoRadius * GizmoRadius;
+			float distDotA = GizmoDistanceVector.Dot(GizmoAxis);
+			C = (GizmoDistanceVector.Dot(GizmoDistanceVector) -
+				distDotA * distDotA) - GizmoRadius * GizmoRadius;
 
 			Det = B * B - A * C;
 			if (Det >= 0) //판별식 0이상 => 근 존재. 높이테스트만 통과하면 충돌
@@ -224,49 +226,71 @@ bool UObjectPicker::DoesRayIntersectTriangle(const FRay& InRay, UPrimitiveCompon
 {
 	FRay ModelRay = GetModelRay(InRay, InPrimitive);
 
-	//삼각형 내의 점은 E1*V + E2*U + Vertex1.Position으로 표현 가능( 0<= U + V <=1,  Y>=0, V>=0 )
-	//Ray.Direction * T + Ray.Origin = E1*V + E2*U + Vertex1.Position을 만족하는 T U V값을 구해야 함.
-	//[E1 E2 RayDirection][V U T] = [RayOrigin-Vertex1.Position]에서 cramer's rule을 이용해서 T U V값을 구하고
-	//U V값이 저 위의 조건을 만족하고 T값이 카메라의 near값 이상이어야 함.
-	FVector RayDirection{ModelRay.Direction.X, ModelRay.Direction.Y, ModelRay.Direction.Z};
-	FVector RayOrigin{ModelRay.Origin.X, ModelRay.Origin.Y, ModelRay.Origin.Z};
-	FVector E1 = Vertex2 - Vertex1;
-	FVector E2 = Vertex3 - Vertex1;
-	FVector Result = (RayOrigin - Vertex1); //[E1 E2 -RayDirection]x = [RayOrigin - Vertex1.Position] 의 result임.
+    // Pack ray origin and dir
+    __m128 rayO = _mm_setr_ps(ModelRay.Origin.X, ModelRay.Origin.Y, ModelRay.Origin.Z, 0.0f);
+    __m128 rayD = _mm_setr_ps(ModelRay.Direction.X, ModelRay.Direction.Y, ModelRay.Direction.Z, 0.0f);
 
+    // Pack vertices
+    __m128 v0 = _mm_setr_ps(Vertex1.X, Vertex1.Y, Vertex1.Z, 0.0f);
+    __m128 v1 = _mm_setr_ps(Vertex2.X, Vertex2.Y, Vertex2.Z, 0.0f);
+    __m128 v2 = _mm_setr_ps(Vertex3.X, Vertex3.Y, Vertex3.Z, 0.0f);
 
-	FVector CrossE2Ray = E2.Cross(RayDirection);
-	FVector CrossE1Result = E1.Cross(Result);
+    // E1 = v1 - v0
+    __m128 e1 = _mm_sub_ps(v1, v0);
+    // E2 = v2 - v0
+    __m128 e2 = _mm_sub_ps(v2, v0);
+    // Result = rayO - v0
+    __m128 res = _mm_sub_ps(rayO, v0);
 
-	float Determinant = E1.Dot(CrossE2Ray);
+    // CrossE2Ray = E2 × RayDir
+    __m128 e2_yzx = _mm_shuffle_ps(e2, e2, _MM_SHUFFLE(3,0,2,1));
+    __m128 d_yzx  = _mm_shuffle_ps(rayD, rayD, _MM_SHUFFLE(3,0,2,1));
+    __m128 crossE2Ray = _mm_sub_ps(_mm_mul_ps(e2, d_yzx), _mm_mul_ps(e2_yzx, rayD));
+    crossE2Ray = _mm_shuffle_ps(crossE2Ray, crossE2Ray, _MM_SHUFFLE(3,0,2,1));
 
-	float NoInverse = 0.0001f; //0.0001이하면 determinant가 0이라고 판단=>역행렬 존재 X
-	if (abs(Determinant) <= NoInverse)
-	{
-		return false;
-	}
+    // CrossE1Result = E1 × Result
+    __m128 e1_yzx = _mm_shuffle_ps(e1, e1, _MM_SHUFFLE(3,0,2,1));
+    __m128 res_yzx = _mm_shuffle_ps(res, res, _MM_SHUFFLE(3,0,2,1));
+    __m128 crossE1Res = _mm_sub_ps(_mm_mul_ps(e1, res_yzx), _mm_mul_ps(e1_yzx, res));
+    crossE1Res = _mm_shuffle_ps(crossE1Res, crossE1Res, _MM_SHUFFLE(3,0,2,1));
 
-	float V = Result.Dot(CrossE2Ray) / Determinant; //cramer's rule로 해를 구했음. 이게 0미만 1초과면 충돌하지 않음.
+    // Determinant = dot(E1, CrossE2Ray)
+    __m128 det4 = _mm_mul_ps(e1, crossE2Ray);
+    __m128 det2 = _mm_hadd_ps(det4, det4);
+    __m128 det1 = _mm_hadd_ps(det2, det2);
+    float det = _mm_cvtss_f32(det1);
 
-	if (V < 0 || V > 1)
-	{
-		return false;
-	}
+    if (fabsf(det) <= 1e-4f)
+        return false;
 
-	float U = RayDirection.Dot(CrossE1Result) / Determinant;
-	if (U < 0 || U + V > 1)
-	{
-		return false;
-	}
+    float invDet = 1.0f / det;
 
-	float T = E2.Dot(CrossE1Result) / Determinant;
-	if (T < 0)
-	{
-		return false;
-	}
+    // V = dot(Result, CrossE2Ray) / det
+    __m128 v4 = _mm_mul_ps(res, crossE2Ray);
+    __m128 v2_ = _mm_hadd_ps(v4, v4);
+    __m128 v1_ = _mm_hadd_ps(v2_, v2_);
+    float V = _mm_cvtss_f32(v1_) * invDet;
+    if (V < 0.0f || V > 1.0f)
+        return false;
 
-	*OutDistance = T;
-	return true;
+    // U = dot(RayDir, CrossE1Result) / det
+    __m128 u4 = _mm_mul_ps(rayD, crossE1Res);
+    __m128 u2 = _mm_hadd_ps(u4, u4);
+    __m128 u1 = _mm_hadd_ps(u2, u2);
+    float U = _mm_cvtss_f32(u1) * invDet;
+    if (U < 0.0f || U + V > 1.0f)
+        return false;
+
+    // T = dot(E2, CrossE1Result) / det
+    __m128 t4 = _mm_mul_ps(e2, crossE1Res);
+    __m128 t2 = _mm_hadd_ps(t4, t4);
+    __m128 t1 = _mm_hadd_ps(t2, t2);
+    float T = _mm_cvtss_f32(t1) * invDet;
+    if (T < 0.0f)
+        return false;
+
+    *OutDistance = T;
+    return true;
 }
 
 bool UObjectPicker::DoesRayIntersectPlane(const FRay& WorldRay, FVector PlanePoint, FVector Normal, FVector& PointOnPlane)
