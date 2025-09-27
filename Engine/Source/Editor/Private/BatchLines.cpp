@@ -18,22 +18,12 @@ UBatchLines::UBatchLines()
 
 	URenderer& Renderer = URenderer::GetInstance();
 
-	//BatchLineConstData.CellSize = 1.0f;
-	//BatchLineConstData.BoundingBoxModel = FMatrix::Identity();
-
-	/*AddWorldGridVerticesAndConstData();
-	AddBoundingBoxVertices();*/
-
 	Primitive.NumVertices = static_cast<uint32>(Vertices.size());
 	Primitive.NumIndices = static_cast<uint32>(Indices.size());
 	Primitive.IndexBuffer = Renderer.CreateIndexBuffer(Indices.data(), Primitive.NumIndices * sizeof(uint32));
-	//Primitive.Color = FVector4(1, 1, 1, 0.2f);
 	Primitive.Topology = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
 	Primitive.Vertexbuffer = Renderer.CreateVertexBuffer(
 		Vertices.data(), Primitive.NumVertices * sizeof(FVector), true);
-	/*Primitive.Location = FVector(0, 0, 0);
-	Primitive.Rotation = FVector(0, 0, 0);
-	Primitive.Scale = FVector(1, 1, 1);*/
 	Primitive.VertexShader = UAssetManager::GetInstance().GetVertexShader(EShaderType::BatchLine);
 	Primitive.InputLayout = UAssetManager::GetInstance().GetIputLayout(EShaderType::BatchLine);
 	Primitive.PixelShader = UAssetManager::GetInstance().GetPixelShader(EShaderType::BatchLine);
@@ -76,7 +66,6 @@ void UBatchLines::UpdateBatchLineVertices(const float newCellSize, const FAABB& 
 {
 	UpdateUGridVertices(newCellSize);
 	UpdateBoundingBoxVertices(newBoundingBoxInfo);
-	bChangedVertices = true;
 }
 
 void UBatchLines::UpdateVertexBuffer()
@@ -85,6 +74,7 @@ void UBatchLines::UpdateVertexBuffer()
 	{
 		URenderer::GetInstance().UpdateVertexBuffer(Primitive.Vertexbuffer, Vertices);
 	}
+
 	bChangedVertices = false;
 }
 
@@ -98,15 +88,15 @@ void UBatchLines::Render(UPipeline& InPipeline)
 
 void UBatchLines::SetIndices()
 {
+	Indices.clear();
 	const uint32 numGridVertices = Grid.GetNumVertices();
+	Indices.reserve(numGridVertices + 24);
 
-	// 기존 그리드 라인 인덱스
 	for (uint32 index = 0; index < numGridVertices; ++index)
 	{
 		Indices.push_back(index);
 	}
 
-	// Bounding Box 라인 인덱스 (LineList)
 	uint32 boundingBoxLineIdx[] = {
 		// 앞면
 		0, 1,
@@ -127,9 +117,9 @@ void UBatchLines::SetIndices()
 		3, 7
 	};
 
-	// numGridVertices 이후에 추가된 8개의 꼭짓점에 맞춰 오프셋 적용
 	for (uint32 i = 0; i < std::size(boundingBoxLineIdx); ++i)
 	{
 		Indices.push_back(numGridVertices + boundingBoxLineIdx[i]);
 	}
 }
+

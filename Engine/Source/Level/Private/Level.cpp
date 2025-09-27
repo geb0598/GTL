@@ -21,6 +21,8 @@
 
 #include <json.hpp>
 
+#include "Manager/BVH/public/BVHManager.h"
+
 ULevel::ULevel() = default;
 
 ULevel::ULevel(const FName& InName)
@@ -176,6 +178,11 @@ AActor* ULevel::SpawnActorToLevel(UClass* InActorClass, const FName& InName)
 		}
 		LevelActors.push_back(TObjectPtr(NewActor));
 		NewActor->BeginPlay();
+
+		TArray<FBVHPrimitive> BVHPrimitives;
+		UBVHManager::GetInstance().ConvertComponentsToPrimitives(LevelPrimitiveComponents, BVHPrimitives);
+		UBVHManager::GetInstance().Build(BVHPrimitives);
+
 		return NewActor;
 	}
 

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Core/Public/PlatformTime.h"
 
 struct TStatId
@@ -27,14 +27,14 @@ public:
 		Finish();
 	}
 
-	uint64 Finish()
+	double Finish()
 	{
 		const uint64 EndCycles = FPlatformTime::Cycles64();
 		const uint64 CycleDiff = EndCycles - StartCycles;
 
 		// FThreadStats::AddMessage(UsedStatId, EStatOperation::Add, CycleDiff);
 
-		return CycleDiff;
+		return FPlatformTime::ToMilliseconds(CycleDiff); // ms 변환 후 리턴
 	}
 
 private:
