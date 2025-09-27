@@ -56,8 +56,6 @@ void ULevelManager::Update() const
 	{
 		Editor->Update();
 	}
-
-	UBVHManager::GetInstance().Refit();
 }
 
 bool ULevelManager::SaveCurrentLevel(const FString& InFilePath) const

@@ -108,50 +108,62 @@ int UBVHManager::BuildRecursive(int Start, int Count, int MaxLeafSize)
 
 void UBVHManager::Refit()
 {
-	if (Nodes.empty()) return;
-	if (Primitives.empty())
+	if (Nodes.empty() || Primitives.empty())
 	{
 		RootIndex = -1;
-
 		if (bDebugDrawEnabled)
-		{
 			DebugDraw.Clear();
-		}
-
 		return;
 	}
 
-	// don't do refitting for now. i want to just draw the debug lines.
-
-	// // For each leaf node
-	// for (FBVHNode& node : Nodes)
-	// {
-	// 	if (node.bIsLeaf)
-	// 	{
-	// 		// Recompute bounds from primitives
-	// 		FAABB bounds = FAABB();
-	// 		for (int i = 0; i < node.Count; i++)
-	// 		{
-	// 			int idx = node.Start + i;
-	// 			bounds = bounds.Union(bounds, Primitives[idx].Bounds);
-	// 		}
-	// 		node.Bounds = bounds;
-	// 	}
-	// }
-	//
-	// // Refit internal nodes (reverse order so children updated first)
-	// for (int i = Nodes.size() - 1; i >= 0; i--)
-	// {
-	// 	FBVHNode& node = Nodes[i];
-	// 	if (!node.bIsLeaf)
-	// 	{
-	// 		node.Bounds = node.Bounds.Union(Nodes[node.LeftChild].Bounds,Nodes[node.RightChild].Bounds);
-	// 	}
-	// }
-
-	if (bDebugDrawEnabled)
+	// Step 1: Update primitive bounds from their components
+	for (FBVHPrimitive& Prim : Primitives)
 	{
+		if (!Prim.Primitive || !Prim.Primitive->IsVisible())
+			continue;
+
+		FVector WorldMin, WorldMax;
+		Prim.Primitive->GetWorldAABB(WorldMin, WorldMax);
+		Prim.Bounds = FAABB(WorldMin, WorldMax);
+		Prim.Center = (WorldMin + WorldMax) * 0.5f;
+	}
+
+	// Step 2: Recompute node bounds bottom-up
+	RefitRecursive(RootIndex);
+
+	// Optional: refresh debug
+	if (bDebugDrawEnabled)
 		RefreshDebugDraw();
+}
+
+
+FAABB UBVHManager::RefitRecursive(int NodeIndex)
+{
+	FBVHNode& Node = Nodes[NodeIndex];
+
+	if (Node.bIsLeaf)
+	{
+		FAABB Bounds(
+			FVector(+FLT_MAX, +FLT_MAX, +FLT_MAX),
+			FVector(-FLT_MAX, -FLT_MAX, -FLT_MAX)
+		);
+
+		for (int i = 0; i < Node.Count; i++)
+		{
+			int primIndex = Node.Start + i;
+			Bounds = Bounds.Union(Bounds, Primitives[primIndex].Bounds);
+		}
+
+		Node.Bounds = Bounds;
+		return Bounds;
+	}
+	else
+	{
+		FAABB LeftBounds = RefitRecursive(Node.LeftChild);
+		FAABB RightBounds = RefitRecursive(Node.RightChild);
+
+		Node.Bounds = Node.Bounds.Union(LeftBounds, RightBounds);
+		return Node.Bounds;
 	}
 }
 
