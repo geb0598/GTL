@@ -14,6 +14,8 @@ struct FBVHNode
 	int Start = 0;   // leaf start index
 	int Count = 0;   // leaf count
 	bool bIsLeaf = false;
+
+	uint32 FrustumMask = 0;
 };
 
 struct FBVHPrimitive
@@ -22,6 +24,8 @@ struct FBVHPrimitive
 	FAABB Bounds;
 	UPrimitiveComponent* Primitive;
 };
+
+class FFrustumCull;
 
 class UBVHManager : UObject
 {
@@ -38,6 +42,7 @@ public:
 	bool IsDebugDrawEnabled() const { return bDebugDrawEnabled; }
 	void ConvertComponentsToPrimitives(const TArray<TObjectPtr<UPrimitiveComponent>>& InComponents, TArray<FBVHPrimitive>& OutPrimitives);
 	[[nodiscard]] const TArray<FBVHNode>& GetNodes() const { return Nodes; }
+	void FrustumCull(FFrustumCull& InFrustum, TArray<UPrimitiveComponent*>& OutVisibleComponents);
 
 	TArray<FAABB>& GetBoxes() { return Boxes; }
 
@@ -48,6 +53,7 @@ private:
 	void RaycastIterative(const FRay& InRay, float& OutClosestHit, int& OutHitObject) const;
 	void RaycastRecursive(int NodeIndex, const FRay& InRay, float& OutClosestHit, int& OutHitObject) const;
 	void CollectNodeBounds(TArray<FAABB>& OutBounds) const;
+	void TraverseForCulling(uint32 NodeIndex, FFrustumCull& InFrustum, TArray<UPrimitiveComponent*>& OutVisibleComponents);
 
 	TArray<FBVHNode> Nodes;
 	TArray<FBVHPrimitive> Primitives;

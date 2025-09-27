@@ -9,7 +9,6 @@
 #include "Component/Public/PrimitiveComponent.h"
 #include "Editor/Public/EditorPrimitive.h"
 
-class FFrustumCulling;
 class UPipeline;
 class UDeviceResources;
 class UPrimitiveComponent;
@@ -148,7 +147,6 @@ private:
 	uint32 Stride = 0;
 
 	FViewport* ViewportClient = nullptr;
-	FFrustumCulling* FrustumCulling = nullptr;
 
 	struct FRasterKey
 	{

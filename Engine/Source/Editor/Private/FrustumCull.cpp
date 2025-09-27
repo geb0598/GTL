@@ -1,20 +1,20 @@
 ﻿#include "pch.h"
 #include <immintrin.h>
-#include "Editor/Public/FrustumCulling.h"
+#include "Editor/Public/FrustumCull.h"
 #include "Physics/Public/AABB.h"
 #include "Editor/Public/Camera.h"
 
 
-IMPLEMENT_CLASS(FFrustumCulling, UObject)
+IMPLEMENT_CLASS(FFrustumCull, UObject)
 
-FFrustumCulling::FFrustumCulling()
+FFrustumCull::FFrustumCull()
 {
 }
-FFrustumCulling::~FFrustumCulling()
+FFrustumCull::~FFrustumCull()
 {
 }
 
-void FFrustumCulling::Update(UCamera* InCamera)
+void FFrustumCull::Update(UCamera* InCamera)
 {
 	FMatrix ViewMatrix = InCamera->GetFViewProjConstants().View;
 	FMatrix ProjMatrix =  InCamera->GetFViewProjConstants().Projection;
@@ -62,7 +62,7 @@ void FFrustumCulling::Update(UCamera* InCamera)
 	}
 }
 
-EFrustumTestResult FFrustumCulling::IsInFrustum(const FAABB& TargetAABB)
+EFrustumTestResult FFrustumCull::IsInFrustum(const FAABB& TargetAABB, uint32 Mask)
 {
 	// TODO : BVH 적용 시 교차 검사 필요
 	// 교차 시 leaf이면 rendering, 아니면 다음 노드 탐색

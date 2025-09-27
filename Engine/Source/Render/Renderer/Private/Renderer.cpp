@@ -9,7 +9,6 @@
 #include "Editor/Public/Viewport.h"
 #include "Editor/Public/ViewportClient.h"
 #include "Editor/Public/Camera.h"
-#include "Editor/Public/FrustumCulling.h"
 #include "Level/Public/Level.h"
 #include "Manager/Level/Public/LevelManager.h"
 #include "Manager/UI/Public/UIManager.h"
@@ -18,7 +17,6 @@
 #include "Texture/Public/Texture.h"
 #include "Texture/Public/TextureRenderProxy.h"
 #include "Source/Component/Mesh/Public/StaticMesh.h"
-#include "Editor/Public/FrustumCulling.h"
 
 #ifdef MULTI_THREADING
 #include "cpp-thread-pool/thread_pool.h"
@@ -35,7 +33,6 @@ void URenderer::Init(HWND InWindowHandle)
 	DeviceResources = new UDeviceResources(InWindowHandle);
 	Pipeline = new UPipeline(GetDeviceContext());
 	ViewportClient = new FViewport();
-	FrustumCulling = NewObject<FFrustumCulling>();
 
 	// 래스터라이저 상태 생성
 	CreateRasterizerState();
@@ -514,17 +511,6 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 			//RenderStaticMesh(*Pipeline, Cast<UStaticMeshComponent>(PrimitiveComponent), LoadedRasterizerState, ConstantBufferModels, ConstantBufferMaterial);
 			RenderStaticMesh(*Pipeline, Cast<UStaticMeshComponent>(PrimitiveComponent), LoadedRasterizerState, ConstantBufferModels, ConstantBufferMaterial);
 			break;
-			{
-				FAABB TargetAABB{};
-				PrimitiveComponent->GetWorldAABB(TargetAABB.Min, TargetAABB.Max);
-				FrustumCulling->Update(InCurrentCamera);
-				if(FrustumCulling->IsInFrustum(TargetAABB) == EFrustumTestResult::Outside)
-				{
-					continue;
-				}
-				RenderStaticMesh(Cast<UStaticMeshComponent>(PrimitiveComponent), LoadedRasterizerState);
-				break;
-			}
 		default:
 			//RenderPrimitiveDefault(*Pipeline, PrimitiveComponent, LoadedRasterizerState, ConstantBufferModels, ConstantBufferColor);
 			RenderPrimitiveDefault(*Pipeline, PrimitiveComponent, LoadedRasterizerState, ConstantBufferModels, ConstantBufferColor);

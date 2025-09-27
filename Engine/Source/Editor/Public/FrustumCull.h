@@ -3,6 +3,27 @@
 class UCamera;
 struct  FAABB;
 
+enum class EFrustumPlaneState : uint32
+{
+	Outside		= 0b00,
+	Intersect	= 0b01,
+	Inside		= 0b10,
+
+	// 상태 추출용
+	PlaneMask	= 0b11
+};
+
+// 평면의 비트 표현
+enum class EFrustumPlaneIndex : uint32
+{
+	Left	= 0,
+	Right	= 2,
+	Bottom	= 4,
+	Top		= 6,
+	Near	= 8,
+	Far 	= 10
+};
+
 enum class EFrustumTestResult : uint8
 {
 	Outside,
@@ -41,16 +62,16 @@ struct FFrustum
 	FPlane BottomPlane;
 };
 
-class FFrustumCulling : public UObject
+class FFrustumCull : public UObject
 {
-	DECLARE_CLASS(FFrustumCulling, UObject)
+	DECLARE_CLASS(FFrustumCull, UObject)
 
 public:
-	FFrustumCulling();
-	~FFrustumCulling();
+	FFrustumCull();
+	~FFrustumCull();
 
 	void Update(UCamera* InViewProperties);
-	EFrustumTestResult IsInFrustum(const FAABB& TargetAABB);
+	EFrustumTestResult IsInFrustum(const FAABB& TargetAABB, uint32 Mask);
 
 private:
 	FPlane Planes[6];

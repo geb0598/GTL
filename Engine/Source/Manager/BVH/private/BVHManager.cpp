@@ -316,6 +316,14 @@ void UBVHManager::ConvertComponentsToPrimitives(
 	}
 }
 
+void UBVHManager::FrustumCull(FFrustumCull& InFrustum, TArray<UPrimitiveComponent*>& OutVisibleComponents)
+{
+
+
+
+	TraverseForCulling(1, InFrustum, OutVisibleComponents);
+}
+
 void UBVHManager::CollectNodeBounds(TArray<FAABB>& OutBounds) const
 {
 	OutBounds.clear();
@@ -325,5 +333,10 @@ void UBVHManager::CollectNodeBounds(TArray<FAABB>& OutBounds) const
 	{
 		OutBounds.push_back(Node.Bounds);
 	}
+}
+
+void UBVHManager::TraverseForCulling(uint32 NodeIndex, FFrustumCull& InFrustum,
+	TArray<UPrimitiveComponent*>& OutVisibleComponents)
+{
 }
 
