@@ -9,6 +9,7 @@
 #include "Editor/Public/Viewport.h"
 #include "Editor/Public/ViewportClient.h"
 #include "Editor/Public/Camera.h"
+#include "Editor/Public/FrustumCulling.h"
 #include "Level/Public/Level.h"
 #include "Manager/Level/Public/LevelManager.h"
 #include "Manager/UI/Public/UIManager.h"
@@ -17,6 +18,7 @@
 #include "Texture/Public/Texture.h"
 #include "Texture/Public/TextureRenderProxy.h"
 #include "Source/Component/Mesh/Public/StaticMesh.h"
+#include "Editor/Public/FrustumCulling.h"
 
 IMPLEMENT_SINGLETON_CLASS_BASE(URenderer)
 
@@ -29,6 +31,7 @@ void URenderer::Init(HWND InWindowHandle)
 	DeviceResources = new UDeviceResources(InWindowHandle);
 	Pipeline = new UPipeline(GetDeviceContext());
 	ViewportClient = new FViewport();
+	FrustumCulling = NewObject<FFrustumCulling>();
 
 	// 래스터라이저 상태 생성
 	CreateRasterizerState();
@@ -295,7 +298,6 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera)
 	{
 		return;
 	}
-
 	TObjectPtr<UBillBoardComponent> BillBoard = nullptr;
 	// Render Primitive
 	for (auto& PrimitiveComponent : ULevelManager::GetInstance().GetCurrentLevel()->GetLevelPrimitiveComponents())
@@ -322,8 +324,17 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera)
 			BillBoard = Cast<UBillBoardComponent>(PrimitiveComponent);
 			break;
 		case EPrimitiveType::StaticMesh:
-			RenderStaticMesh(Cast<UStaticMeshComponent>(PrimitiveComponent), LoadedRasterizerState);
-			break;
+			{
+				FAABB TargetAABB{};
+				PrimitiveComponent->GetWorldAABB(TargetAABB.Min, TargetAABB.Max);
+				FrustumCulling->Update(InCurrentCamera);
+				if(FrustumCulling->IsInFrustum(TargetAABB) == EFrustumTestResult::Outside)
+				{
+					continue;
+				}
+				RenderStaticMesh(Cast<UStaticMeshComponent>(PrimitiveComponent), LoadedRasterizerState);
+				break;
+			}
 		default:
 			RenderPrimitiveDefault(PrimitiveComponent, LoadedRasterizerState);
 			break;
