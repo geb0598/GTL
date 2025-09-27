@@ -183,7 +183,7 @@ private:
 	bool bIsResizing = false;
 
 #ifdef MULTI_THREADING
-	constexpr static size_t NUM_WORKER_THREADS = 4;
+	constexpr static size_t NUM_WORKER_THREADS = 8;
 
 	mutable std::mutex RasterCacheMutex;
 

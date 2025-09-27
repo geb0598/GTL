@@ -337,7 +337,6 @@ void URenderer::ReleaseDepthStencilState()
 void URenderer::Update()
 {
 	RenderBegin();
-
 	// FViewportClient로부터 모든 뷰포트를 가져옵니다.
 	for (FViewportClient& ViewportClient : ViewportClient->GetViewports())
 	{
@@ -367,8 +366,6 @@ void URenderer::Update()
 	UStatOverlay::GetInstance().Render();
 
 	RenderEnd(); // Present 1회
-
-	GetDeviceContext()->ClearState();
 }
 
 
@@ -742,9 +739,6 @@ void URenderer::RenderPrimitiveDefault(UPipeline& InPipeline, UPrimitiveComponen
 		D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST
     };
     InPipeline.UpdatePipeline(PipelineInfo);
-
-    InPipeline.GetDeviceContext()->VSSetShader(DefaultVertexShader, nullptr, 0);
-    InPipeline.GetDeviceContext()->PSSetShader(DefaultPixelShader, nullptr, 0);
 
     // Update pipeline buffers
     InPipeline.SetConstantBuffer(0, true, InConstantBufferModels);
@@ -1204,10 +1198,6 @@ bool URenderer::UpdateVertexBuffer(ID3D11Buffer* InVertexBuffer, const TArray<FV
 
 ID3D11RasterizerState* URenderer::GetRasterizerState(const FRenderState& InRenderState)
 {
-#ifdef MULTI_THREADING
-	std::lock_guard<std::mutex> Lock(RasterCacheMutex);
-#endif
-
 	D3D11_FILL_MODE FillMode = ToD3D11(InRenderState.FillMode);
 	D3D11_CULL_MODE CullMode = ToD3D11(InRenderState.CullMode);
 
