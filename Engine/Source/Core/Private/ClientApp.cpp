@@ -60,7 +60,7 @@ int FClientApp::Run(HINSTANCE InInstanceHandle, int InCmdShow)
 	int InitResult = InitializeSystem();
 	if (InitResult != S_OK)
 	{
-		assert(!"Initialize Failed");
+		assert(!"Initialization Failed");
 		return 0;
 	}
 

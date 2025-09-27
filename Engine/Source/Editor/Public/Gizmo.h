@@ -2,6 +2,7 @@
 #include "Editor/Public/EditorPrimitive.h"
 #include "Core/Public/Object.h"
 #include "Actor/Public/Actor.h"
+#include "Render/Renderer/Public/Pipeline.h"
 
 class UObjectPicker;
 class UCamera;
@@ -51,7 +52,7 @@ public:
 	UGizmo();
 	~UGizmo() override;
 	void UpdateScale(UCamera* InCamera);
-	void RenderGizmo(AActor* Actor, UCamera* InCamera);
+	void RenderGizmo(UPipeline& InPipeline, AActor* Actor, UCamera* InCamera);
 	void ChangeGizmoMode();
 
 	/* *

@@ -6,6 +6,7 @@
 #include "Editor/Public/ObjectPicker.h"
 #include "Editor/Public/BatchLines.h"
 #include "Editor/Public/SplitterWindow.h"
+#include "Render/Renderer/Public/Pipeline.h"
 
 class UPrimitiveComponent;
 class FViewportClient;
@@ -35,7 +36,7 @@ public:
 	~UEditor();
 
 	void Update();
-	void RenderEditor(UCamera* InCamera);
+	void RenderEditor(UPipeline& InPipeline, UCamera* InCamera);
 
 	void SetViewMode(EViewModeIndex InNewViewMode) { CurrentViewMode = InNewViewMode; }
 	EViewModeIndex GetViewMode() const { return CurrentViewMode; }
