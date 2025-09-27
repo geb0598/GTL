@@ -27,10 +27,9 @@ FRay UObjectPicker::GetModelRay(const FRay& Ray, UPrimitiveComponent* Primitive)
 	return ModelRay;
 }
 
-UPrimitiveComponent* UObjectPicker::PickPrimitive(UCamera* InActiveCamera, const FRay& WorldRay, TArray<UPrimitiveComponent*> Candidate, float* OutDistance)
+UPrimitiveComponent* UObjectPicker::PickPrimitive(const FRay& WorldRay, TArray<TObjectPtr<UPrimitiveComponent>> Candidate, float* OutDistance)
 {
 	UPrimitiveComponent* ShortestPrimitive = nullptr;
-	float ShortestDistance = D3D11_FLOAT32_MAX;
 	float PrimitiveDistance = D3D11_FLOAT32_MAX;
 
 	UBVHManager::GetInstance().Raycast(WorldRay, ShortestPrimitive, PrimitiveDistance);

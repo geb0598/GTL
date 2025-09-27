@@ -12,7 +12,7 @@ class UObjectPicker : public UObject
 {
 public:
 	UObjectPicker() = default;
-	UPrimitiveComponent* PickPrimitive(UCamera* InActiveCamera, const FRay& WorldRay, TArray<UPrimitiveComponent*> Candidate, float* OutDistance);
+	UPrimitiveComponent* PickPrimitive(const FRay& WorldRay, TArray<TObjectPtr<UPrimitiveComponent>> Candidate, float* OutDistance);
 	void PickGizmo(UCamera* InActiveCamera, const FRay& WorldRay, UGizmo& Gizmo, FVector& CollisionPoint);
 	bool DoesRayIntersectPlane(const FRay& WorldRay, FVector PlanePoint, FVector Normal, FVector& PointOnPlane);
 	bool DoesRayIntersectPrimitive_MollerTrumbore(const FRay& InModelRay,

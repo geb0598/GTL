@@ -76,17 +76,15 @@ int UBVHManager::BuildRecursive(int Start, int Count, int MaxLeafSize)
 	if (Var.Y > Var.X) Axis = 1;
 	if (Var.Z > Var[Axis]) Axis = 2;
 
-	// 4. Sort primitives along chosen axis
-	std::sort(
-	Primitives.begin() + Start,
-	Primitives.begin() + Start + Count,
-	[Axis](const FBVHPrimitive& A, const FBVHPrimitive& B)
-		{
-			return A.Center[Axis] < B.Center[Axis];
-		}
-	);
-
 	int Mid = Start + Count / 2;
+	// 4. Sort primitives along chosen axis
+	std::nth_element(
+	Primitives.begin() + Start,
+	Primitives.begin() + Mid,
+	Primitives.begin() + Start + Count,
+	[Axis](const FBVHPrimitive& A, const FBVHPrimitive& B) {
+		return A.Center[Axis] < B.Center[Axis];
+	});
 
 	// 5. Recurse children
 	int LeftIndex = BuildRecursive(Start, Mid - Start, MaxLeafSize);
@@ -194,15 +192,14 @@ void UBVHManager::RaycastRecursive(int NodeIndex, const FRay& InRay, float& OutC
 		{
 			const FBVHPrimitive& Prim = Primitives[Node.Start + i];
 			float t;
-			if (Prim.Bounds.RaycastHit(InRay, &t)
-				&& ObjectPicker.DoesRayIntersectPrimitive_MollerTrumbore(InRay, Prim.Primitive, &t))
+			if (!Prim.Bounds.RaycastHit(InRay, &t)) continue;
+			if (!ObjectPicker.DoesRayIntersectPrimitive_MollerTrumbore(InRay, Prim.Primitive, &t)) continue;
+			if (t < OutClosestHit)
 			{
-				if (t < OutClosestHit)
-				{
-					OutClosestHit = t;
-					OutHitObject = Node.Start + i;
-				}
+				OutClosestHit = t;
+				OutHitObject = Node.Start + i;
 			}
+			break;
 		}
 	}
 	else
