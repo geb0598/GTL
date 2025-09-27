@@ -567,19 +567,20 @@ ID3D11ShaderResourceView* UAssetManager::CreateTextureFromMemory(const void* InD
  */
 FAABB UAssetManager::CalculateAABB(const TArray<FNormalVertex>& Vertices)
 {
-	FVector MinPoint(+FLT_MAX, +FLT_MAX, +FLT_MAX);
-	FVector MaxPoint(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+	__m128 minv = _mm_set1_ps(FLT_MAX);
+	__m128 maxv = _mm_set1_ps(-FLT_MAX);
 
 	for (const auto& Vertex : Vertices)
 	{
-		MinPoint.X = std::min(MinPoint.X, Vertex.Position.X);
-		MinPoint.Y = std::min(MinPoint.Y, Vertex.Position.Y);
-		MinPoint.Z = std::min(MinPoint.Z, Vertex.Position.Z);
-
-		MaxPoint.X = std::max(MaxPoint.X, Vertex.Position.X);
-		MaxPoint.Y = std::max(MaxPoint.Y, Vertex.Position.Y);
-		MaxPoint.Z = std::max(MaxPoint.Z, Vertex.Position.Z);
+		__m128 p = _mm_setr_ps(Vertex.Position.X, Vertex.Position.Y, Vertex.Position.Z, 0.0f);
+		minv = _mm_min_ps(minv, p);
+		maxv = _mm_max_ps(maxv, p);
 	}
 
-	return FAABB(MinPoint, MaxPoint);
+	alignas(16) float tmpMin[4], tmpMax[4];
+	_mm_store_ps(tmpMin, minv);
+	_mm_store_ps(tmpMax, maxv);
+
+	return FAABB(FVector(tmpMin[0], tmpMin[1], tmpMin[2]),
+				 FVector(tmpMax[0], tmpMax[1], tmpMax[2]));
 }

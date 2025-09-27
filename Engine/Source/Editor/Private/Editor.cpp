@@ -377,7 +377,12 @@ void UEditor::ProcessMouseInput(ULevel* InLevel)
 	}
 	if (InputManager.IsKeyReleased(EKeyInput::MouseLeft))
 	{
+		const bool bWasDragging = Gizmo.IsDragging();
 		Gizmo.EndDrag();
+		if (bWasDragging && Gizmo.GetSelectedActor())
+		{
+			UBVHManager::GetInstance().Refit();
+		}
 		// 드래그가 끝나면 선택된 뷰포트를 비활성화 합니다.
 		InteractionViewport = nullptr;
 	}
@@ -416,15 +421,17 @@ void UEditor::ProcessMouseInput(ULevel* InLevel)
 			Gizmo.SetGizmoDirection(EGizmoDirection::None);
 		}
 
+		TArray<TObjectPtr<UPrimitiveComponent>> Candidate =
+			ULevelManager::GetInstance().GetCurrentLevel()->GetLevelPrimitiveComponents();
+
 		if (!ImGui::GetIO().WantCaptureMouse && InputManager.IsKeyPressed(EKeyInput::MouseLeft))
 		{
 			if (ULevelManager::GetInstance().GetCurrentLevel()->GetShowFlags() & EEngineShowFlags::SF_Primitives)
 			{
-				FScopeCycleCounter PickCounter;
 				UStatOverlay::GetInstance().NumPickingAttempts++;
+				FScopeCycleCounter PickCounter;
 
-				TArray<UPrimitiveComponent*> Candidate = FindCandidatePrimitives(InLevel);
-				UPrimitiveComponent* PrimitiveCollided = ObjectPicker.PickPrimitive(CurrentCamera, WorldRay, Candidate, &ActorDistance);
+				UPrimitiveComponent* PrimitiveCollided = ObjectPicker.PickPrimitive(WorldRay, Candidate, &ActorDistance);
 				ActorPicked = PrimitiveCollided ? PrimitiveCollided->GetOwner() : nullptr;
 
 				UStatOverlay::GetInstance().LastPickingTime = PickCounter.Finish();
@@ -455,22 +462,6 @@ void UEditor::ProcessMouseInput(ULevel* InLevel)
 			}
 		}
 	}
-}
-
-TArray<UPrimitiveComponent*> UEditor::FindCandidatePrimitives(ULevel* InLevel)
-{
-	TArray<UPrimitiveComponent*> Candidate;
-	for (AActor* Actor : InLevel->GetLevelActors())
-	{
-		for (auto& ActorComponent : Actor->GetOwnedComponents())
-		{
-			if (TObjectPtr<UPrimitiveComponent> Primitive = Cast<UPrimitiveComponent>(ActorComponent))
-			{
-				Candidate.push_back(Primitive);
-			}
-		}
-	}
-	return Candidate;
 }
 
 FVector UEditor::GetGizmoDragLocation(UCamera* InActiveCamera, FRay& WorldRay)

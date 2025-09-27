@@ -78,16 +78,16 @@ const FMatrix& USceneComponent::GetWorldTransformMatrix() const
 
 const FMatrix& USceneComponent::GetWorldTransformMatrixInverse() const
 {
-
 	if (bIsTransformDirtyInverse)
 	{
 		WorldTransformMatrixInverse = FMatrix::Identity();
-		for (USceneComponent* Ancester = ParentAttachment; Ancester && Ancester->ParentAttachment; Ancester = Ancester->ParentAttachment)
-		{
-			WorldTransformMatrixInverse = FMatrix::GetModelMatrixInverse(Ancester->RelativeLocation, FVector::GetDegreeToRadian(Ancester->RelativeRotation), Ancester->RelativeScale3D) * WorldTransformMatrixInverse;
-
-		}
-		WorldTransformMatrixInverse = WorldTransformMatrixInverse * FMatrix::GetModelMatrixInverse(RelativeLocation, FVector::GetDegreeToRadian(RelativeRotation), RelativeScale3D);
+		// 아직은 부모가 없을꺼기 때문에 효율을 위해 아래를 뺀다
+		// for (USceneComponent* Ancester = ParentAttachment; Ancester && Ancester->ParentAttachment; Ancester = Ancester->ParentAttachment)
+		// {
+		// 	WorldTransformMatrixInverse = FMatrix::GetModelMatrixInverse(Ancester->RelativeLocation, FVector::GetDegreeToRadian(Ancester->RelativeRotation), Ancester->RelativeScale3D) * WorldTransformMatrixInverse;
+		// }
+		WorldTransformMatrixInverse = WorldTransformMatrixInverse *
+			FMatrix::GetModelMatrixInverse(RelativeLocation, FVector::GetDegreeToRadian(RelativeRotation), RelativeScale3D);
 
 		bIsTransformDirtyInverse = false;
 	}

@@ -22,7 +22,14 @@ struct FQuaternion
 	void Normalize();
 
 	FQuaternion Conjugate() const { return FQuaternion(-X, -Y, -Z, W); }
-	FQuaternion Inverse() const { FQuaternion c = Conjugate(); float n = X * X + Y * Y + Z * Z + W * W; return (n > 0) ? FQuaternion(c.X / n, c.Y / n, c.Z / n, c.W / n) : FQuaternion(); }
+	FQuaternion Inverse() const;
 	static FVector RotateVector(const FQuaternion& q, const FVector& v);
 	FVector RotateVector(const FVector& v) const;
 };
+
+inline __m128 loadq(const FQuaternion& q) {
+	return _mm_loadu_ps(&q.X);
+}
+inline void storeq(FQuaternion& q, __m128 v) {
+	_mm_storeu_ps(&q.X, v);
+}
