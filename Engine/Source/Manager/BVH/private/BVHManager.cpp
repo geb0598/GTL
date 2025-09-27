@@ -23,11 +23,6 @@ void UBVHManager::Build(const TArray<FBVHPrimitive>& InPrimitives, int MaxLeafSi
 	{
 		RootIndex = -1;
 
-		if (bDebugDrawEnabled)
-		{
-			DebugDraw.Clear();
-		}
-
 		return;
 	}
 
@@ -111,8 +106,6 @@ void UBVHManager::Refit()
 	if (Nodes.empty() || Primitives.empty())
 	{
 		RootIndex = -1;
-		if (bDebugDrawEnabled)
-			DebugDraw.Clear();
 		return;
 	}
 
@@ -130,10 +123,6 @@ void UBVHManager::Refit()
 
 	// Step 2: Recompute node bounds bottom-up
 	RefitRecursive(RootIndex);
-
-	// Optional: refresh debug
-	if (bDebugDrawEnabled)
-		RefreshDebugDraw();
 }
 
 
@@ -256,55 +245,6 @@ void UBVHManager::ConvertComponentsToPrimitives(const TArray<TObjectPtr<UPrimiti
 
 		OutPrimitives.push_back(Primitive);
 	}
-}
-
-void UBVHManager::SetDebugDrawEnabled(bool bEnabled)
-{
-	if (bDebugDrawEnabled == bEnabled)
-	{
-		return;
-	}
-
-	bDebugDrawEnabled = bEnabled;
-
-	if (bDebugDrawEnabled)
-	{
-		RefreshDebugDraw();
-	}
-	else
-	{
-		DebugDraw.Clear();
-	}
-}
-
-void UBVHManager::RenderDebug(const TArray<FAABB>& InBoxes) const
-{
-	if (!bDebugDrawEnabled)
-	{
-		return;
-	}
-
-	DebugDraw.Render(InBoxes);
-}
-
-void UBVHManager::RefreshDebugDraw()
-{
-	if (!bDebugDrawEnabled)
-	{
-		return;
-	}
-
-	if (Nodes.empty())
-	{
-		DebugDraw.Clear();
-		return;
-	}
-
-	TArray<FAABB> NodeBounds;
-	CollectNodeBounds(NodeBounds);
-	// DebugDraw.SetBoxes(NodeBounds);
-	RenderDebug(NodeBounds);
-	Boxes = NodeBounds;
 }
 
 void UBVHManager::CollectNodeBounds(TArray<FAABB>& OutBounds) const

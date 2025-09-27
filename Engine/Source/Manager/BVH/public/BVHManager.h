@@ -5,7 +5,6 @@
 #include "Editor/Public/BatchLines.h"
 #include "Editor/Public/ObjectPicker.h"
 #include "Physics/Public/AABB.h"
-#include "Manager/BVH/public/BVHDebugDraw.h"
 
 struct FBVHNode
 {
@@ -36,9 +35,7 @@ public:
 	// void QueryFrustum(const Frustum& frustum, TArray<int>& outVisible) const;
 	bool Raycast(const FRay& InRay, UPrimitiveComponent*& HitComponent, float& HitT) const;
 	void Refit();
-	void SetDebugDrawEnabled(bool bEnabled);
 	bool IsDebugDrawEnabled() const { return bDebugDrawEnabled; }
-	void RenderDebug(const TArray<FAABB>& InBoxes) const;
 	void ConvertComponentsToPrimitives(const TArray<TObjectPtr<UPrimitiveComponent>>& InComponents, TArray<FBVHPrimitive>& OutPrimitives);
 	[[nodiscard]] const TArray<FBVHNode>& GetNodes() const { return Nodes; }
 
@@ -49,13 +46,11 @@ private:
 	FAABB RefitRecursive(int NodeIndex);
 	// void QueryRecursive(int nodeIdx, const Frustum& frustum, TArray<int>& outVisible) const;
 	void RaycastRecursive(int NodeIndex, const FRay& InRay, float& OutClosestHit, int& OutHitObject) const;
-	void RefreshDebugDraw();
 	void CollectNodeBounds(TArray<FAABB>& OutBounds) const;
 
 	TArray<FBVHNode> Nodes;
 	TArray<FBVHPrimitive> Primitives;
 	int RootIndex = -1;
-	UBVHDebugDraw DebugDraw;
 	bool bDebugDrawEnabled = true;
 
 	TArray<FAABB> Boxes;
