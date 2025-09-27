@@ -377,7 +377,12 @@ void UEditor::ProcessMouseInput(ULevel* InLevel)
 	}
 	if (InputManager.IsKeyReleased(EKeyInput::MouseLeft))
 	{
+		const bool bWasDragging = Gizmo.IsDragging();
 		Gizmo.EndDrag();
+		if (bWasDragging && Gizmo.GetSelectedActor())
+		{
+			UBVHManager::GetInstance().Refit();
+		}
 		// 드래그가 끝나면 선택된 뷰포트를 비활성화 합니다.
 		InteractionViewport = nullptr;
 	}
