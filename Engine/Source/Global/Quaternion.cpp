@@ -1,17 +1,31 @@
 #include "pch.h"
 #include "Global/Quaternion.h"
 
+FQuaternion FQuaternion::Inverse() const
+{
+	__m128 q = loadq(*this);
+	__m128 conj = _mm_xor_ps(q, _mm_set_ps(-0.0f, -0.0f, -0.0f, 0.0f)); // flip signs of X,Y,Z only
+	__m128 sq = _mm_mul_ps(q, q);
+	__m128 sum1 = _mm_hadd_ps(sq, sq);
+	__m128 sum2 = _mm_hadd_ps(sum1, sum1); // n = X²+Y²+Z²+W²
+	float n = _mm_cvtss_f32(sum2);
+
+	FQuaternion out;
+	if (n > 1e-8f) {
+		__m128 invn = _mm_set1_ps(1.0f / n);
+		storeq(out, _mm_mul_ps(conj, invn));
+	} else {
+		out = FQuaternion{0,0,0,0};
+	}
+	return out;
+}
+
 FQuaternion FQuaternion::FromAxisAngle(const FVector& Axis, float AngleRad)
 {
 	FVector N = Axis;
 	N.Normalize();
 	float s = sinf(AngleRad * 0.5f);
-	return FQuaternion(
-		N.X * s,
-		N.Y * s,
-		N.Z * s,
-		cosf(AngleRad * 0.5f)
-	);
+	return FQuaternion(N.X * s, N.Y * s, N.Z * s, cosf(AngleRad * 0.5f));
 }
 
 FQuaternion FQuaternion::FromEuler(const FVector& EulerDeg)
@@ -70,13 +84,15 @@ FQuaternion FQuaternion::operator*(const FQuaternion& Q) const
 
 void FQuaternion::Normalize()
 {
-	float mag = sqrtf(X * X + Y * Y + Z * Z + W * W);
-	if (mag > 0.0001f)
-	{
-		X /= mag;
-		Y /= mag;
-		Z /= mag;
-		W /= mag;
+	__m128 q = loadq(*this);
+	__m128 sq = _mm_mul_ps(q, q);
+	__m128 sum1 = _mm_hadd_ps(sq, sq);
+	__m128 sum2 = _mm_hadd_ps(sum1, sum1);
+	float mag2 = _mm_cvtss_f32(sum2);
+	if (mag2 > 1e-8f) {
+		float invMag = 1.0f / sqrtf(mag2);
+		__m128 s = _mm_set1_ps(invMag);
+		storeq(*this, _mm_mul_ps(q, s));
 	}
 }
 

@@ -141,14 +141,27 @@ struct FVector
 	/**
 	 * @brief 단위 벡터로 변경하는 함수
 	 */
+	static inline void store3(__m128 v, float& x, float& y, float& z) {
+		alignas(16) float tmp[4];
+		_mm_store_ps(tmp, v); // requires 16B alignment of tmp (stack is fine)
+		x = tmp[0]; y = tmp[1]; z = tmp[2];
+	}
 	void Normalize()
 	{
-		float Length = sqrt(LengthSquared());
-		if (Length > 0.00000001f)
-		{
-			X /= Length;
-			Y /= Length;
-			Z /= Length;
+		// Load as [X, Y, Z, 0]
+		__m128 v = _mm_setr_ps(X, Y, Z, 0.0f);
+
+		// Length^2 (XYZ only). If you lack SSE4.1, replace with mul+hadd fallback.
+		__m128 dp = _mm_dp_ps(v, v, 0x71);
+		float lenSq = _mm_cvtss_f32(dp);
+
+		if (lenSq > 1e-16f) {
+			// Compute scalar 1/sqrt(lenSq), then broadcast to all lanes
+			float invLenScalar = 1.0f / std::sqrt(lenSq);
+			__m128 invLen = _mm_set1_ps(invLenScalar);
+
+			__m128 n = _mm_mul_ps(v, invLen);
+			store3(n, X, Y, Z);
 		}
 	}
 
