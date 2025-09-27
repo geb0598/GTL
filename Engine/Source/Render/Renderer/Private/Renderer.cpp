@@ -367,6 +367,8 @@ void URenderer::Update()
 	UStatOverlay::GetInstance().Render();
 
 	RenderEnd(); // Present 1회
+
+	GetDeviceContext()->ClearState();
 }
 
 
@@ -460,7 +462,7 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 					// Billboards are rendered on the main thread after all other primitives
 					break;
 				case EPrimitiveType::StaticMesh:
-					//RenderStaticMesh(ThreadPipeline, Cast<UStaticMeshComponent>(PrimitiveComponent), LoadedRasterizerState, ThreadCBModels, ThreadCBMaterials);
+					RenderStaticMesh(ThreadPipeline, Cast<UStaticMeshComponent>(PrimitiveComponent), LoadedRasterizerState, ThreadCBModels, ThreadCBMaterials);
 					break;
 				default:
 					RenderPrimitiveDefault(ThreadPipeline, PrimitiveComponent, LoadedRasterizerState, ThreadCBModels, ThreadCBColors);
@@ -486,15 +488,8 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 	}
 	CommandLists.clear();
 
-	//auto* RTV = DeviceResources->GetRenderTargetView();
-	//auto* DSV = DeviceResources->GetDepthStencilView();
-	//GetDeviceContext()->OMSetRenderTargets(1, &RTV, DSV);
-	//DeviceResources->UpdateViewport();
-
 #else
-	// Render Primitive
-	for (auto& PrimitiveComponent : ULevelManager::GetInstance().GetCurrentLevel()->GetLevelPrimitiveComponents())
-	{
+	for (auto& PrimitiveComponent : ULevelManager::GetInstance().GetCurrentLevel()->GetLevelPrimitiveComponents())	{
 		// TODO(KHJ) Visible 여기서 Control 하고 있긴 한데 맞는지 Actor 단위 렌더링 할 때도 이렇게 써야할지 고민 필요
 		if (!PrimitiveComponent || !PrimitiveComponent->IsVisible())
 		{
@@ -517,9 +512,11 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 			BillBoard = Cast<UBillBoardComponent>(PrimitiveComponent);
 			break;
 		case EPrimitiveType::StaticMesh:
+			//RenderStaticMesh(*Pipeline, Cast<UStaticMeshComponent>(PrimitiveComponent), LoadedRasterizerState, ConstantBufferModels, ConstantBufferMaterial);
 			RenderStaticMesh(*Pipeline, Cast<UStaticMeshComponent>(PrimitiveComponent), LoadedRasterizerState, ConstantBufferModels, ConstantBufferMaterial);
 			break;
 		default:
+			//RenderPrimitiveDefault(*Pipeline, PrimitiveComponent, LoadedRasterizerState, ConstantBufferModels, ConstantBufferColor);
 			RenderPrimitiveDefault(*Pipeline, PrimitiveComponent, LoadedRasterizerState, ConstantBufferModels, ConstantBufferColor);
 			break;
 		}
@@ -609,7 +606,7 @@ void URenderer::RenderPrimitiveIndexed(UPipeline& InPipeline, const FEditorPrimi
         InPipeline.SetConstantBuffer(0, true, ConstantBufferModels);
         UpdateConstant(InPipeline.GetDeviceContext(), ConstantBufferModels, InPrimitive.Location, InPrimitive.Rotation, InPrimitive.Scale);
 
-        InPipeline.SetConstantBuffer(2, false, ConstantBufferColor);
+        InPipeline.SetConstantBuffer(2, true, ConstantBufferColor);
         UpdateConstant(InPipeline.GetDeviceContext(), ConstantBufferColor, InPrimitive.Color);
     }
 
@@ -745,6 +742,9 @@ void URenderer::RenderPrimitiveDefault(UPipeline& InPipeline, UPrimitiveComponen
 		D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST
     };
     InPipeline.UpdatePipeline(PipelineInfo);
+
+    InPipeline.GetDeviceContext()->VSSetShader(DefaultVertexShader, nullptr, 0);
+    InPipeline.GetDeviceContext()->PSSetShader(DefaultPixelShader, nullptr, 0);
 
     // Update pipeline buffers
     InPipeline.SetConstantBuffer(0, true, InConstantBufferModels);
