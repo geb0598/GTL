@@ -100,25 +100,25 @@ void UPrimitiveSpawnWidget::SpawnActors() const
 		AActor* NewActor = nullptr;
 
 		// 타입에 따라 액터 생성
-		if (SelectedPrimitiveType == EPrimitiveType::Cube)
+		switch (SelectedPrimitiveType)
 		{
+		case (EPrimitiveType::Cube):
 			NewActor = CurrentLevel->SpawnActorToLevel(ACubeActor::StaticClass());
-		}
-		else if (SelectedPrimitiveType == EPrimitiveType::Sphere)
-		{
+			break;
+		case (EPrimitiveType::Sphere):
 			NewActor = CurrentLevel->SpawnActorToLevel(ASphereActor::StaticClass());
-		}
-		else if (SelectedPrimitiveType == EPrimitiveType::Triangle)
-		{
+			break;
+		case (EPrimitiveType::Triangle):
 			NewActor = CurrentLevel->SpawnActorToLevel(ATriangleActor::StaticClass());
-		}
-		else if (SelectedPrimitiveType == EPrimitiveType::Square)
-		{
+			break;
+		case (EPrimitiveType::Square):
 			NewActor = CurrentLevel->SpawnActorToLevel(ASquareActor::StaticClass());
-		}
-		else if (SelectedPrimitiveType == EPrimitiveType::StaticMesh)
-		{
+			break;
+		case (EPrimitiveType::StaticMesh):
 			NewActor = CurrentLevel->SpawnActorToLevel(AStaticMeshActor::StaticClass());
+			break;
+		default:
+			break;
 		}
 
 		if (NewActor)

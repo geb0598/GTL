@@ -39,17 +39,10 @@ public:
 		UpdateBoundingBoxVertices({ {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} });
 	}
 
-	//void UpdateConstant(FBoundingBox boundingBoxInfo);
-
-	//void Update();
-
 	void Render(UPipeline& InPipeline);
 
 private:
 	void SetIndices();
-
-	/*void AddWorldGridVerticesAndConstData();
-	void AddBoundingBoxVertices();*/
 
 	bool bChangedVertices = false;
 

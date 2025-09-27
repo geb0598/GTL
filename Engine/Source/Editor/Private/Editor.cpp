@@ -19,6 +19,7 @@
 #include "Render/UI/Widget/Public/SceneHierarchyWidget.h"
 #include "Render/UI/Widget/Public/SplitterDebugWidget.h"
 #include "Render/UI/Widget/Public/ViewportMenuBarWidget.h"
+#include "Manager/BVH/public/BVHManager.h"
 
 UEditor::UEditor()
 {

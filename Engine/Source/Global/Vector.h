@@ -76,6 +76,8 @@ struct FVector
 	 */
 	FVector& operator*=(float InRatio);
 
+	FVector& operator/=(float InRatio);
+
 	/**
 	 * @brief 자신의 벡터의 각 성분의 부호를 반전한 값을 반환
 	 */
