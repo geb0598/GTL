@@ -31,7 +31,7 @@ class UBVHManager : UObject
 public:
 	void Initialize();
 
-	void Build(const TArray<FBVHPrimitive>& InPrimitives, int MaxLeafSize = 2);
+	void Build(const TArray<FBVHPrimitive>& InPrimitives, int MaxLeafSize = 5);
 	// void QueryFrustum(const Frustum& frustum, TArray<int>& outVisible) const;
 	bool Raycast(const FRay& InRay, UPrimitiveComponent*& HitComponent, float& HitT) const;
 	void Refit();
@@ -45,6 +45,7 @@ private:
 	int BuildRecursive(int Start, int Count, int MaxLeafSize);
 	FAABB RefitRecursive(int NodeIndex);
 	// void QueryRecursive(int nodeIdx, const Frustum& frustum, TArray<int>& outVisible) const;
+	void RaycastIterative(const FRay& InRay, float& OutClosestHit, int& OutHitObject) const;
 	void RaycastRecursive(int NodeIndex, const FRay& InRay, float& OutClosestHit, int& OutHitObject) const;
 	void CollectNodeBounds(TArray<FAABB>& OutBounds) const;
 

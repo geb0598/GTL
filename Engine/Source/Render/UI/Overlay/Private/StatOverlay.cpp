@@ -120,10 +120,11 @@ void UStatOverlay::RenderFPS()
 	// --- Picking Stats Text ---
 	char PickBuffer[128];
 	sprintf_s(PickBuffer, sizeof(PickBuffer),
-		"Picking Time %f ms : Num Attempts %u : Cumulative Time %f ms",
+		"Picking Time %f ms : Num Attempts %u : Cumulative Time %f ms : Average Time %f ms",
 		LastPickingTime,
 		NumPickingAttempts,
-		CumulativePickingTime);
+		CumulativePickingTime,
+		CumulativePickingTime / static_cast<float>(NumPickingAttempts));
 
 	FString PickText = PickBuffer;
 

@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "Manager/BVH/public/BVHManager.h"
-
 #include "Editor/Public/ObjectPicker.h"
+
 IMPLEMENT_SINGLETON_CLASS_BASE(UBVHManager)
 
 UBVHManager::UBVHManager() : Boxes()
@@ -45,7 +45,6 @@ int UBVHManager::BuildRecursive(int Start, int Count, int MaxLeafSize)
 		Bounds = Bounds.Union(Bounds, primitiveBounds);
 	}
 	Node.Bounds = Bounds;
-	// UE_LOG("Bounds now: (%f, %f), (%f, %f)", Bounds.Min.X, Bounds.Max.X, Bounds.Min.Y, Bounds.Max.Y);
 
 	// 2. Leaf condition
 	if (Count <= MaxLeafSize)
@@ -167,29 +166,19 @@ bool UBVHManager::Raycast(const FRay& InRay, UPrimitiveComponent*& HitComponent,
 	int HitObjectIndex = -1;
 
 	RaycastRecursive(RootIndex, InRay, HitT, HitObjectIndex);
+	// RaycastIterative(InRay, HitT, HitObjectIndex);
 	if (HitObjectIndex == -1)
 	{
-		UE_LOG("Raycast: No hit");
 		return false;
 	}
 
 	HitComponent = Primitives[HitObjectIndex].Primitive;
-	UE_LOG("Raycast: Hit Object Index=%d", HitObjectIndex);
 	return true;
 }
 
 void UBVHManager::RaycastRecursive(int NodeIndex, const FRay& InRay, float& OutClosestHit, int& OutHitObject) const
 {
-	if (NodeIndex < 0 || NodeIndex >= (int)Nodes.size())
-	{
-		UE_LOG("Invalid NodeIndex: %d (Nodes.size()=%d)", NodeIndex, (int)Nodes.size());
-		return;
-	}
-
 	const FBVHNode& Node = Nodes[NodeIndex];
-
-	// UE_LOG("BuildRecursive: Start=%d Count=%d -> NodeIndex=%d Leaf=%d",
-	//    Node.Start, Node.Count, NodeIndex, Node.bIsLeaf);
 
 	float tmin;
 	if (!Node.Bounds.RaycastHit(InRay, &tmin))
@@ -223,8 +212,88 @@ void UBVHManager::RaycastRecursive(int NodeIndex, const FRay& InRay, float& OutC
 	}
 }
 
+void UBVHManager::RaycastIterative(const FRay& InRay, float& OutClosestHit, int& OutHitObject) const
+{
+    struct StackEntry { int NodeIndex; float tmin; };
+    StackEntry stack[64]; // depth is ~log2(N), 64 is plenty for 50k
+    int stackPtr = 0;
 
-void UBVHManager::ConvertComponentsToPrimitives(const TArray<TObjectPtr<UPrimitiveComponent>>& InComponents, TArray<FBVHPrimitive>& OutPrimitives)
+    stack[stackPtr++] = { RootIndex, 0.0f };
+
+    while (stackPtr > 0)
+    {
+        // Pop
+        StackEntry entry = stack[--stackPtr];
+        int nodeIndex = entry.NodeIndex;
+
+        if (nodeIndex < 0 || nodeIndex >= (int)Nodes.size())
+            continue;
+
+        const FBVHNode& Node = Nodes[nodeIndex];
+
+        float tmin;
+        if (!Node.Bounds.RaycastHit(InRay, &tmin))
+            continue;
+        if (tmin > OutClosestHit) // farther than known closest
+            continue;
+
+        if (Node.bIsLeaf)
+        {
+            for (int i = 0; i < Node.Count; i++)
+            {
+                const FBVHPrimitive& Prim = Primitives[Node.Start + i];
+                float t;
+                if (Prim.Bounds.RaycastHit(InRay, &t) &&
+                    ObjectPicker.DoesRayIntersectPrimitive_MollerTrumbore(InRay, Prim.Primitive, &t))
+                {
+                    if (t < OutClosestHit)
+                    {
+                        OutClosestHit = t;
+                        OutHitObject  = Node.Start + i;
+                    }
+                }
+            }
+        }
+        else
+        {
+            // Check both children
+            float tLeft, tRight;
+            bool hitLeft  = Nodes[Node.LeftChild].Bounds.RaycastHit(InRay, &tLeft);
+            bool hitRight = Nodes[Node.RightChild].Bounds.RaycastHit(InRay, &tRight);
+
+            if (hitLeft && hitRight)
+            {
+                // Push far child first, near child last (so near is popped first)
+                if (tLeft < tRight)
+                {
+                    if (tRight < OutClosestHit)
+                        stack[stackPtr++] = { Node.RightChild, tRight };
+                    if (tLeft < OutClosestHit)
+                        stack[stackPtr++] = { Node.LeftChild, tLeft };
+                }
+                else
+                {
+                    if (tLeft < OutClosestHit)
+                        stack[stackPtr++] = { Node.LeftChild, tLeft };
+                    if (tRight < OutClosestHit)
+                        stack[stackPtr++] = { Node.RightChild, tRight };
+                }
+            }
+            else if (hitLeft && tLeft < OutClosestHit)
+            {
+                stack[stackPtr++] = { Node.LeftChild, tLeft };
+            }
+            else if (hitRight && tRight < OutClosestHit)
+            {
+                stack[stackPtr++] = { Node.RightChild, tRight };
+            }
+        }
+    }
+}
+
+
+void UBVHManager::ConvertComponentsToPrimitives(
+	const TArray<TObjectPtr<UPrimitiveComponent>>& InComponents, TArray<FBVHPrimitive>& OutPrimitives)
 {
 	OutPrimitives.clear();
 	OutPrimitives.reserve(InComponents.size());
