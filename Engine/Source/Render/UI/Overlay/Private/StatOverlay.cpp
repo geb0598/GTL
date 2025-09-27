@@ -1,9 +1,10 @@
 #include "pch.h"
-#include "Render/UI/Overlay/Public/StatOverlay.h"
+#include "Core/Public/PlatformTime.h"
+#include "Global/Memory.h"
 #include "Global/Types.h"
 #include "Manager/Time/Public/TimeManager.h"
-#include "Global/Memory.h"
 #include "Render/Renderer/Public/Renderer.h"
+#include "Render/UI/Overlay/Public/StatOverlay.h"
 
 IMPLEMENT_SINGLETON_CLASS_BASE(UStatOverlay)
 

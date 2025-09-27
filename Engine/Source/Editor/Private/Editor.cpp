@@ -1,24 +1,25 @@
 #include "pch.h"
-#include "Editor/Public/Editor.h"
+
+#include "Component/Public/PrimitiveComponent.h"
+#include "Core/Public/ScopeCycleCounter.h"
 #include "Editor/Public/Camera.h"
+#include "Editor/Public/Editor.h"
 #include "Editor/Public/Viewport.h"
+#include "Global/Quaternion.h"
+#include "Level/Public/Level.h"
+#include "Manager/Config/Public/ConfigManager.h"
+#include "Manager/Input/Public/InputManager.h"
+#include "Manager/Level/Public/LevelManager.h"
+#include "Manager/Time/Public/TimeManager.h"
+#include "Manager/UI/Public/UIManager.h"
 #include "Render/Renderer/Public/Renderer.h"
+#include "Render/UI/Overlay/Public/StatOverlay.h"
+#include "Render/UI/Widget/Public/CameraControlWidget.h"
 #include "Render/UI/Widget/Public/FPSWidget.h"
 #include "Render/UI/Widget/Public/SceneHierarchyWidget.h"
 #include "Render/UI/Widget/Public/SplitterDebugWidget.h"
-#include "Render/UI/Widget/Public/CameraControlWidget.h"
 #include "Render/UI/Widget/Public/ViewportMenuBarWidget.h"
-#include "Manager/Level/Public/LevelManager.h"
-#include "Manager/UI/Public/UIManager.h"
-#include "Manager/Input/Public/InputManager.h"
-#include "Manager/Config/Public/ConfigManager.h"
-#include "Manager/Time/Public/TimeManager.h"
-#include "Component/Public/PrimitiveComponent.h"
-#include "Core/Public/ScopeCycleCounter.h"
-#include "Level/Public/Level.h"
-#include "Global/Quaternion.h"
 #include "Manager/BVH/public/BVHManager.h"
-#include "Render/UI/Overlay/Public/StatOverlay.h"
 
 UEditor::UEditor()
 {
@@ -84,6 +85,7 @@ void UEditor::Update()
 				PrimitiveComponent->GetWorldAABB(WorldMin, WorldMax);
 
 				uint64 ShowFlags = ULevelManager::GetInstance().GetCurrentLevel()->GetShowFlags();
+
 				if ((ShowFlags & EEngineShowFlags::SF_Primitives) && (ShowFlags & EEngineShowFlags::SF_Bounds))
 				{
 					BatchLines.UpdateBoundingBoxVertices(FAABB(WorldMin, WorldMax));
@@ -107,17 +109,17 @@ void UEditor::Update()
 	UpdateLayout();
 }
 
-void UEditor::RenderEditor(UCamera* InCamera)
+void UEditor::RenderEditor(UPipeline& InPipeline, UCamera* InCamera)
 {
-	// Grid, Axis 등 에디터 요소를 렌더링합니다.
-	BatchLines.Render();
-	Axis.Render();
+	// Grid, Axis 등 에디터 요소를 렌더링합니다。
+	BatchLines.Render(InPipeline);
+	Axis.Render(InPipeline);
 
-	// Gizmo 렌더링 시, 현재 활성화된 카메라의 위치를 전달해야 합니다.
+	// Gizmo 렌더링 시, 현재 활성화된 카메라의 위치를 전달해야 합니다。
 	if (InCamera)
 	{
 		AActor* SelectedActor = ULevelManager::GetInstance().GetCurrentLevel()->GetSelectedActor();
-		Gizmo.RenderGizmo(SelectedActor, InCamera);
+		Gizmo.RenderGizmo(InPipeline, SelectedActor, InCamera);
 	}
 }
 
@@ -375,12 +377,7 @@ void UEditor::ProcessMouseInput(ULevel* InLevel)
 	}
 	if (InputManager.IsKeyReleased(EKeyInput::MouseLeft))
 	{
-		const bool bWasDragging = Gizmo.IsDragging();
 		Gizmo.EndDrag();
-		if (bWasDragging && Gizmo.GetSelectedActor())
-		{
-			UBVHManager::GetInstance().Refit();
-		}
 		// 드래그가 끝나면 선택된 뷰포트를 비활성화 합니다.
 		InteractionViewport = nullptr;
 	}

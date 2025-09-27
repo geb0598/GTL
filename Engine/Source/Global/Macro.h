@@ -2,7 +2,6 @@
 
 #define DT UTimeManager::GetInstance().GetDeltaTime()
 
-
 // UE_LOG Macro 시스템
 // 기본 UE_LOG (Info 타입)
 #define UE_LOG(fmt, ...) \
@@ -85,7 +84,6 @@
             UConsoleWindow::GetInstance().AddLog(ELogType::TerminalError, "" fmt, ##__VA_ARGS__); \
         } catch(...) {} \
     } while(0)
-
 
 /**
  * @brief UENUM 매크로 시스템

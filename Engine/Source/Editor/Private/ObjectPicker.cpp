@@ -1,15 +1,20 @@
 #include "pch.h"
-#include "Editor/Public/ObjectPicker.h"
+
+#ifdef MULTI_THREADING
+#include "cpp-thread-pool/thread_pool.h"
+#endif
+
+#include "Component/Public/PrimitiveComponent.h"
+#include "Core/Public/AppWindow.h"
 #include "Editor/Public/Camera.h"
 #include "Editor/Public/Gizmo.h"
-#include "Component/Public/PrimitiveComponent.h"
-#include "Manager/Input/Public/InputManager.h"
-#include "Core/Public/AppWindow.h"
+#include "Editor/Public/ObjectPicker.h"
+#include "Global/Quaternion.h"
 #include "ImGui/imgui.h"
 #include "Level/Public/Level.h"
-#include "Global/Quaternion.h"
-#include "Manager/BVH/public/BVHManager.h"
+#include "Manager/Input/Public/InputManager.h"
 #include "Physics/Public/AABB.h"
+#include "Manager/BVH/public/BVHManager.h"
 
 FRay UObjectPicker::GetModelRay(const FRay& Ray, UPrimitiveComponent* Primitive) const
 {
@@ -27,25 +32,6 @@ UPrimitiveComponent* UObjectPicker::PickPrimitive(UCamera* InActiveCamera, const
 	UPrimitiveComponent* ShortestPrimitive = nullptr;
 	float ShortestDistance = D3D11_FLOAT32_MAX;
 	float PrimitiveDistance = D3D11_FLOAT32_MAX;
-
-	// for (UPrimitiveComponent* Primitive : Candidate)
-	// {
-	// 	if (Primitive->GetPrimitiveType() == EPrimitiveType::BillBoard)
-	// 	{
-	// 		continue;
-	// 	}
-	// 	FMatrix ModelMat = Primitive->GetWorldTransformMatrix();
-	// 	if (DoesRayIntersectPrimitive(InActiveCamera, WorldRay, Primitive, ModelMat, &PrimitiveDistance))
-	// 		//Ray와 Primitive가 충돌했다면 거리 테스트 후 가까운 Actor Picking
-	// 	{
-	// 		if (PrimitiveDistance < ShortestDistance)
-	// 		{
-	// 			ShortestPrimitive = Primitive;
-	// 			ShortestDistance = PrimitiveDistance;
-	// 		}
-	// 	}
-	// }
-	// *OutDistance = ShortestDistance;
 
 	UBVHManager::GetInstance().Raycast(WorldRay, ShortestPrimitive, PrimitiveDistance);
 	*OutDistance = PrimitiveDistance;

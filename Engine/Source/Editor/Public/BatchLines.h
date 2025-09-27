@@ -4,6 +4,7 @@
 #include "Editor/Public/EditorPrimitive.h"
 #include "Editor/Public/Grid.h"
 #include "Editor/Public/BoundingBoxLines.h"
+#include "Render/Renderer/Public/Pipeline.h"
 
 struct FVertex;
 
@@ -35,10 +36,10 @@ public:
 
 	void DisableRenderBoundingBox()
 	{
-		UpdateBoundingBoxVertices(FAABB());
+		UpdateBoundingBoxVertices({ {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} });
 	}
 
-	void Render();
+	void Render(UPipeline& InPipeline);
 
 private:
 	void SetIndices();
