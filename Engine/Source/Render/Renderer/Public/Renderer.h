@@ -20,6 +20,7 @@ class UEditor;
 class UFontRenderer;
 class FViewport;
 class UCamera;
+class FViewportClient;
 
 /**
  * @brief Rendering Pipeline 전반을 처리하는 클래스
@@ -73,7 +74,7 @@ public:
 	// Render
 	void Update();
 	void RenderBegin() const;
-	void RenderLevel(UCamera* InCurrentCamera);
+	void RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewportClient);
 	void RenderEnd() const;
 	void RenderStaticMesh(UPipeline& InPipeline, UStaticMeshComponent* InMeshComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferMaterial);
 	void RenderBillboard(UBillBoardComponent* InBillBoardComp, UCamera* InCurrentCamera);

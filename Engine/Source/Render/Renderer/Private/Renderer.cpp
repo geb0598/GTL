@@ -352,10 +352,11 @@ void URenderer::Update()
 
 		// 3. 해당 카메라의 View/Projection 행렬로 상수 버퍼를 업데이트합니다.
 		CurrentCamera->Update(ViewportClient.GetViewportInfo());
+		Pipeline->SetConstantBuffer(1, true, ConstantBufferViewProj);
 		UpdateConstant(GetDeviceContext(), ConstantBufferViewProj, CurrentCamera->GetFViewProjConstants());
 
 		// 4. 씬(레벨, 에디터 요소 등)을 이 뷰포트와 카메라 기준으로 렌더링합니다.
-		RenderLevel(CurrentCamera);
+		RenderLevel(CurrentCamera, ViewportClient);
 
 		// 5. 에디터를 렌더링합니다.
 		ULevelManager::GetInstance().GetEditor()->RenderEditor(*Pipeline, CurrentCamera);
@@ -388,7 +389,7 @@ void URenderer::RenderBegin() const
 /**
  * @brief Buffer에 데이터 입력 및 Draw
  */
-void URenderer::RenderLevel(UCamera* InCurrentCamera)
+void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewportClient)
 {
 	// Level 없으면 Early Return
 	if (!ULevelManager::GetInstance().GetCurrentLevel())
@@ -416,7 +417,7 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera)
 
 		if (StartIndex >= EndIndex) continue;
 
-		Futures.emplace_back(Pool.Enqueue([this, StartIndex, EndIndex, &PrimitiveComponents, InCurrentCamera, i]()
+		Futures.emplace_back(Pool.Enqueue([this, StartIndex, EndIndex, &PrimitiveComponents, InCurrentCamera, i, &InViewportClient]()
 		{
 			ID3D11DeviceContext* DeferredContext = DeferredContexts[i];
 			if (!DeferredContext)
@@ -425,6 +426,12 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera)
 				return;
 			}
 			UPipeline ThreadPipeline(DeferredContext);
+			InViewportClient.Apply(DeferredContext);
+
+			auto* RTV = DeviceResources->GetRenderTargetView();
+			auto* DSV = DeviceResources->GetDepthStencilView();
+			DeferredContext->OMSetRenderTargets(1, &RTV, DSV);
+			ThreadPipeline.SetConstantBuffer(1, true, ConstantBufferViewProj);
 
 			ID3D11Buffer* ThreadCBModels = ThreadConstantBufferModels[i];
 			ID3D11Buffer* ThreadCBColors = ThreadConstantBufferColors[i];
@@ -456,7 +463,7 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera)
 					//RenderStaticMesh(ThreadPipeline, Cast<UStaticMeshComponent>(PrimitiveComponent), LoadedRasterizerState, ThreadCBModels, ThreadCBMaterials);
 					break;
 				default:
-					//RenderPrimitiveDefault(ThreadPipeline, PrimitiveComponent, LoadedRasterizerState, ThreadCBModels, ThreadCBColors);
+					RenderPrimitiveDefault(ThreadPipeline, PrimitiveComponent, LoadedRasterizerState, ThreadCBModels, ThreadCBColors);
 					break;
 				}
 			}
@@ -473,11 +480,16 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera)
 	{
 		if (CommandList)
 		{
-			GetDeviceContext()->ExecuteCommandList(CommandList, FALSE);
+			GetDeviceContext()->ExecuteCommandList(CommandList, TRUE);
 			CommandList->Release();
 		}
 	}
 	CommandLists.clear();
+
+	//auto* RTV = DeviceResources->GetRenderTargetView();
+	//auto* DSV = DeviceResources->GetDepthStencilView();
+	//GetDeviceContext()->OMSetRenderTargets(1, &RTV, DSV);
+	//DeviceResources->UpdateViewport();
 
 #else
 	// Render Primitive
@@ -549,7 +561,7 @@ void URenderer::RenderPrimitive(UPipeline& InPipeline, const FEditorPrimitive& I
     InPipeline.SetConstantBuffer(0, true, ConstantBufferModels);
     UpdateConstant(InPipeline.GetDeviceContext(), ConstantBufferModels, InPrimitive.Location, InPrimitive.Rotation, InPrimitive.Scale);
 
-    InPipeline.SetConstantBuffer(2, true, ConstantBufferColor);
+    InPipeline.SetConstantBuffer(2, false, ConstantBufferColor);
     UpdateConstant(InPipeline.GetDeviceContext(), ConstantBufferColor, InPrimitive.Color);
 
     // Set vertex buffer and draw
@@ -597,7 +609,7 @@ void URenderer::RenderPrimitiveIndexed(UPipeline& InPipeline, const FEditorPrimi
         InPipeline.SetConstantBuffer(0, true, ConstantBufferModels);
         UpdateConstant(InPipeline.GetDeviceContext(), ConstantBufferModels, InPrimitive.Location, InPrimitive.Rotation, InPrimitive.Scale);
 
-        InPipeline.SetConstantBuffer(2, true, ConstantBufferColor);
+        InPipeline.SetConstantBuffer(2, false, ConstantBufferColor);
         UpdateConstant(InPipeline.GetDeviceContext(), ConstantBufferColor, InPrimitive.Color);
     }
 
@@ -677,6 +689,7 @@ void URenderer::RenderStaticMesh(UPipeline& InPipeline, UStaticMeshComponent* In
             MaterialConstants.Time = InMeshComp->GetElapsedTime();
 
             // Update Constant Buffer
+            InPipeline.SetConstantBuffer(2, false, InConstantBufferMaterial);
             UpdateConstant(InPipeline.GetDeviceContext(), InConstantBufferMaterial, MaterialConstants);
 
             if (Material->GetDiffuseTexture()){
@@ -729,6 +742,7 @@ void URenderer::RenderPrimitiveDefault(UPipeline& InPipeline, UPrimitiveComponen
         DefaultDepthStencilState,
         DefaultPixelShader,
         nullptr,
+		D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST
     };
     InPipeline.UpdatePipeline(PipelineInfo);
 
@@ -1093,8 +1107,6 @@ void URenderer::UpdateConstant(ID3D11DeviceContext* InDeviceContext, ID3D11Buffe
 }
 void URenderer::UpdateConstant(ID3D11DeviceContext* InDeviceContext, ID3D11Buffer* InConstantBuffer, const FViewProjConstants& InViewProjConstants) const
 {
-    Pipeline->SetConstantBuffer(1, true, InConstantBuffer);
-
     if (InConstantBuffer)
     {
         D3D11_MAPPED_SUBRESOURCE ConstantBufferMSR = {};
@@ -1121,8 +1133,6 @@ void URenderer::UpdateConstant(ID3D11DeviceContext* InDeviceContext, ID3D11Buffe
 }
 void URenderer::UpdateConstant(ID3D11DeviceContext* InDeviceContext, ID3D11Buffer* InConstantBuffer, const FVector4& InColor) const
 {
-    Pipeline->SetConstantBuffer(2, false, InConstantBuffer);
-
     if (InConstantBuffer)
     {
         D3D11_MAPPED_SUBRESOURCE ConstantBufferMSR = {};
@@ -1141,8 +1151,6 @@ void URenderer::UpdateConstant(ID3D11DeviceContext* InDeviceContext, ID3D11Buffe
 }
 void URenderer::UpdateConstant(ID3D11DeviceContext* InDeviceContext, ID3D11Buffer* InConstantBuffer, const FMaterialConstants& InMaterial) const
 {
-    Pipeline->SetConstantBuffer(2, false, InConstantBuffer);
-
     if (InConstantBuffer)
     {
         D3D11_MAPPED_SUBRESOURCE ConstantBufferMSR = {};
