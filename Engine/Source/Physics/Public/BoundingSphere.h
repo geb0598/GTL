@@ -9,6 +9,6 @@ struct FBoundingSphere : public IBoundingVolume
 
 	FBoundingSphere(const FVector& InCenter, float InRadius) : Center(InCenter), Radius(InRadius) {}
 
-	bool RaycastHit() const override;
+	bool RaycastHit(const FRay& Ray, float* OutDistance) const override;
 	EBoundingVolumeType GetType() const override { return EBoundingVolumeType::Sphere; }
 };

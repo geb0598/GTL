@@ -10,6 +10,26 @@ struct FVector
 	float Y;
 	float Z;
 
+	float& operator[](int Index)
+	{
+		switch (Index)
+		{
+		case 0: return X;
+		case 1: return Y;
+		case 2: return Z;
+		}
+	}
+
+	const float& operator[](int Index) const
+	{
+		switch (Index)
+		{
+		case 0: return X;
+		case 1: return Y;
+		case 2: return Z;
+		}
+	}
+
 	/**
 	 * @brief FVector 기본 생성자
 	 */
@@ -287,6 +307,28 @@ struct FVector4
 	float Dot3(const FVector& InOtherVector) const
 	{
 		return X * InOtherVector.X + Y * InOtherVector.Y + Z * InOtherVector.Z;
+	}
+
+	float& operator[](int Index)
+	{
+		switch (Index)
+		{
+		case 0: return X;
+		case 1: return Y;
+		case 2: return Z;
+		case 3: return W;
+		}
+	}
+
+	const float& operator[](int Index) const
+	{
+		switch (Index)
+		{
+		case 0: return X;
+		case 1: return Y;
+		case 2: return Z;
+		case 3: return W;
+		}
 	}
 
 	// Constant Vector (definition from UE5)
