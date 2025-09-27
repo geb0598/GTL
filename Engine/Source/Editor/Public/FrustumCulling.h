@@ -18,14 +18,7 @@ struct FPlane
 	// D
 	float ConstantD;
 	FPlane() : NormalVector(FVector::Zero()), ConstantD(0.0f) {}
-	FPlane(const FVector& Normal, const float d) : NormalVector(Normal), ConstantD(d) {}
-
-	FPlane(const FVector& PointOnPlane, const FVector& PlaneNormalVector)
-	{
-		this->NormalVector = PlaneNormalVector;
-		this->ConstantD = PlaneNormalVector.Dot(PointOnPlane);
-		this->Normalize();
-	}
+	FPlane(const FVector& Normal, const float Distance) : NormalVector(Normal), ConstantD(Distance) {}
 
 	void Normalize()
 	{
