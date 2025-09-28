@@ -216,7 +216,43 @@ void UAssetManager::LoadAllObjStaticMesh()
 			if (MeshSimplifier.LoadFromObj(ObjPath.ToString()))
 			{
 				MeshSimplifier.Simplify(ReductionRatio);
-				MeshSimplifier.SaveToObj(ObjPath.ToString(), ReductionRatio);
+				if (MeshSimplifier.SaveToObj(ObjPath.ToString(), ReductionRatio))
+				{
+					// LOD 파일 경로 구성 (SaveToObj와 동일한 로직)
+					std::filesystem::path OriginalPath(ObjPath.ToString());
+					std::filesystem::path LodDirectory = OriginalPath.parent_path() / "LOD";
+
+					// 파일명 구성 (예: A_lod_050.obj, A_lod_025.obj)
+					FString OriginalStem = OriginalPath.stem().string();
+					int RatioInt = static_cast<int>(ReductionRatio * 100);
+					FString RatioStr = (RatioInt < 100) ? "0" + std::to_string(RatioInt) : std::to_string(RatioInt);
+					if (RatioInt < 10) RatioStr = "0" + RatioStr;
+
+					std::filesystem::path LodObjPath = LodDirectory / (OriginalStem + "_lod_" + RatioStr + ".obj");
+
+					// 경로를 정규화하여 / 또는 \ 차이로 인한 중복 방지
+					FString NormalizedPath = LodObjPath.generic_string();
+					FName LodObjName(NormalizedPath);
+
+					// 중복 체크 후 LODObjList에 추가 (정규화된 경로로 비교)
+					bool bAlreadyExists = false;
+					for (const FName& ExistingPath : LODObjList)
+					{
+						std::filesystem::path ExistingNormalized(ExistingPath.ToString());
+						FString ExistingGeneric = ExistingNormalized.generic_string();
+
+						if (NormalizedPath == ExistingGeneric)
+						{
+							bAlreadyExists = true;
+							break;
+						}
+					}
+
+					if (!bAlreadyExists)
+					{
+						LODObjList.push_back(LodObjName);
+					}
+				}
 			}
 		}
 
@@ -226,6 +262,11 @@ void UAssetManager::LoadAllObjStaticMesh()
 			StaticMeshVertexBuffers.emplace(ObjPath, CreateVertexBuffer(LoadedMesh->GetVertices()));
 			StaticMeshIndexBuffers.emplace(ObjPath, CreateIndexBuffer(LoadedMesh->GetIndices()));
 		}
+	}
+
+	for (auto& Path : LODObjList)
+	{
+		UE_LOG("Path : %s", Path.ToString().data());
 	}
 
 	// LOD Mesh 로드
