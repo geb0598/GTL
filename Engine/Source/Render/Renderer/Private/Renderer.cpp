@@ -18,6 +18,8 @@
 #include "Texture/Public/TextureRenderProxy.h"
 #include "Source/Component/Mesh/Public/StaticMesh.h"
 
+#include "Render/Renderer/Public/OcclusionRenderer.h"
+
 #ifdef MULTI_THREADING
 #include "cpp-thread-pool/thread_pool.h"
 #endif
@@ -50,6 +52,16 @@ void URenderer::Init(HWND InWindowHandle)
 	}
 
 	ViewportClient->InitializeLayout(DeviceResources->GetViewportInfo());
+
+	// =============================================================================== //
+	// Occlusion Renderer Initialization
+
+	RECT ClientRect;
+	GetClientRect(InWindowHandle, &ClientRect);
+	uint32 Width = ClientRect.right - ClientRect.left;
+	uint32 Height = ClientRect.bottom - ClientRect.top;
+
+	UOcclusionRenderer::GetInstance().Initialize(GetDevice(), GetDeviceContext(), Width, Height);
 
 #ifdef MULTI_THREADING
 	// Create deferred contexts and thread-specific constant buffers
@@ -396,12 +408,28 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 		return;
 	}
 
+	const auto& PrimitiveComponents = ULevelManager::GetInstance().GetCurrentLevel()->GetLevelPrimitiveComponents();
+
+	auto& OcclusionRenderer = UOcclusionRenderer::GetInstance();
+	//OcclusionRenderer.BuildScreenSpaceBoundingVolumes(GetDeviceContext(), InCurrentCamera, PrimitiveComponents);
+	OcclusionRenderer.DepthPrePass(GetDeviceContext(), InCurrentCamera, PrimitiveComponents);
+	OcclusionRenderer.GenerateHiZ(GetDevice(), GetDeviceContext());
+	TArray<bool> VisibilityResults;
+	OcclusionRenderer.OcclusionTest(GetDevice(), GetDeviceContext(), InCurrentCamera, PrimitiveComponents, VisibilityResults);
+
+	UE_LOG("Total Primitives: %d", PrimitiveComponents.size());
+	int CulledCnt = 0;
+	for (size_t i = 0; i < VisibilityResults.size(); ++i)
+	{
+		CulledCnt += !VisibilityResults[i];
+	}
+	UE_LOG("Culled Primitives: %d", CulledCnt);
+
 	TObjectPtr<UBillBoardComponent> BillBoard = nullptr;
 
 #ifdef MULTI_THREADING
 	static ThreadPool Pool(NUM_WORKER_THREADS);
 
-	const auto& PrimitiveComponents = ULevelManager::GetInstance().GetCurrentLevel()->GetLevelPrimitiveComponents();
 	const size_t NumPrimitives = PrimitiveComponents.size();
 	const size_t ChunkSize = (NumPrimitives + NUM_WORKER_THREADS - 1) / NUM_WORKER_THREADS;
 
@@ -486,9 +514,10 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 	CommandLists.clear();
 
 #else
-	for (auto& PrimitiveComponent : ULevelManager::GetInstance().GetCurrentLevel()->GetLevelPrimitiveComponents())	{
+	for (size_t i = 0; i < PrimitiveComponents.size(); ++i) {
+		auto PrimitiveComponent = PrimitiveComponents[i];
 		// TODO(KHJ) Visible 여기서 Control 하고 있긴 한데 맞는지 Actor 단위 렌더링 할 때도 이렇게 써야할지 고민 필요
-		if (!PrimitiveComponent || !PrimitiveComponent->IsVisible())
+		if (!PrimitiveComponent || !PrimitiveComponent->IsVisible() || !VisibilityResults[i])
 		{
 			continue;
 		}
@@ -876,6 +905,8 @@ void URenderer::OnResize(uint32 InWidth, uint32 InHeight) const
 	ID3D11RenderTargetView* RenderTargetViews[] = { RenderTargetView };
 	GetDeviceContext()->OMSetRenderTargets(1, RenderTargetViews, DeviceResources->GetDepthStencilView());
 	UStatOverlay::GetInstance().OnResize();
+
+	UOcclusionRenderer::GetInstance().Resize(InWidth, InHeight);
 }
 
 /**

@@ -84,4 +84,6 @@ using filesystem::create_directories;
 #pragma comment(lib, "d2d1")
 #pragma comment(lib, "dwrite")
 #pragma comment(lib, DIRECTX_TOOL_KIT)
+#ifdef MULTI_THREADING
 #pragma comment(lib, "thread_pool")
+#endif

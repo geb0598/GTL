@@ -16,6 +16,21 @@
     <FxCompile Include="Asset\Shader\TextureShader.hlsl">
       <Filter>Asset\Shader</Filter>
     </FxCompile>
+    <FxCompile Include="Asset\Shader\HiZOcclusionCS.hlsl">
+      <Filter>Asset\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\HiZCopyDepthCS.hlsl">
+      <Filter>Asset\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\HiZDownSampleCS.hlsl">
+      <Filter>Asset\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\DepthPS.hlsl">
+      <Filter>Asset\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\DepthVS.hlsl">
+      <Filter>Asset\Shader</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -210,10 +225,10 @@
       <Filter>Source\Manager\UI\Private</Filter>
     </ClCompile>
     <ClCompile Include="Source\Physics\Private\AABB.cpp">
-      <Filter>Source\Physics\Private</Filter>
+      <Filter>Source\Render\Renderer\Physics\Private</Filter>
     </ClCompile>
     <ClCompile Include="Source\Physics\Private\BoundingSphere.cpp">
-      <Filter>Source\Physics\Private</Filter>
+      <Filter>Source\Render\Renderer\Physics\Private</Filter>
     </ClCompile>
     <ClCompile Include="Source\ImGui\imgui.cpp">
       <Filter>Source\ImGui</Filter>
@@ -344,6 +359,10 @@
     <ClCompile Include="Source\Utility\Private\ActorTypeMapper.cpp">
       <Filter>Source\Utility\Private</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Core\Private\PlatformTime.cpp" />
+    <ClCompile Include="Source\Core\Private\ScopeCycleCounter.cpp" />
+    <ClCompile Include="Source\Manager\BVH\private\BVHManager.cpp" />
+    <ClCompile Include="Source\Render\Renderer\Private\OcclusionRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -570,13 +589,13 @@
       <Filter>Source\Manager\UI\Public</Filter>
     </ClInclude>
     <ClInclude Include="Source\Physics\Public\AABB.h">
-      <Filter>Source\Physics\Public</Filter>
+      <Filter>Source\Render\Renderer\Physics\Public</Filter>
     </ClInclude>
     <ClInclude Include="Source\Physics\Public\BoundingSphere.h">
-      <Filter>Source\Physics\Public</Filter>
+      <Filter>Source\Render\Renderer\Physics\Public</Filter>
     </ClInclude>
     <ClInclude Include="Source\Physics\Public\BoundingVolume.h">
-      <Filter>Source\Physics\Public</Filter>
+      <Filter>Source\Render\Renderer\Physics\Public</Filter>
     </ClInclude>
     <ClInclude Include="Source\ImGui\imconfig.h">
       <Filter>Source\ImGui</Filter>
@@ -716,6 +735,10 @@
     <ClInclude Include="Source\Utility\Public\ActorTypeMapper.h">
       <Filter>Source\Utility\Public</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Core\Public\PlatformTime.h" />
+    <ClInclude Include="Source\Core\Public\ScopeCycleCounter.h" />
+    <ClInclude Include="Source\Render\Renderer\Public\OcclusionRenderer.h" />
+    <ClInclude Include="Source\Manager\BVH\public\BVHManager.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Source">
@@ -877,15 +900,6 @@
     <Filter Include="Source\Manager\UI\Public">
       <UniqueIdentifier>{228c3486-1222-40a5-ac01-e28cddde3d88}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Physics">
-      <UniqueIdentifier>{cd53a2a6-519e-49e0-a529-37eb02a2ec27}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Physics\Private">
-      <UniqueIdentifier>{f34ad9cf-a34c-4a35-b87b-9ae8807a83b9}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Physics\Public">
-      <UniqueIdentifier>{4d9cfda4-228a-4217-9905-74be629af921}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\ImGui">
       <UniqueIdentifier>{b55eb613-a2fb-4132-a8f3-b3c8e8dd5a73}</UniqueIdentifier>
     </Filter>
@@ -975,6 +989,15 @@
     </Filter>
     <Filter Include="Source\Texture\Public">
       <UniqueIdentifier>{b2172c3a-7772-49d9-b101-7e62cf0fc027}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Render\Renderer\Physics">
+      <UniqueIdentifier>{cd53a2a6-519e-49e0-a529-37eb02a2ec27}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Render\Renderer\Physics\Private">
+      <UniqueIdentifier>{f34ad9cf-a34c-4a35-b87b-9ae8807a83b9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Render\Renderer\Physics\Public">
+      <UniqueIdentifier>{4d9cfda4-228a-4217-9905-74be629af921}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
