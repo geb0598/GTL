@@ -104,3 +104,21 @@ const TArray<FMeshSection>& UStaticMesh::GetSections() const
 	static const TArray<FMeshSection> EmptySections;
 	return EmptySections;
 }
+
+// LOD System Implementation
+void UStaticMesh::AddLODMesh(FStaticMesh* LODMesh)
+{
+	if (LODMesh)
+	{
+		LODMeshes.push_back(LODMesh);
+	}
+}
+
+FStaticMesh* UStaticMesh::GetLODMesh(int32 LODLevel) const
+{
+	if (LODLevel >= 0 && LODLevel < static_cast<int32>(LODMeshes.size()))
+	{
+		return LODMeshes[LODLevel];
+	}
+	return StaticMeshAsset; // LOD가 없으면 원본 반환
+}

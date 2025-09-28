@@ -28,6 +28,27 @@ public:
 	UMaterial* GetMaterial(int32 Index) const;
 	void SetMaterial(int32 Index, UMaterial* InMaterial);
 
+	// LOD System
+	void SetLODLevel(int32 LODLevel);
+	int32 GetCurrentLODLevel() const { return CurrentLODLevel; }
+	void SetLODEnabled(bool bEnabled) { bLODEnabled = bEnabled; }
+	bool IsLODEnabled() const { return bLODEnabled; }
+	void UpdateLODBasedOnDistance(const FVector& CameraPosition);
+
+	// LOD Distance Control
+	void SetLODDistance1(float Distance) { LODDistanceSquared1 = Distance * Distance; }
+	void SetLODDistance2(float Distance) { LODDistanceSquared2 = Distance * Distance; }
+	float GetLODDistance1() const { return sqrtf(LODDistanceSquared1); }
+	float GetLODDistance2() const { return sqrtf(LODDistanceSquared2); }
+	float GetLODDistanceSquared1() const { return LODDistanceSquared1; }
+	float GetLODDistanceSquared2() const { return LODDistanceSquared2; }
+
+	// LOD Level Limit Control
+	void SetMinLODLevel(int32 MinLevel) { MinLODLevel = MinLevel; }
+	int32 GetMinLODLevel() const { return MinLODLevel; }
+
+	void TickComponent() override;
+
 	void EnableScroll() { bIsScrollEnabled = true; }
 	void DisableScroll() { bIsScrollEnabled = false; }
 	bool IsScrollEnabled() const { return bIsScrollEnabled; }
@@ -40,6 +61,14 @@ private:
 
 	// MaterialList
 	TArray<UMaterial*> OverrideMaterials;
+
+	// LOD System
+	int32 CurrentLODLevel = 0;
+	bool bLODEnabled = true;
+	float LODDistanceSquared1 = 100.0f;  // LOD 1 전환 거리 제곱 (10^2)
+	float LODDistanceSquared2 = 400.0f; // LOD 2 전환 거리 제곱 (20^2)
+	int32 MinLODLevel = 0;  // 최소 허용 LOD 레벨 (0=모든LOD, 1=LOD1,2만, 2=LOD2만)
+	FName OriginalMeshPath;  // 원본 메시 경로 저장
 
 	// Scroll
 	bool bIsScrollEnabled;

@@ -269,14 +269,46 @@ void UAssetManager::LoadAllObjStaticMesh()
 		UE_LOG("Path : %s", Path.ToString().data());
 	}
 
-	// LOD Mesh 로드
+	// LOD Mesh 로드 및 원본 메시와 연결
 	for (const FName& LODObjPath : LODObjList)
 	{
-		if (UStaticMesh* LoadedMesh = FObjManager::LoadObjStaticMesh(LODObjPath, Config))
+		if (UStaticMesh* LoadedLODMesh = FObjManager::LoadObjStaticMesh(LODObjPath, Config))
 		{
-			StaticMeshCache.emplace(LODObjPath, LoadedMesh);
-			StaticMeshVertexBuffers.emplace(LODObjPath, CreateVertexBuffer(LoadedMesh->GetVertices()));
-			StaticMeshIndexBuffers.emplace(LODObjPath, CreateIndexBuffer(LoadedMesh->GetIndices()));
+			StaticMeshCache.emplace(LODObjPath, LoadedLODMesh);
+			StaticMeshVertexBuffers.emplace(LODObjPath, CreateVertexBuffer(LoadedLODMesh->GetVertices()));
+			StaticMeshIndexBuffers.emplace(LODObjPath, CreateIndexBuffer(LoadedLODMesh->GetIndices()));
+
+			// LOD 파일에서 원본 파일 경로 추출하여 연결
+			FString LODPathStr = LODObjPath.ToString();
+			std::filesystem::path LODPath(LODPathStr);
+
+			// LOD 파일명에서 원본 파일명 추출 (예: apple_lod_050.obj -> apple.obj)
+			FString FileName = LODPath.stem().string();
+			size_t LodPos = FileName.find("_lod_");
+			if (LodPos != FString::npos)
+			{
+				FString OriginalStem = FileName.substr(0, LodPos);
+
+				// 원본 파일 경로 구성 (LOD 폴더의 부모 디렉토리에서 찾기)
+				std::filesystem::path OriginalPath = LODPath.parent_path().parent_path() / (OriginalStem + ".obj");
+
+				// 경로 정규화: 백슬래시를 슬래시로 변경
+				FString OriginalPathStr = OriginalPath.string();
+				std::replace(OriginalPathStr.begin(), OriginalPathStr.end(), '\\', '/');
+
+				FName OriginalObjPath(OriginalPathStr);
+
+				// 원본 메시가 캐시에 있으면 LOD 연결
+				auto OriginalMeshIter = StaticMeshCache.find(OriginalObjPath);
+				if (OriginalMeshIter != StaticMeshCache.end())
+				{
+					UStaticMesh* OriginalMesh = OriginalMeshIter->second.get();
+					if (OriginalMesh && LoadedLODMesh->GetStaticMeshAsset())
+					{
+						OriginalMesh->AddLODMesh(LoadedLODMesh->GetStaticMeshAsset());
+					}
+				}
+			}
 		}
 	}
 }

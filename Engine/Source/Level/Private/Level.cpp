@@ -18,6 +18,8 @@
 #include "Render/Renderer/Public/Renderer.h"
 #include "Editor/Public/Viewport.h"
 #include "Utility/Public/ActorTypeMapper.h"
+#include "Component/Mesh/Public/StaticMeshComponent.h"
+#include "Editor/Public/Camera.h"
 
 #include <json.hpp>
 
@@ -130,10 +132,11 @@ void ULevel::Update()
 	{
 		if (Actor)
 		{
-			Actor->Tick();
+			// Actor->Tick();
 			AddLevelPrimitiveComponent(Actor);
 		}
 	}
+	TickLODUpdate();
 }
 
 void ULevel::Render()
@@ -349,4 +352,59 @@ void ULevel::ProcessPendingDeletions()
 	}
 
 	UE_LOG("Level: 모든 지연 삭제 프로세스 완료");
+}
+
+void ULevel::TickLODUpdate()
+{
+	LODUpdateFrameCounter++;
+
+	// 10프레임마다 LOD 업데이트 실행
+	if (LODUpdateFrameCounter >= LOD_UPDATE_INTERVAL)
+	{
+		LODUpdateFrameCounter = 0;
+		UpdateLODForAllMeshes();
+	}
+}
+
+void ULevel::UpdateLODForAllMeshes()
+{
+	// 카메라 위치 가져오기
+	URenderer* RendererPtr = nullptr;
+	try {
+		RendererPtr = &URenderer::GetInstance();
+	}
+	catch (...) {
+		return; // Renderer가 초기화되지 않은 경우
+	}
+
+	if (!RendererPtr) return;
+
+	FViewport* Viewport = RendererPtr->GetViewportClient();
+	if (!Viewport) return;
+
+	UCamera* Camera = Viewport->GetActiveCamera();
+	if (!Camera) return;
+
+	FVector CameraPosition = Camera->GetLocation();
+
+	// 레벨의 모든 StaticMeshComponent에 대해 LOD 업데이트
+	for (const TObjectPtr<AActor>& ActorPtr : LevelActors)
+	{
+		AActor* Actor = ActorPtr.Get();
+		if (Actor)
+		{
+			const TArray<TObjectPtr<UActorComponent>>& Components = Actor->GetOwnedComponents();
+			for (const TObjectPtr<UActorComponent>& ComponentPtr : Components)
+			{
+				UActorComponent* Component = ComponentPtr.Get();
+				if (UStaticMeshComponent* MeshComp = dynamic_cast<UStaticMeshComponent*>(Component))
+				{
+					if (MeshComp->IsLODEnabled())
+					{
+						MeshComp->UpdateLODBasedOnDistance(CameraPosition);
+					}
+				}
+			}
+		}
+	}
 }
