@@ -5,6 +5,7 @@
 #include "DirectXTK/WICTextureLoader.h"
 #include "DirectXTK/DDSTextureLoader.h"
 #include "Component/Mesh/Public/VertexDatas.h"
+#include "Manager/Asset/Public/LODMaker.h"
 #include "Physics/Public/AABB.h"
 #include "Texture/Public/TextureRenderProxy.h"
 #include "Texture/Public/Texture.h"
@@ -152,22 +153,48 @@ void UAssetManager::LoadAllObjStaticMesh()
 {
 	URenderer& Renderer = URenderer::GetInstance();
 
-	TArray<FName> ObjList;
+	TArray<FName> ObjList, LODObjList;
 	const FString DataDirectory = "Data/"; // 검색할 기본 디렉토리
-	// 디렉토리가 실제로 존재하는지 먼저 확인합니다.
+
+	auto IsInLodFolder = [](const std::filesystem::path& P) -> bool
+	{
+		for (std::filesystem::path Cur = P; !Cur.empty(); Cur = Cur.parent_path())
+		{
+			std::string Name = Cur.filename().string();
+			std::transform(Name.begin(), Name.end(), Name.begin(),
+				[](unsigned char C){ return static_cast<char>(std::tolower(C)); });
+
+			if (Name == "lod")
+			{
+				return true;
+			}
+		}
+		return false;
+	};
+
 	if (std::filesystem::exists(DataDirectory) && std::filesystem::is_directory(DataDirectory))
 	{
-		// recursive_directory_iterator를 사용하여 디렉토리와 모든 하위 디렉토리를 순회합니다.
-		for (const auto& Entry : std::filesystem::recursive_directory_iterator(DataDirectory))
+		std::filesystem::recursive_directory_iterator It(
+			DataDirectory, std::filesystem::directory_options::skip_permission_denied
+		), End;
+
+		for (; It != End; ++It)
 		{
-			// 현재 항목이 일반 파일이고, 확장자가 ".obj"인지 확인합니다.
+			const auto& Entry = *It;
+
 			if (Entry.is_regular_file() && Entry.path().extension() == ".obj")
 			{
-				// .generic_string()을 사용하여 OS에 상관없이 '/' 구분자를 사용하는 경로를 바로 얻습니다.
+				const bool bInLOD = IsInLodFolder(Entry.path().parent_path());
 				FString PathString = Entry.path().generic_string();
 
-				// 찾은 파일 경로를 FName으로 변환하여 ObjList에 추가합니다.
-				ObjList.push_back(FName(PathString));
+				if (bInLOD)
+				{
+					LODObjList.push_back(FName(PathString));
+				}
+				else
+				{
+					ObjList.push_back(FName(PathString));
+				}
 			}
 		}
 	}
@@ -179,19 +206,36 @@ void UAssetManager::LoadAllObjStaticMesh()
 	Config.bUVToUEBasis = true;
 	Config.bPositionToUEBasis = true;
 
-	// 범위 기반 for문을 사용하여 배열의 모든 요소를 순회합니다.
+	TArray<float> ReductionRatios = { 0.5f, 0.25f };
+
 	for (const FName& ObjPath : ObjList)
 	{
-		// FObjManager가 UStaticMesh 포인터를 반환한다고 가정합니다.
-		UStaticMesh* LoadedMesh = FObjManager::LoadObjStaticMesh(ObjPath, Config);
+		for (float ReductionRatio : ReductionRatios)
+		{
+			FMeshSimplifier MeshSimplifier;
+			if (MeshSimplifier.LoadFromObj(ObjPath.ToString()))
+			{
+				MeshSimplifier.Simplify(ReductionRatio);
+				MeshSimplifier.SaveToObj(ObjPath.ToString(), ReductionRatio);
+			}
+		}
 
-		// 로드에 성공했는지 확인합니다.
-		if (LoadedMesh)
+		if (UStaticMesh* LoadedMesh = FObjManager::LoadObjStaticMesh(ObjPath, Config))
 		{
 			StaticMeshCache.emplace(ObjPath, LoadedMesh);
-
 			StaticMeshVertexBuffers.emplace(ObjPath, CreateVertexBuffer(LoadedMesh->GetVertices()));
 			StaticMeshIndexBuffers.emplace(ObjPath, CreateIndexBuffer(LoadedMesh->GetIndices()));
+		}
+	}
+
+	// LOD Mesh 로드
+	for (const FName& LODObjPath : LODObjList)
+	{
+		if (UStaticMesh* LoadedMesh = FObjManager::LoadObjStaticMesh(LODObjPath, Config))
+		{
+			StaticMeshCache.emplace(LODObjPath, LoadedMesh);
+			StaticMeshVertexBuffers.emplace(LODObjPath, CreateVertexBuffer(LoadedMesh->GetVertices()));
+			StaticMeshIndexBuffers.emplace(LODObjPath, CreateIndexBuffer(LoadedMesh->GetIndices()));
 		}
 	}
 }
@@ -202,6 +246,7 @@ ID3D11Buffer* UAssetManager::GetVertexBuffer(FName InObjPath)
 	{
 		return StaticMeshVertexBuffers[InObjPath];
 	}
+	return nullptr;
 }
 
 ID3D11Buffer* UAssetManager::GetIndexBuffer(FName InObjPath)
@@ -210,6 +255,7 @@ ID3D11Buffer* UAssetManager::GetIndexBuffer(FName InObjPath)
 	{
 		return StaticMeshIndexBuffers[InObjPath];
 	}
+	return nullptr;
 }
 
 ID3D11Buffer* UAssetManager::CreateVertexBuffer(TArray<FNormalVertex> InVertices)
