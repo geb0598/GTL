@@ -40,7 +40,6 @@ void UOcclusionRenderer::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext*
 	CreateShader(Device);
 	CreateDepthResource(Device);
 	CreateHiZResource(Device);
-	CreateVisibilityResource(Device);
 }
 
 void UOcclusionRenderer::Release()
@@ -48,81 +47,106 @@ void UOcclusionRenderer::Release()
 	ReleaseShader();
 	ReleaseDepthResource();
 	ReleaseHiZResource();
-	ReleaseVisibilityResource();
 
 	Device = nullptr;
 	DeviceContext = nullptr;
 }
 
-void UOcclusionRenderer::BuildScreenSpaceBoundingVolumes(ID3D11DeviceContext* InDeviceContext, UCamera* InCamera, const TArray<TObjectPtr<UPrimitiveComponent>>& PrimitiveComponents)
+void UOcclusionRenderer::BuildScreenSpaceBoundingVolumes(
+	ID3D11DeviceContext* InDeviceContext,
+	UCamera* InCamera,
+	const TArray<TObjectPtr<UPrimitiveComponent>>& PrimitiveComponents)
 {
-	// Clear previous bounding volumes
+	// ========================================================= //
+	// 1. 준비: 기존 데이터 클리어 & 리사이즈
+	// ========================================================= //
 	BoundingVolumes.clear();
 	BoundingVolumes.resize(PrimitiveComponents.size());
 
 	if (PrimitiveComponents.empty())
-	{
 		return;
-	}
 
-	FViewProjConstants ViewProjConstants = InCamera->GetFViewProjConstants();
-	FMatrix ViewProjectionMatrix = ViewProjConstants.View * ViewProjConstants.Projection;
+	FViewProjConstants ViewProj = InCamera->GetFViewProjConstants();
+	FMatrix ViewProjMatrix = ViewProj.View * ViewProj.Projection;
 
+	// ========================================================= //
+	// 2. 프리미티브 루프
+	// ========================================================= //
 	for (size_t i = 0; i < PrimitiveComponents.size(); ++i)
 	{
 		const auto& Primitive = PrimitiveComponents[i];
 		if (!Primitive)
 		{
-			BoundingVolumes[i] = { FVector(0, 0, 0), FVector(0, 0, 0) };
+			BoundingVolumes[i] = { FVector4(0, 0, 0, 0), FVector4(0, 0, 0, 0) };
 			continue;
 		}
 
+		// --- (1) 월드 공간 AABB 가져오기 ---
 		FVector WorldMin, WorldMax;
 		Primitive->GetWorldAABB(WorldMin, WorldMax);
 
-		// Get the 8 corners of the world-space AABB
+		// --- (2) 8개 코너 생성 ---
 		FVector corners[8] = {
-			FVector(WorldMin.X, WorldMin.Y, WorldMin.Z),
-			FVector(WorldMax.X, WorldMin.Y, WorldMin.Z),
-			FVector(WorldMin.X, WorldMax.Y, WorldMin.Z),
-			FVector(WorldMin.X, WorldMin.Y, WorldMax.Z),
-			FVector(WorldMax.X, WorldMax.Y, WorldMin.Z),
-			FVector(WorldMax.X, WorldMin.Y, WorldMax.Z),
-			FVector(WorldMin.X, WorldMax.Y, WorldMax.Z),
-			FVector(WorldMax.X, WorldMax.Y, WorldMax.Z)
+			{ WorldMin.X, WorldMin.Y, WorldMin.Z },
+			{ WorldMax.X, WorldMin.Y, WorldMin.Z },
+			{ WorldMin.X, WorldMax.Y, WorldMin.Z },
+			{ WorldMin.X, WorldMin.Y, WorldMax.Z },
+			{ WorldMax.X, WorldMax.Y, WorldMin.Z },
+			{ WorldMax.X, WorldMin.Y, WorldMax.Z },
+			{ WorldMin.X, WorldMax.Y, WorldMax.Z },
+			{ WorldMax.X, WorldMax.Y, WorldMax.Z }
 		};
 
-		FVector ClipMin = FVector(FLT_MAX, FLT_MAX, FLT_MAX);
-		FVector ClipMax = FVector(FLT_MIN, FLT_MIN, FLT_MIN);
-
-		for (int j = 0; j < 8; ++j)
-		{
-			FVector4 clipPos = FMatrix::VectorMultiply(FVector4(corners[j].X, corners[j].Y, corners[j].Z, 1.0f), ViewProjectionMatrix);
-
-			// Perform perspective divide
-			if (clipPos.W == 0.0f) continue; // Avoid division by zero
-
-			FVector4 ndcPos;
-			ndcPos.X = clipPos.X / clipPos.W;
-			ndcPos.Y = clipPos.Y / clipPos.W;
-			ndcPos.Z = clipPos.Z / clipPos.W;
-
-			ClipMin.X = (std::min)(ClipMin.X, ndcPos.X);
-			ClipMin.Y = (std::min)(ClipMin.Y, ndcPos.Y);
-			ClipMin.Z = (std::min)(ClipMin.Z, ndcPos.Z);
-
-			ClipMax.X = (std::max)(ClipMax.X, ndcPos.X);
-			ClipMax.Y = (std::max)(ClipMax.Y, ndcPos.Y);
-			ClipMax.Z = (std::max)(ClipMax.Z, ndcPos.Z);
-		}
+		        // --- (3) Clip 공간 AABB 초기화 ---
+				FVector4 ClipMin(FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX);
+				FVector4 ClipMax(-FLT_MAX, -FLT_MAX, -FLT_MAX, -FLT_MAX);
 		
+				// --- (4) 각 코너 변환 후 Min/Max 업데이트 ---
+				for (int j = 0; j < 8; ++j)
+				{
+					FVector4 clipPos = FMatrix::VectorMultiply(
+						FVector4(corners[j].X, corners[j].Y, corners[j].Z, 1.0f),
+						ViewProjMatrix
+					);
+		
+					if (clipPos.W <= 0.0f) continue; // Discard points behind or on the projection plane
+		
+					FVector4 ndcPos(
+						clipPos.X / clipPos.W,
+						clipPos.Y / clipPos.W,
+						clipPos.Z / clipPos.W,
+						1.0f // Set W to 1.0f for NDC
+					);
+		
+					// Clamp NDC coordinates to [-1, 1] range for X and Y, and [0, 1] for Z
+					ndcPos.X = std::clamp(ndcPos.X, -1.0f, 1.0f);
+					ndcPos.Y = std::clamp(ndcPos.Y, -1.0f, 1.0f);
+					ndcPos.Z = std::clamp(ndcPos.Z, 0.0f, 1.0f); // Assuming Z is [0, 1] based on projection matrix analysis
+		
+					ClipMin.X = std::min(ClipMin.X, ndcPos.X);
+					ClipMin.Y = std::min(ClipMin.Y, ndcPos.Y);
+					ClipMin.Z = std::min(ClipMin.Z, ndcPos.Z);
+					ClipMin.W = std::min(ClipMin.W, ndcPos.W);
+		
+					ClipMax.X = std::max(ClipMax.X, ndcPos.X);
+					ClipMax.Y = std::max(ClipMax.Y, ndcPos.Y);
+					ClipMax.Z = std::max(ClipMax.Z, ndcPos.Z);
+					ClipMax.W = std::max(ClipMax.W, ndcPos.W);
+				}
+		// --- (5) 결과 저장 ---
 		BoundingVolumes[i] = { ClipMin, ClipMax };
 	}
 }
 
-void UOcclusionRenderer::DepthPrePass(ID3D11DeviceContext* InDeviceContext, UCamera* InCamera, const TArray<TObjectPtr<UPrimitiveComponent>>& InPrimitiveComponents)
+
+void UOcclusionRenderer::DepthPrePass(
+	ID3D11DeviceContext* InDeviceContext,
+	UCamera* InCamera,
+	const TArray<TObjectPtr<UPrimitiveComponent>>& InPrimitiveComponents)
 {
-	//// Save current device context state
+	// ========================================================= //
+	// 1. 기존 상태 저장
+	// ========================================================= //
 	ID3D11RenderTargetView* pOldRTV = nullptr;
 	ID3D11DepthStencilView* pOldDSV = nullptr;
 	InDeviceContext->OMGetRenderTargets(1, &pOldRTV, &pOldDSV);
@@ -131,12 +155,12 @@ void UOcclusionRenderer::DepthPrePass(ID3D11DeviceContext* InDeviceContext, UCam
 	InDeviceContext->PSGetShaderResources(0, 1, &pOldPSShaderResource);
 
 	ID3D11PixelShader* pOldPS = nullptr;
-	ID3D11ClassInstance* pOldPSInstances[256] = { 0 };
+	ID3D11ClassInstance* pOldPSInstances[256] = { nullptr };
 	UINT pOldPSNumInstances = 0;
 	InDeviceContext->PSGetShader(&pOldPS, pOldPSInstances, &pOldPSNumInstances);
 
 	ID3D11VertexShader* pOldVS = nullptr;
-	ID3D11ClassInstance* pOldVSInstances[256] = { 0 };
+	ID3D11ClassInstance* pOldVSInstances[256] = { nullptr };
 	UINT pOldVSNumInstances = 0;
 	InDeviceContext->VSGetShader(&pOldVS, pOldVSInstances, &pOldVSNumInstances);
 
@@ -146,62 +170,53 @@ void UOcclusionRenderer::DepthPrePass(ID3D11DeviceContext* InDeviceContext, UCam
 	D3D11_PRIMITIVE_TOPOLOGY OldPrimitiveTopology;
 	InDeviceContext->IAGetPrimitiveTopology(&OldPrimitiveTopology);
 
-	// Set render targets for depth pre-pass
-	ID3D11RenderTargetView* NullRTV = nullptr;
-	InDeviceContext->OMSetRenderTargets(0, &pOldRTV, DepthStencilView);
-
-	// Clear the depth stencil view
+	// ========================================================= //
+	// 2. Depth Pre-Pass 셋업
+	// ========================================================= //
+	InDeviceContext->OMSetRenderTargets(0, nullptr, DepthStencilView);
 	InDeviceContext->ClearDepthStencilView(DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-	// Set shaders and input layout for depth pre-pass
 	InDeviceContext->VSSetShader(DepthVertexShader, nullptr, 0);
 	InDeviceContext->PSSetShader(DepthPixelShader, nullptr, 0);
 	InDeviceContext->IASetInputLayout(DepthInputLayout);
 
-	// Loop through primitive components and draw them
+	// ========================================================= //
+	// 3. 프리미티브 드로우
+	// ========================================================= //
 	for (const auto& Primitive : InPrimitiveComponents)
 	{
-		if (!Primitive)
-		{
-			continue;
-		}
+		if (!Primitive || !Primitive->IsVisible()) continue;
 
-		// Update constant buffer with WorldViewProj matrix
+		// --- (1) 상수 버퍼 업데이트 ---
 		FMatrix WorldMatrix = Primitive->GetWorldTransformMatrix();
-		FViewProjConstants ViewProjConstants = InCamera->GetFViewProjConstants();
-		FMatrix WorldViewProjMatrix = WorldMatrix * ViewProjConstants.View * ViewProjConstants.Projection;
+		FViewProjConstants ViewProj = InCamera->GetFViewProjConstants();
+		FMatrix WorldViewProj = WorldMatrix * ViewProj.View * ViewProj.Projection;
 
 		D3D11_MAPPED_SUBRESOURCE MappedResource;
-		HRESULT hResult = InDeviceContext->Map(DepthPassConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource);
-		if (SUCCEEDED(hResult))
+		if (SUCCEEDED(InDeviceContext->Map(DepthPassConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource)))
 		{
-			memcpy(MappedResource.pData, &WorldViewProjMatrix, sizeof(FMatrix));
+			memcpy(MappedResource.pData, &WorldViewProj, sizeof(FMatrix));
 			InDeviceContext->Unmap(DepthPassConstantBuffer, 0);
 		}
-		else
-		{
-			// Handle error
-		}
-
 		InDeviceContext->VSSetConstantBuffers(0, 1, &DepthPassConstantBuffer);
 
-		// Bind vertex and index buffers
-		UINT stride = sizeof(FNormalVertex);
-		UINT offset = 0;
-		ID3D11Buffer* vertexBuffer = Primitive->GetVertexBuffer();
-		ID3D11Buffer* indexBuffer = Primitive->GetIndexBuffer();
+		// --- (2) 버퍼 바인딩 ---
+		UINT Stride	= sizeof(FNormalVertex);
+		UINT Offset = 0;
+		ID3D11Buffer* VertexBuffer = Primitive->GetVertexBuffer();
+		ID3D11Buffer* IndexBuffer = Primitive->GetIndexBuffer();
 
-		InDeviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
-		InDeviceContext->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
-
-		// Set primitive topology
+		InDeviceContext->IASetVertexBuffers(0, 1, &VertexBuffer, &Stride, &Offset);
+		InDeviceContext->IASetIndexBuffer(IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
 		InDeviceContext->IASetPrimitiveTopology(Primitive->GetTopology());
 
-		// Draw
+		// --- (3) 드로우 ---
 		InDeviceContext->DrawIndexed(Primitive->GetNumIndices(), 0, 0);
 	}
 
-	// Restore previous device context state
+	// ========================================================= //
+	// 4. 이전 상태 복원
+	// ========================================================= //
 	InDeviceContext->OMSetRenderTargets(1, &pOldRTV, pOldDSV);
 	if (pOldRTV) pOldRTV->Release();
 	if (pOldDSV) pOldDSV->Release();
@@ -211,11 +226,13 @@ void UOcclusionRenderer::DepthPrePass(ID3D11DeviceContext* InDeviceContext, UCam
 
 	InDeviceContext->PSSetShader(pOldPS, pOldPSInstances, pOldPSNumInstances);
 	if (pOldPS) pOldPS->Release();
-	for (UINT i = 0; i < pOldPSNumInstances; ++i) if (pOldPSInstances[i]) pOldPSInstances[i]->Release();
+	for (UINT i = 0; i < pOldPSNumInstances; ++i)
+		if (pOldPSInstances[i]) pOldPSInstances[i]->Release();
 
 	InDeviceContext->VSSetShader(pOldVS, pOldVSInstances, pOldVSNumInstances);
 	if (pOldVS) pOldVS->Release();
-	for (UINT i = 0; i < pOldVSNumInstances; ++i) if (pOldVSInstances[i]) pOldVSInstances[i]->Release();
+	for (UINT i = 0; i < pOldVSNumInstances; ++i)
+		if (pOldVSInstances[i]) pOldVSInstances[i]->Release();
 
 	InDeviceContext->IASetInputLayout(pOldInputLayout);
 	if (pOldInputLayout) pOldInputLayout->Release();
@@ -223,10 +240,13 @@ void UOcclusionRenderer::DepthPrePass(ID3D11DeviceContext* InDeviceContext, UCam
 	InDeviceContext->IASetPrimitiveTopology(OldPrimitiveTopology);
 }
 
-
-void UOcclusionRenderer::GenerateHiZ(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext)
+void UOcclusionRenderer::GenerateHiZ(
+	ID3D11Device* InDevice,
+	ID3D11DeviceContext* InDeviceContext)
 {
-	// Initial Copy (Mip 0): Copy depth buffer to HiZ Mip 0
+	// ========================================================= //
+	// 1. Mip 0 초기 복사 (Depth → HiZ)
+	// ========================================================= //
 	InDeviceContext->CSSetShader(HiZCopyDepthShader, nullptr, 0);
 	InDeviceContext->CSSetShaderResources(0, 1, &DepthShaderResourceView);
 	InDeviceContext->CSSetUnorderedAccessViews(0, 1, &HiZUnorderedAccessViews[0], nullptr);
@@ -235,135 +255,207 @@ void UOcclusionRenderer::GenerateHiZ(ID3D11Device* InDevice, ID3D11DeviceContext
 	UINT Mip0Height = Height;
 	InDeviceContext->Dispatch((Mip0Width + 15) / 16, (Mip0Height + 15) / 16, 1);
 
-	// Unbind resources
-	ID3D11ShaderResourceView* NullSRV = nullptr;
-	ID3D11UnorderedAccessView* NullUAV = nullptr;
-	InDeviceContext->CSSetShaderResources(0, 1, &NullSRV);
-	InDeviceContext->CSSetUnorderedAccessViews(0, 1, &NullUAV, nullptr);
+	// --- 리소스 언바인딩 ---
+	{
+		ID3D11ShaderResourceView* NullSRV = nullptr;
+		ID3D11UnorderedAccessView* NullUAV = nullptr;
+		InDeviceContext->CSSetShaderResources(0, 1, &NullSRV);
+		InDeviceContext->CSSetUnorderedAccessViews(0, 1, &NullUAV, nullptr);
+	}
 
-	// Mipmap Generation Loop
+	// ========================================================= //
+	// 2. 다운샘플링 루프 (Mip 1 ~ N-1)
+	// ========================================================= //
 	InDeviceContext->CSSetShader(HiZDownSampleShader, nullptr, 0);
 
 	for (UINT Mip = 1; Mip < MipLevels; ++Mip)
 	{
-		UINT MipWidth = (std::max)(1u, Width >> Mip);
-		UINT MipHeight = (std::max)(1u, Height >> Mip);
+		UINT MipWidth = std::max(1u, Width >> Mip);
+		UINT MipHeight = std::max(1u, Height >> Mip);
 
-		// Update constant buffer
+		// --- (1) 상수 버퍼 업데이트 ---
 		FHiZDownsampleConstants constants;
-		constants.TextureWidth = MipWidth;
+		constants.TextureWidth	= MipWidth;
 		constants.TextureHeight = MipHeight;
-		constants.MipLevel = Mip;
-		constants.Padding = 0;
+		constants.MipLevel		= Mip;
+		constants.Padding		= 0;
 
 		D3D11_MAPPED_SUBRESOURCE MappedResource;
-		HRESULT hResult = InDeviceContext->Map(HiZDownsampleConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource);
-		if (SUCCEEDED(hResult))
+		if (SUCCEEDED(InDeviceContext->Map(HiZDownsampleConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource)))
 		{
 			memcpy(MappedResource.pData, &constants, sizeof(FHiZDownsampleConstants));
 			InDeviceContext->Unmap(HiZDownsampleConstantBuffer, 0);
 		}
-		else
-		{
-			// Handle error
-		}
-
 		InDeviceContext->CSSetConstantBuffers(0, 1, &HiZDownsampleConstantBuffer);
 
-		// Bind previous mip level as SRV, current mip level as UAV
+		// --- (2) 이전 Mip을 SRV로, 현재 Mip을 UAV로 바인딩 ---
 		InDeviceContext->CSSetShaderResources(0, 1, &HiZShaderResourceViews[Mip - 1]);
 		InDeviceContext->CSSetUnorderedAccessViews(0, 1, &HiZUnorderedAccessViews[Mip], nullptr);
 
+		// --- (3) 다운샘플 Dispatch ---
 		InDeviceContext->Dispatch((MipWidth + 15) / 16, (MipHeight + 15) / 16, 1);
 
-		// Unbind resources
-		InDeviceContext->CSSetShaderResources(0, 1, &NullSRV);
-		InDeviceContext->CSSetUnorderedAccessViews(0, 1, &NullUAV, nullptr);
-		ID3D11Buffer* NullCB = nullptr;
-		InDeviceContext->CSSetConstantBuffers(0, 1, &NullCB);
+		// --- (4) 리소스 언바인딩 ---
+		{
+			ID3D11ShaderResourceView* NullSRV  = nullptr;
+			ID3D11UnorderedAccessView* NullUAV = nullptr;
+			ID3D11Buffer* NullCB			   = nullptr;
+
+			InDeviceContext->CSSetShaderResources(0, 1, &NullSRV);
+			InDeviceContext->CSSetUnorderedAccessViews(0, 1, &NullUAV, nullptr);
+			InDeviceContext->CSSetConstantBuffers(0, 1, &NullCB);
+		}
 	}
 
-	// Final Cleanup
+	// ========================================================= //
+	// 3. 최종 정리
+	// ========================================================= //
 	InDeviceContext->CSSetShader(nullptr, nullptr, 0);
 }
 
 
-void UOcclusionRenderer::OcclusionTest(ID3D11Device* Device, ID3D11DeviceContext* InDeviceContext, UCamera* InCamera, const TArray<TObjectPtr<UPrimitiveComponent>>& InPrimitiveComponents, TArray<bool>& OutVisibilityResults)
+void UOcclusionRenderer::OcclusionTest(
+	ID3D11Device* InDevice,
+	ID3D11DeviceContext* InDeviceContext,
+	UCamera* InCamera,
+	TArray<bool>& OutVisibilityResults)
 {
-	OutVisibilityResults.resize(InPrimitiveComponents.size());
-	for (size_t i = 0; i < InPrimitiveComponents.size(); ++i)
-	{
-		OutVisibilityResults[i] = true;
-	}
-
-	if (InPrimitiveComponents.empty())
+	// ========================================================= //
+	// 초기화: 입력이 비어있으면 바로 리턴
+	// ========================================================= //
+	if (BoundingVolumes.empty())
 	{
 		return;
 	}
 
-	BuildScreenSpaceBoundingVolumes(InDeviceContext, InCamera, InPrimitiveComponents);
+	OutVisibilityResults.resize(BoundingVolumes.size(), true);
 
-	// Set occlusion shader
+	// ========================================================= //
+	// 1. 상수 버퍼 업데이트
+	// ========================================================= //
 	InDeviceContext->CSSetShader(HiZOcclusionShader, nullptr, 0);
 
-	// Update constant buffer
-	FHiZOcclusionConstants constants;
-	constants.NumBoundingVolumes = BoundingVolumes.size();
-	constants.ScreenSize = FVector2((float)Width, (float)Height);
-	constants.MipLevels = MipLevels;
-	constants.Padding = FVector4::Zero();
+	FHiZOcclusionConstants Constants;
+	Constants.NumBoundingVolumes = BoundingVolumes.size();
+	Constants.ScreenSize		 = FVector2((float)Width, (float)Height);
+	Constants.MipLevels			 = MipLevels;
 
 	D3D11_MAPPED_SUBRESOURCE MappedResource;
-	HRESULT hr = InDeviceContext->Map(HiZOcclusionConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource);
-	if (SUCCEEDED(hr))
-	{
-		memcpy(MappedResource.pData, &constants, sizeof(FHiZOcclusionConstants));
-		InDeviceContext->Unmap(HiZOcclusionConstantBuffer, 0);
-	}
-	else
-	{
-		// Handle error
-		return;
-	}
+	HRESULT hResult = InDeviceContext->Map(HiZOcclusionConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource);
+	if (FAILED(hResult)) return;
+
+	memcpy(MappedResource.pData, &Constants, sizeof(FHiZOcclusionConstants));
+	InDeviceContext->Unmap(HiZOcclusionConstantBuffer, 0);
 
 	InDeviceContext->CSSetConstantBuffers(0, 1, &HiZOcclusionConstantBuffer);
 
-	// Bind resources
-	InDeviceContext->CSSetShaderResources(1, 1, &HiZShaderResourceViews[MipLevels - 1]); // Smallest mip for occlusion test
-	InDeviceContext->CSSetSamplers(0, 1, &HiZSamplerState);
-	InDeviceContext->CSSetUnorderedAccessViews(0, 1, &VisibilityUnorderedAccessView, nullptr);
+	// ========================================================= //
+	// 2. 출력 UAV (가시성 플래그 버퍼)
+	// ========================================================= //
+	D3D11_BUFFER_DESC BufferDesc   = {};
+	BufferDesc.ByteWidth		   = sizeof(uint32) * BoundingVolumes.size();
+	BufferDesc.Usage			   = D3D11_USAGE_DEFAULT;
+	BufferDesc.BindFlags		   = D3D11_BIND_UNORDERED_ACCESS;
+	BufferDesc.MiscFlags		   = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+	BufferDesc.StructureByteStride = sizeof(uint32);
 
-	// Dispatch compute shader
+	ID3D11Buffer* VisibilityUAVBuffer = nullptr;
+	if (FAILED(InDevice->CreateBuffer(&BufferDesc, nullptr, &VisibilityUAVBuffer))) return;
+
+	D3D11_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {};
+	UAVDesc.Format							 = DXGI_FORMAT_UNKNOWN;
+	UAVDesc.ViewDimension					 = D3D11_UAV_DIMENSION_BUFFER;
+	UAVDesc.Buffer.NumElements				 = BoundingVolumes.size();
+
+	ID3D11UnorderedAccessView* VisibilityUAV = nullptr;
+	if (FAILED(InDevice->CreateUnorderedAccessView(VisibilityUAVBuffer, &UAVDesc, &VisibilityUAV))) return;
+
+	// ========================================================= //
+	// 3. 입력 StructuredBuffer (BoundingVolumes)
+	// ========================================================= //
+	D3D11_BUFFER_DESC BVDesc   = {};
+	BVDesc.ByteWidth		   = sizeof(FBoundingVolume) * BoundingVolumes.size();
+	BVDesc.Usage			   = D3D11_USAGE_DEFAULT;
+	BVDesc.BindFlags		   = D3D11_BIND_SHADER_RESOURCE;
+	BVDesc.MiscFlags		   = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+	BVDesc.StructureByteStride = sizeof(FBoundingVolume);
+
+	D3D11_SUBRESOURCE_DATA InitData = {};
+	InitData.pSysMem				= BoundingVolumes.data();
+
+	ID3D11Buffer* BVBuffer = nullptr;
+	if (FAILED(InDevice->CreateBuffer(&BVDesc, &InitData, &BVBuffer))) return;
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
+	SRVDesc.Format							= DXGI_FORMAT_UNKNOWN;
+	SRVDesc.ViewDimension					= D3D11_SRV_DIMENSION_BUFFER;
+	SRVDesc.Buffer.NumElements				= (UINT)BoundingVolumes.size();
+
+	ID3D11ShaderResourceView* BVSRV = nullptr;
+	if (FAILED(InDevice->CreateShaderResourceView(BVBuffer, &SRVDesc, &BVSRV)))
+	{
+		BVBuffer->Release();
+		return;
+	}
+
+	// ========================================================= //
+	// 4. 리소스 바인딩
+	// ========================================================= //
+	InDeviceContext->CSSetShaderResources(0, 1, &BVSRV);
+	InDeviceContext->CSSetShaderResources(1, 1, &HiZShaderResourceViews[MipLevels - 1]);
+	InDeviceContext->CSSetSamplers(0, 1, &HiZSamplerState);
+	InDeviceContext->CSSetUnorderedAccessViews(0, 1, &VisibilityUAV, nullptr);
+
+	// ========================================================= //
+	// 5. Compute Shader 실행
+	// ========================================================= //
 	UINT numGroups = (BoundingVolumes.size() + 63) / 64; // 64 threads per group
 	InDeviceContext->Dispatch(numGroups, 1, 1);
 
-	// Unbind resources
+	// 리소스 언바인딩
 	ID3D11ShaderResourceView* NullSRV[2] = { nullptr, nullptr };
-	ID3D11UnorderedAccessView* NullUAV = nullptr;
-	ID3D11Buffer* NullCB = nullptr;
-	ID3D11SamplerState* NullSampler = nullptr;
+	ID3D11UnorderedAccessView* NullUAV	 = nullptr;
+	ID3D11Buffer* NullCB				 = nullptr;
+	ID3D11SamplerState* NullSampler		 = nullptr;
 	InDeviceContext->CSSetShaderResources(0, 2, NullSRV);
 	InDeviceContext->CSSetUnorderedAccessViews(0, 1, &NullUAV, nullptr);
 	InDeviceContext->CSSetConstantBuffers(0, 1, &NullCB);
 	InDeviceContext->CSSetSamplers(0, 1, &NullSampler);
 
-	// Read back results
-	InDeviceContext->CopyResource(VisibilityReadbackBuffer, VisibilityUAVBuffer);
-	hr = InDeviceContext->Map(VisibilityReadbackBuffer, 0, D3D11_MAP_READ, 0, &MappedResource);
-	if (SUCCEEDED(hr))
+	// ========================================================= //
+	// 6. 결과 Readback
+	// ========================================================= //
+	D3D11_BUFFER_DESC ReadbackDesc	 = {};
+	ReadbackDesc.ByteWidth			 = sizeof(uint32) * BoundingVolumes.size();
+	ReadbackDesc.Usage				 = D3D11_USAGE_STAGING;
+	ReadbackDesc.CPUAccessFlags		 = D3D11_CPU_ACCESS_READ;
+	ReadbackDesc.MiscFlags			 = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+	ReadbackDesc.StructureByteStride = sizeof(uint32);
+
+	ID3D11Buffer* ReadbackBuffer = nullptr;
+	if (FAILED(InDevice->CreateBuffer(&ReadbackDesc, nullptr, &ReadbackBuffer))) return;
+
+	InDeviceContext->CopyResource(ReadbackBuffer, VisibilityUAVBuffer);
+
+	hResult = InDeviceContext->Map(ReadbackBuffer, 0, D3D11_MAP_READ, 0, &MappedResource);
+	if (SUCCEEDED(hResult))
 	{
-		uint32* visibilityFlags = reinterpret_cast<uint32*>(MappedResource.pData);
-		for (size_t i = 0; i < InPrimitiveComponents.size(); ++i)
+		uint32* flags = reinterpret_cast<uint32*>(MappedResource.pData);
+		for (size_t i = 0; i < BoundingVolumes.size(); ++i)
 		{
-			if(i < BoundingVolumes.size())
-				OutVisibilityResults[i] = (visibilityFlags[i] == 1);
+			OutVisibilityResults[i] = (flags[i] == 1);
 		}
-		InDeviceContext->Unmap(VisibilityReadbackBuffer, 0);
+		InDeviceContext->Unmap(ReadbackBuffer, 0);
 	}
-	else
-	{
-		// Handle error
-	}
+
+	// ========================================================= //
+	// 7. 리소스 해제
+	// ========================================================= //
+	if (VisibilityUAVBuffer) VisibilityUAVBuffer->Release();
+	if (VisibilityUAV) VisibilityUAV->Release();
+	if (ReadbackBuffer) ReadbackBuffer->Release();
+	if (BVSRV) BVSRV->Release();
+	if (BVBuffer) BVBuffer->Release();
 }
 
 void UOcclusionRenderer::CreateShader(ID3D11Device* InDevice)
@@ -709,46 +801,6 @@ void UOcclusionRenderer::CreateHiZResource(ID3D11Device* InDevice)
 	}
 }
 
-void UOcclusionRenderer::CreateVisibilityResource(ID3D11Device* InDevice)
-{
-	D3D11_BUFFER_DESC BufferDesc = {};
-	BufferDesc.ByteWidth = sizeof(uint32) * 1024; // Assuming 1024 visibility flags for now
-	BufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	BufferDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
-	BufferDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-	BufferDesc.StructureByteStride = sizeof(uint32);
-
-	HRESULT hResult = InDevice->CreateBuffer(&BufferDesc, nullptr, &VisibilityUAVBuffer);
-	if (FAILED(hResult))
-	{
-		return;
-	}
-
-	D3D11_UNORDERED_ACCESS_VIEW_DESC UnorderedAccessViewDesc = {};
-	UnorderedAccessViewDesc.Format = DXGI_FORMAT_UNKNOWN;
-	UnorderedAccessViewDesc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
-	UnorderedAccessViewDesc.Buffer.FirstElement = 0;
-	UnorderedAccessViewDesc.Buffer.NumElements = 1024;
-	hResult = InDevice->CreateUnorderedAccessView(VisibilityUAVBuffer, &UnorderedAccessViewDesc, &VisibilityUnorderedAccessView);
-	if (FAILED(hResult))
-	{
-		return;
-	}
-
-	D3D11_BUFFER_DESC ReadbackBufferDesc = {};
-	ReadbackBufferDesc.ByteWidth = sizeof(uint32) * 1024;
-	ReadbackBufferDesc.Usage = D3D11_USAGE_STAGING;
-	ReadbackBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-	ReadbackBufferDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-	ReadbackBufferDesc.StructureByteStride = sizeof(uint32);
-
-	hResult = InDevice->CreateBuffer(&ReadbackBufferDesc, nullptr, &VisibilityReadbackBuffer);
-	if (FAILED(hResult))
-	{
-		return;
-	}
-}
-
 void UOcclusionRenderer::ReleaseShader()
 {
 	if (HiZDownSampleShader)
@@ -840,24 +892,5 @@ void UOcclusionRenderer::ReleaseHiZResource()
 	{
 		HiZDownsampleConstantBuffer->Release();
 		HiZDownsampleConstantBuffer = nullptr;
-	}
-}
-
-void UOcclusionRenderer::ReleaseVisibilityResource()
-{
-	if (VisibilityUAVBuffer)
-	{
-		VisibilityUAVBuffer->Release();
-		VisibilityUAVBuffer = nullptr;
-	}
-	if (VisibilityUnorderedAccessView)
-	{
-		VisibilityUnorderedAccessView->Release();
-		VisibilityUnorderedAccessView = nullptr;
-	}
-	if (VisibilityReadbackBuffer)
-	{
-		VisibilityReadbackBuffer->Release();
-		VisibilityReadbackBuffer = nullptr;
 	}
 }

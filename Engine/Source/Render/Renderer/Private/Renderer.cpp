@@ -414,8 +414,9 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 	//OcclusionRenderer.BuildScreenSpaceBoundingVolumes(GetDeviceContext(), InCurrentCamera, PrimitiveComponents);
 	OcclusionRenderer.DepthPrePass(GetDeviceContext(), InCurrentCamera, PrimitiveComponents);
 	OcclusionRenderer.GenerateHiZ(GetDevice(), GetDeviceContext());
+	OcclusionRenderer.BuildScreenSpaceBoundingVolumes(GetDeviceContext(), InCurrentCamera, PrimitiveComponents);
 	TArray<bool> VisibilityResults;
-	OcclusionRenderer.OcclusionTest(GetDevice(), GetDeviceContext(), InCurrentCamera, PrimitiveComponents, VisibilityResults);
+	OcclusionRenderer.OcclusionTest(GetDevice(), GetDeviceContext(), InCurrentCamera, VisibilityResults);
 
 	UE_LOG("Total Primitives: %d", PrimitiveComponents.size());
 	int CulledCnt = 0;

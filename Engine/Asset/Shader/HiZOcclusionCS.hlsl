@@ -13,7 +13,6 @@ cbuffer CullingConstants : register(b0)
     uint NumBoundingVolumes;
     float2 ScreenSize;
     uint MipLevels;
-    uint Padding; // For 16-byte alignment
 };
 
 SamplerState Sampler_LinearClamp : register(s0);
@@ -53,20 +52,23 @@ void main(uint3 DispatchThreadID : SV_DispatchThreadID)
     float mip = floor(log2(max(maxDim, 1.0f)));
     mip = clamp(mip, 0, MipLevels - 1);
 
-    // AABB의 중심점 UV 좌표 계산
-    float2 centerClip = (minClip + maxClip) * 0.5f;
-    float2 centerUV = ClipToTexCoord(centerClip);
+    // AABB의 클립 공간 코너 UV 좌표 계산
+    float2 cornerUVs[4];
+    cornerUVs[0] = ClipToTexCoord(minClip.xy); // Top-Left
+    cornerUVs[1] = ClipToTexCoord(float2(maxClip.x, minClip.y)); // Top-Right
+    cornerUVs[2] = ClipToTexCoord(float2(minClip.x, maxClip.y)); // Bottom-Left
+    cornerUVs[3] = ClipToTexCoord(maxClip.xy); // Bottom-Right
     
-    // Hi-Z 맵에서 가장 먼 깊이 값을 샘플링
-    float occluderZ = HiZTexture.SampleLevel(Sampler_LinearClamp, centerUV, mip).r;
+    bool isVisible = false;
+    for (int i = 0; i < 4; ++i)
+    {
+        float occluderZ = HiZTexture.SampleLevel(Sampler_LinearClamp, cornerUVs[i], mip).r;
+        if (minZ < occluderZ) // 객체의 가장 가까운 Z가 Hi-Z 맵의 깊이보다 가까우면 가시적
+        {
+            isVisible = true;
+            break;
+        }
+    }
 
-    // 객체의 가장 가까운 Z(minZ)가 가려지는 Z(occluderZ)보다 멀리 있으면 가려진 것
-    if (minZ > occluderZ)
-    {
-        VisibilityBuffer[volumeIndex] = 0; // Occluded
-    }
-    else
-    {
-        VisibilityBuffer[volumeIndex] = 1; // Visible
-    }
+    VisibilityBuffer[volumeIndex] = isVisible ? 1 : 0;
 }

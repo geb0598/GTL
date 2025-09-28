@@ -11,8 +11,8 @@ class UPrimitiveComponent;
 
 struct FBoundingVolume
 {
-	FVector Min;
-	FVector Max;
+	FVector4 Min;
+	FVector4 Max;
 };
 
 struct FHiZDownsampleConstants
@@ -46,7 +46,7 @@ public:
 
 	void GenerateHiZ(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext);
 
-	void OcclusionTest(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, UCamera* InCamera, const TArray<TObjectPtr<UPrimitiveComponent>>& InPrimitiveComponents, TArray<bool>& OutVisibilityResults);
+	void OcclusionTest(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, UCamera* InCamera, TArray<bool>& OutVisibilityResults);
 
 private:
 	static constexpr size_t NUM_WORKER_THREADS = 4;
@@ -54,12 +54,10 @@ private:
 	void CreateShader(ID3D11Device* InDevice);
 	void CreateDepthResource(ID3D11Device* InDevice);
 	void CreateHiZResource(ID3D11Device* InDevice);
-	void CreateVisibilityResource(ID3D11Device* InDevice);
 
 	void ReleaseShader();
 	void ReleaseDepthResource();
 	void ReleaseHiZResource();
-	void ReleaseVisibilityResource();
 
 	/** @note: UOcclusionRenderer에서는 Device와 DeviceContext의 수명을 관리하지 않음*/
 	ID3D11Device* Device = nullptr;
@@ -94,7 +92,6 @@ private:
 		UINT NumBoundingVolumes;
 		FVector2 ScreenSize;
 		UINT MipLevels;
-		FVector4 Padding; // For 16-byte alignment
 	};
 
 	/** @brief: Boudning volume resources */
@@ -104,11 +101,6 @@ private:
 
 	ID3D11Buffer* HiZOcclusionConstantBuffer = nullptr;
 	ID3D11SamplerState* HiZSamplerState = nullptr;
-
-	/** @brief: Visibility resources */
-	ID3D11Buffer* VisibilityUAVBuffer = nullptr;
-	ID3D11UnorderedAccessView* VisibilityUnorderedAccessView = nullptr;
-	ID3D11Buffer* VisibilityReadbackBuffer = nullptr;
 
 	uint32 Width;
 	uint32 Height;
