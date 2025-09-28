@@ -40,7 +40,6 @@ void UOcclusionRenderer::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext*
 	CreateShader(Device);
 	CreateDepthResource(Device);
 	CreateHiZResource(Device);
-	CreateBoundingVolumeResource(Device);
 	CreateVisibilityResource(Device);
 }
 
@@ -49,7 +48,6 @@ void UOcclusionRenderer::Release()
 	ReleaseShader();
 	ReleaseDepthResource();
 	ReleaseHiZResource();
-	ReleaseBoundingVolumeResource();
 	ReleaseVisibilityResource();
 
 	Device = nullptr;
@@ -119,22 +117,6 @@ void UOcclusionRenderer::BuildScreenSpaceBoundingVolumes(ID3D11DeviceContext* In
 		}
 		
 		BoundingVolumes[i] = { ClipMin, ClipMax };
-	}
-
-	// Update GPU buffer with new bounding volumes
-	if (!BoundingVolumes.empty())
-	{
-		D3D11_MAPPED_SUBRESOURCE MappedResource;
-		HRESULT hr = InDeviceContext->Map(BoundingVolumeBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource);
-		if (SUCCEEDED(hr))
-		{
-			memcpy(MappedResource.pData, BoundingVolumes.data(), BoundingVolumes.size() * sizeof(FBoundingVolume));
-			InDeviceContext->Unmap(BoundingVolumeBuffer, 0);
-		}
-		else
-		{
-			// Handle error
-		}
 	}
 }
 
@@ -347,7 +329,6 @@ void UOcclusionRenderer::OcclusionTest(ID3D11Device* Device, ID3D11DeviceContext
 	InDeviceContext->CSSetConstantBuffers(0, 1, &HiZOcclusionConstantBuffer);
 
 	// Bind resources
-	InDeviceContext->CSSetShaderResources(0, 1, &BoundingVolumeShaderResourceView);
 	InDeviceContext->CSSetShaderResources(1, 1, &HiZShaderResourceViews[MipLevels - 1]); // Smallest mip for occlusion test
 	InDeviceContext->CSSetSamplers(0, 1, &HiZSamplerState);
 	InDeviceContext->CSSetUnorderedAccessViews(0, 1, &VisibilityUnorderedAccessView, nullptr);
@@ -728,36 +709,6 @@ void UOcclusionRenderer::CreateHiZResource(ID3D11Device* InDevice)
 	}
 }
 
-
-void UOcclusionRenderer::CreateBoundingVolumeResource(ID3D11Device* InDevice)
-{
-	D3D11_BUFFER_DESC BufferDesc = {};
-	BufferDesc.ByteWidth = sizeof(FBoundingVolume) * 1024; // Assuming a max of 1024 bounding volumes for now
-	BufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-	BufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-	BufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	BufferDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-	BufferDesc.StructureByteStride = sizeof(FBoundingVolume);
-
-	HRESULT hResult = InDevice->CreateBuffer(&BufferDesc, nullptr, &BoundingVolumeBuffer);
-	if (FAILED(hResult))
-	{
-		return;
-	}
-
-	D3D11_SHADER_RESOURCE_VIEW_DESC ShaderResourceViewDesc = {};
-	ShaderResourceViewDesc.Format = DXGI_FORMAT_UNKNOWN;
-	ShaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFEREX;
-	ShaderResourceViewDesc.BufferEx.FirstElement = 0;
-	ShaderResourceViewDesc.BufferEx.NumElements = 1024;
-
-	hResult = InDevice->CreateShaderResourceView(BoundingVolumeBuffer, &ShaderResourceViewDesc, &BoundingVolumeShaderResourceView);
-	if (FAILED(hResult))
-	{
-		return;
-	}
-}
-
 void UOcclusionRenderer::CreateVisibilityResource(ID3D11Device* InDevice)
 {
 	D3D11_BUFFER_DESC BufferDesc = {};
@@ -889,27 +840,6 @@ void UOcclusionRenderer::ReleaseHiZResource()
 	{
 		HiZDownsampleConstantBuffer->Release();
 		HiZDownsampleConstantBuffer = nullptr;
-	}
-}
-
-
-
-void UOcclusionRenderer::ReleaseBoundingVolumeResource()
-{
-	if (BoundingVolumeBuffer)
-	{
-		BoundingVolumeBuffer->Release();	
-		BoundingVolumeBuffer = nullptr;
-	}
-	if (BoundingVolumeShaderResourceView)
-	{
-		BoundingVolumeShaderResourceView->Release();
-		BoundingVolumeShaderResourceView = nullptr;
-	}
-	if (HiZOcclusionConstantBuffer)
-	{
-		HiZOcclusionConstantBuffer->Release();
-		HiZOcclusionConstantBuffer = nullptr;
 	}
 }
 

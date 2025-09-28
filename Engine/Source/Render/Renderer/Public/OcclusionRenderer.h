@@ -54,13 +54,11 @@ private:
 	void CreateShader(ID3D11Device* InDevice);
 	void CreateDepthResource(ID3D11Device* InDevice);
 	void CreateHiZResource(ID3D11Device* InDevice);
-	void CreateBoundingVolumeResource(ID3D11Device* InDevice);
 	void CreateVisibilityResource(ID3D11Device* InDevice);
 
 	void ReleaseShader();
 	void ReleaseDepthResource();
 	void ReleaseHiZResource();
-	void ReleaseBoundingVolumeResource();
 	void ReleaseVisibilityResource();
 
 	/** @note: UOcclusionRenderer에서는 Device와 DeviceContext의 수명을 관리하지 않음*/
@@ -100,9 +98,10 @@ private:
 	};
 
 	/** @brief: Boudning volume resources */
-	ID3D11Buffer* BoundingVolumeBuffer = nullptr;
-	ID3D11ShaderResourceView* BoundingVolumeShaderResourceView = nullptr;
+	[[deprecated]] ID3D11Buffer* BoundingVolumeBuffer = nullptr;
+	[[deprecated]] ID3D11ShaderResourceView* BoundingVolumeShaderResourceView = nullptr;
 	TArray<FBoundingVolume> BoundingVolumes;
+
 	ID3D11Buffer* HiZOcclusionConstantBuffer = nullptr;
 	ID3D11SamplerState* HiZSamplerState = nullptr;
 
