@@ -62,7 +62,7 @@ void FFrustumCull::Update(UCamera* InCamera)
 	}
 }
 
-EFrustumTestResult FFrustumCull::IsInFrustum(const FAABB& TargetAABB, uint32 Mask)
+EFrustumTestResult FFrustumCull::IsInFrustum(const FAABB& TargetAABB)
 {
 	// TODO : BVH 적용 시 교차 검사 필요
 	// 교차 시 leaf이면 rendering, 아니면 다음 노드 탐색
@@ -91,3 +91,52 @@ EFrustumTestResult FFrustumCull::IsInFrustum(const FAABB& TargetAABB, uint32 Mas
 	// Visible
 	return EFrustumTestResult::Inside;
 }
+
+const EFrustumTestResult FFrustumCull::TestAABBWithPlane(const FAABB& TargetAABB, const EPlaneIndex Index)
+{
+	EFrustumTestResult Result = this->CheckPlane(TargetAABB, Index);
+	return Result;
+}
+
+EFrustumTestResult FFrustumCull::CheckPlane(const FAABB& TargetAABB, const EPlaneIndex Index)
+{
+	FPlane Plane = Planes[static_cast<uint8>(Index)];
+
+	FVector PositiveVertex{};
+	PositiveVertex.X = (Plane.NormalVector.X >= 0.0f) ? TargetAABB.Max.X : TargetAABB.Min.X;
+	PositiveVertex.Y = (Plane.NormalVector.Y >= 0.0f) ? TargetAABB.Max.Y : TargetAABB.Min.Y;
+	PositiveVertex.Z = (Plane.NormalVector.Z >= 0.0f) ? TargetAABB.Max.Z : TargetAABB.Min.Z;
+
+	float PositiveDistance = (Plane.NormalVector.X * PositiveVertex.X)
+							+ (Plane.NormalVector.Y * PositiveVertex.Y)
+							+ (Plane.NormalVector.Z * PositiveVertex.Z)
+							+ Plane.ConstantD;
+
+	// 평면 안쪽의 vertex의 거리가 음수이면 완전히 바깥
+	if (PositiveDistance < 0.0f)
+	{
+		return EFrustumTestResult::CompletelyOutside;
+	}
+
+	FVector NegativeVertex{};
+	NegativeVertex.X = (Plane.NormalVector.X >= 0.0f) ? TargetAABB.Min.X : TargetAABB.Max.X;
+	NegativeVertex.Y = (Plane.NormalVector.Y >= 0.0f) ? TargetAABB.Min.Y : TargetAABB.Max.Y;
+	NegativeVertex.Z = (Plane.NormalVector.Z >= 0.0f) ? TargetAABB.Min.Z : TargetAABB.Max.Z;
+
+	float NegativeDistance = (Plane.NormalVector.X * NegativeVertex.X)
+							+ (Plane.NormalVector.Y * NegativeVertex.Y)
+							+ (Plane.NormalVector.Z * NegativeVertex.Z)
+							+ Plane.ConstantD;
+
+	// PositiveDistance가 완전히 바깥이 아닌 상태
+	// 평면 바깥의 Vertex의 거리가 음수이면 교차
+	if (NegativeDistance < 0.0f)
+	{
+		return EFrustumTestResult::Intersect;
+	}
+
+	// 완전히 바깥도 아니고 교차도 아니면 완전히 내부
+	return EFrustumTestResult::CompletelyInside;
+}
+
+

@@ -1,5 +1,7 @@
 #include "pch.h"
 #include "Manager/BVH/public/BVHManager.h"
+
+#include "Editor/Public/FrustumCull.h"
 #include "Editor/Public/ObjectPicker.h"
 
 IMPLEMENT_SINGLETON_CLASS_BASE(UBVHManager)
@@ -322,7 +324,15 @@ void UBVHManager::ConvertComponentsToPrimitives(
 
 void UBVHManager::FrustumCull(FFrustumCull& InFrustum, TArray<UPrimitiveComponent*>& OutVisibleComponents)
 {
-	TraverseForCulling(1, InFrustum, OutVisibleComponents);
+	OutVisibleComponents.clear();
+
+	// 루트가 음수 == BVH 트리가 없다.
+	if (RootIndex < 0)
+	{
+		return;
+	}
+
+	TraverseForCulling(RootIndex, InFrustum, 0x3F, OutVisibleComponents);
 }
 
 void UBVHManager::CollectNodeBounds(TArray<FAABB>& OutBounds) const
@@ -336,14 +346,117 @@ void UBVHManager::CollectNodeBounds(TArray<FAABB>& OutBounds) const
 	}
 }
 
-void UBVHManager::TraverseForCulling(uint32 NodeIndex, FFrustumCull& InFrustum,
+void UBVHManager::TraverseForCulling(uint32 NodeIndex, FFrustumCull& InFrustum, uint32 InMask,
 	TArray<UPrimitiveComponent*>& OutVisibleComponents)
 {
+	// 목적: 현재 노드를 검사하고, 그 결과에 따라 자식 노드로 재귀 호출할지 결정한다.
+	// 1. 입력: CurrentNode, Frustum, VisibleList, ParentMask
+	//
+	// 2. [노드 검사]
+	//    CurrentNode의 경계 상자(Bounding Box)와 Frustum을 ParentMask를 이용해 검사한다.
+	//    -> 검사 결과는 'CompletelyOutside', 'CompletelyInside', 'Intersect' 중 하나가 된다.
+	//
+	// 3. [결과에 따른 분기 처리]
+	//
+	//     Case A: 완전히 바깥에 있을 경우
+	//    만약 검사 결과가 'CompletelyOutside' 라면:
+	// 	 -> 이 노드와 그 아래의 모든 자식은 보이지 않으므로, 아무것도 하지 않고 함수를 즉시 종료한다.
+	// (가지치기)
+	//
+	//     Case B: 완전히 안쪽에 있을 경우
+	//    만약 검사 결과가 'CompletelyInside' 라면:
+	// 	 -> 이 노드와 그 아래의 모든 자식은 무조건 보이므로, 더 이상 검사할 필요가 없다.
+	// 	 -> '모든 자손 추가' 헬퍼 함수를 호출하여 이 노드 아래의 모든 오브젝트를 VisibleList에 추가한다.
+	// 	 -> 함수를 종료한다.
+	//
+	//     Case C: 일부만 걸쳐 있을 경우 (Intersect)
+	//    만약 검사 결과가 'Intersect' 라면:
+	// 	 -> 더 깊이 들어가서 자세히 검사해야 한다.
+	// 	 -> 만약 CurrentNode가 '리프 노드' 라면:
+	// 		   재귀의 끝에 도달. 이 리프 노드가 담고 있는 오브젝트들을 VisibleList에 추가한다.
+	// 	 -> 만약 CurrentNode가 '중간 노드' 라면:
+	// 		   (선택적 최적화: 평면 마스크 기법을 여기서 적용하여 자식에게 넘겨줄 ChildMask를 계산한다)
+	// 		   왼쪽 자식에 대해 '노드 순회 함수'를 재귀 호출한다.
+	// 		   오른쪽 자식에 대해 '노드 순회 함수'를 재귀 호출한다.
+
 	/*
-	 *	순회 하기
-	 *	현재 노드 AABB 검사 - 완전히 밖이면 culling
-	 *	교체 시 - 자식 노드 검사
-	 *
+	 *	BVH의 바운딩박스는 worldbox
 	 */
+
+	// 현재 노드의 BB 검사
+	FAABB CurrentBound = Nodes[NodeIndex].Bounds;
+
+	TArray<EFrustumPlane> PlaneMasks = { EFrustumPlane::Left, EFrustumPlane::Right,
+										EFrustumPlane::Bottom, EFrustumPlane::Top,
+										EFrustumPlane::Near, EFrustumPlane::Far};
+
+	TArray<EPlaneIndex> PlaneIndices = { EPlaneIndex::Left, EPlaneIndex::Right,
+										 EPlaneIndex::Bottom, EPlaneIndex::Top,
+										 EPlaneIndex::Near, EPlaneIndex::Far};
+
+	EFrustumTestResult Result{};
+
+	uint32 ChildMask = 0;
+	// Plane Test
+	for (const auto& PlaneIndex : PlaneIndices)
+	{
+		if (InMask & static_cast<uint32>(PlaneMasks[static_cast<uint32>(PlaneIndex)]))
+		{
+			Result = InFrustum.TestAABBWithPlane(CurrentBound, PlaneIndex);
+			// 완전히 바깥인 경우 return
+			// 더 이상 검사할 필요가 없음
+			if (Result == EFrustumTestResult::CompletelyOutside)
+			{
+				return;
+			}
+			else if (Result == EFrustumTestResult::Intersect)
+			{
+				ChildMask |= static_cast<uint32>(EFrustumPlane::Left);
+			}
+		}
+	}
+
+	// 완전히 안쪽인 경우
+	// 모든 자식의 primitive를 outvisiblecomp에 추가 후 순회 종료
+	if (Result == EFrustumTestResult::CompletelyInside)
+	{
+		AddAllPrimitives(NodeIndex, OutVisibleComponents);
+		return;
+	}
+
+	// 완전히 바깥도 아니고 완전히 안쪽도 아니면 교차
+	// 교차하는 AABB가 Leaf라면 leaf node 내부의 개별 primitive에 대해서 culling test 필요
+	if (Nodes[NodeIndex].bIsLeaf)
+	{
+		size_t Count = Nodes[NodeIndex].Start + Nodes[NodeIndex].Count;
+		for (size_t i = Nodes[NodeIndex].Start; i < Count; i++)
+		{
+			FAABB TargetAABB = Primitives[i].Bounds;
+			if (InFrustum.IsInFrustum(TargetAABB) != EFrustumTestResult::CompletelyOutside)
+			{
+				OutVisibleComponents.push_back(Primitives[i].Primitive);
+			}
+		}
+		return;
+	}
+
+	// leaf가 아니고 교차하는 경우 순회 시작
+	TraverseForCulling(Nodes[NodeIndex].LeftChild, InFrustum, ChildMask, OutVisibleComponents);
+	TraverseForCulling(Nodes[NodeIndex].RightChild, InFrustum, ChildMask, OutVisibleComponents);
+
+}
+
+void UBVHManager::AddAllPrimitives(uint32 NodeIndex, TArray<UPrimitiveComponent*>& OutVisibleComponents)
+{
+	if (NodeIndex < 0 || NodeIndex >= Nodes.size())
+	{
+		return;
+	}
+
+	size_t Count = Nodes[NodeIndex].Start + Nodes[NodeIndex].Count;
+	for (size_t i = Nodes[NodeIndex].Start; i < Count; i++)
+	{
+		OutVisibleComponents.push_back(Primitives[i].Primitive);
+	}
 }
 

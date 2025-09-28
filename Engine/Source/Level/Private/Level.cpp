@@ -216,7 +216,7 @@ TArray<TObjectPtr<UPrimitiveComponent>> ULevel::GetVisiblePrimitiveComponents(UC
 
 		FAABB TargetAABB{};
 		PrimitiveComponent->GetWorldAABB(TargetAABB.Min, TargetAABB.Max);
-		if (Frustum->IsInFrustum(TargetAABB, 0) == EFrustumTestResult::Inside)
+		if (Frustum->IsInFrustum(TargetAABB) == EFrustumTestResult::Inside)
 		{
 			VisibleComponents.push_back(PrimitiveComponent);
 		}

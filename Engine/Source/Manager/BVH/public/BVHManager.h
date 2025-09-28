@@ -53,7 +53,8 @@ private:
 	void RaycastIterative(const FRay& InRay, float& OutClosestHit, int& OutHitObject) const;
 	void RaycastRecursive(int NodeIndex, const FRay& InRay, float& OutClosestHit, int& OutHitObject) const;
 	void CollectNodeBounds(TArray<FAABB>& OutBounds) const;
-	void TraverseForCulling(uint32 NodeIndex, FFrustumCull& InFrustum, TArray<UPrimitiveComponent*>& OutVisibleComponents);
+	void TraverseForCulling(uint32 NodeIndex, FFrustumCull& InFrustum, uint32 InMask, TArray<UPrimitiveComponent*>& OutVisibleComponents);
+	void AddAllPrimitives(uint32 NodeIndex, TArray<UPrimitiveComponent*>& OutVisibleComponents);
 
 	TArray<FBVHNode> Nodes;
 	TArray<FBVHPrimitive> Primitives;

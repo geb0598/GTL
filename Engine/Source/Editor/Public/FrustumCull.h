@@ -3,32 +3,37 @@
 class UCamera;
 struct  FAABB;
 
-enum class EFrustumPlaneState : uint32
+// 평면의 비트 표현
+enum class EFrustumPlane : uint32
 {
-	Outside		= 0b00,
-	Intersect	= 0b01,
-	Inside		= 0b10,
+	Left	= 1 << 0, // 0b000001
+	Right	= 1 << 1, // 0b000010
+	Bottom	= 1 << 2, // 0b000100
+	Top		= 1 << 3, // 0b001000
+	Near	= 1 << 4, // 0b010000
+	Far 	= 1 << 5, // 0b100000
 
-	// 상태 추출용
-	PlaneMask	= 0b11
+	// 모든 평면 검사용 마스크 값
+	All = 0x3F		  // 0b111111
 };
 
-// 평면의 비트 표현
-enum class EFrustumPlaneIndex : uint32
+enum class EPlaneIndex : uint8
 {
-	Left	= 0,
-	Right	= 2,
-	Bottom	= 4,
-	Top		= 6,
-	Near	= 8,
-	Far 	= 10
+	Left,
+	Right,
+	Bottom,
+	Top,
+	Near,
+	Far
 };
 
 enum class EFrustumTestResult : uint8
 {
 	Outside,
+	Inside,
+	CompletelyOutside,
 	Intersect,
-	Inside
+	CompletelyInside
 };
 
 struct FPlane
@@ -71,8 +76,15 @@ public:
 	~FFrustumCull();
 
 	void Update(UCamera* InCamera);
-	EFrustumTestResult IsInFrustum(const FAABB& TargetAABB, uint32 Mask);
+	EFrustumTestResult IsInFrustum(const FAABB& TargetAABB);
+	const EFrustumTestResult TestAABBWithPlane(const FAABB& TargetAABB, const EPlaneIndex Index);
+
+	FPlane& GetPlane(EPlaneIndex Index) { return Planes[static_cast<uint8>(Index)]; }
 
 private:
+	EFrustumTestResult CheckPlane(const FAABB& TargetAABB,  EPlaneIndex Index);
+
+private:
+	// 순서대로 left, right, bottom, top, near, far
 	FPlane Planes[6];
 };
