@@ -418,13 +418,13 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 	TArray<bool> VisibilityResults;
 	OcclusionRenderer.OcclusionTest(GetDevice(), GetDeviceContext(), InCurrentCamera, VisibilityResults);
 
-	//UE_LOG("Total Primitives: %d", PrimitiveComponents.size());
-	//int CulledCnt = 0;
-	//for (size_t i = 0; i < VisibilityResults.size(); ++i)
-	//{
-	//	CulledCnt += !VisibilityResults[i];
-	//}
-	//UE_LOG("Culled Primitives: %d", CulledCnt);
+	UE_LOG("Total Primitives: %d", PrimitiveComponents.size());
+	int CulledCnt = 0;
+	for (size_t i = 0; i < VisibilityResults.size(); ++i)
+	{
+		CulledCnt += !VisibilityResults[i];
+	}
+	UE_LOG("Culled Primitives: %d", CulledCnt);
 
 	TObjectPtr<UBillBoardComponent> BillBoard = nullptr;
 

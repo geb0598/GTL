@@ -54,14 +54,14 @@ void main(uint3 DispatchThreadID : SV_DispatchThreadID)
 
     // AABB의 클립 공간을 3x3 그리드로 나누어 UV 좌표 계산
     bool isVisible = false;
-    for (int y = 0; y < 3; ++y)
+    for (int y = 0; y < 5; ++y)
     {
-        for (int x = 0; x < 3; ++x)
+        for (int x = 0; x < 5; ++x)
         {
-            float2 sampleClip = lerp(minClip, maxClip, float2(x / 2.0f, y / 2.0f));
+            float2 sampleClip = lerp(minClip, maxClip, float2(x / 5.0f, y / 5.0f));
             float2 sampleUV = ClipToTexCoord(sampleClip);
             float occluderZ = HiZTexture.SampleLevel(Sampler_LinearClamp, sampleUV, mip).r;
-            if (minZ < occluderZ) // 객체의 가장 가까운 Z가 Hi-Z 맵의 깊이보다 가까우면 가시적
+            if (minZ < occluderZ + 0.0001f) // 객체의 가장 가까운 Z가 Hi-Z 맵의 깊이보다 가까우면 가시적 (epsilon 추가)
             {
                 isVisible = true;
                 break;
