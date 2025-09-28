@@ -27,8 +27,8 @@ enum class EFrustumPlaneIndex : uint32
 enum class EFrustumTestResult : uint8
 {
 	Outside,
-	Inside,
-	Intersection
+	Intersect,
+	Inside
 };
 
 struct FPlane
@@ -70,7 +70,7 @@ public:
 	FFrustumCull();
 	~FFrustumCull();
 
-	void Update(UCamera* InViewProperties);
+	void Update(UCamera* InCamera);
 	EFrustumTestResult IsInFrustum(const FAABB& TargetAABB, uint32 Mask);
 
 private:

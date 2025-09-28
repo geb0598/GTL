@@ -322,9 +322,6 @@ void UBVHManager::ConvertComponentsToPrimitives(
 
 void UBVHManager::FrustumCull(FFrustumCull& InFrustum, TArray<UPrimitiveComponent*>& OutVisibleComponents)
 {
-
-
-
 	TraverseForCulling(1, InFrustum, OutVisibleComponents);
 }
 
@@ -342,5 +339,11 @@ void UBVHManager::CollectNodeBounds(TArray<FAABB>& OutBounds) const
 void UBVHManager::TraverseForCulling(uint32 NodeIndex, FFrustumCull& InFrustum,
 	TArray<UPrimitiveComponent*>& OutVisibleComponents)
 {
+	/*
+	 *	순회 하기
+	 *	현재 노드 AABB 검사 - 완전히 밖이면 culling
+	 *	교체 시 - 자식 노드 검사
+	 *
+	 */
 }
 

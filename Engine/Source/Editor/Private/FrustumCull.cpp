@@ -70,14 +70,16 @@ EFrustumTestResult FFrustumCull::IsInFrustum(const FAABB& TargetAABB, uint32 Mas
 	{
 		const FPlane& Plane = Planes[i];
 
-		FVector NegativeVector{};
-		NegativeVector.X = (Plane.NormalVector.X >= 0.0f) ? TargetAABB.Min.X : TargetAABB.Max.X;
-		NegativeVector.Y = (Plane.NormalVector.Y >= 0.0f) ? TargetAABB.Min.Y : TargetAABB.Max.Y;
-		NegativeVector.Z = (Plane.NormalVector.Z >= 0.0f) ? TargetAABB.Min.Z : TargetAABB.Max.Z;
+		// 평면의 법선 방향으로 가장 멀리 있는 꼭짓점
+		// 이 꼭짓점이 양수면 frustum 내부에 있거나, 겹침 상태
+		FVector PositiveVertex{};
+		PositiveVertex.X = (Plane.NormalVector.X >= 0.0f) ? TargetAABB.Max.X : TargetAABB.Min.X;
+		PositiveVertex.Y = (Plane.NormalVector.Y >= 0.0f) ? TargetAABB.Max.Y : TargetAABB.Min.Y;
+		PositiveVertex.Z = (Plane.NormalVector.Z >= 0.0f) ? TargetAABB.Max.Z : TargetAABB.Min.Z;
 
-		float Distance = (Plane.NormalVector.X * NegativeVector.X)
-						+ (Plane.NormalVector.Y * NegativeVector.Y)
-						+ (Plane.NormalVector.Z * NegativeVector.Z)
+		float Distance = (Plane.NormalVector.X * PositiveVertex.X)
+						+ (Plane.NormalVector.Y * PositiveVertex.Y)
+						+ (Plane.NormalVector.Z * PositiveVertex.Z)
 						+ Plane.ConstantD;
 		if (Distance < 0.0f)
 		{
