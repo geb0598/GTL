@@ -71,6 +71,7 @@ private:
 	/** @brief: HiZ resources */
 	ID3D11Texture2D* HiZTexture = nullptr;
 	TArray<ID3D11ShaderResourceView*> HiZShaderResourceViews;
+	ID3D11ShaderResourceView* HiZFullMipShaderResourceView = nullptr;
 	TArray<ID3D11UnorderedAccessView*> HiZUnorderedAccessViews;
 
 	ID3D11Buffer* HiZDownsampleConstantBuffer = nullptr;

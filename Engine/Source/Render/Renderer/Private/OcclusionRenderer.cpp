@@ -402,7 +402,7 @@ void UOcclusionRenderer::OcclusionTest(
 	// 4. 리소스 바인딩
 	// ========================================================= //
 	InDeviceContext->CSSetShaderResources(0, 1, &BVSRV);
-	InDeviceContext->CSSetShaderResources(1, 1, &HiZShaderResourceViews[MipLevels - 1]);
+	InDeviceContext->CSSetShaderResources(1, 1, &HiZFullMipShaderResourceView);
 	InDeviceContext->CSSetSamplers(0, 1, &HiZSamplerState);
 	InDeviceContext->CSSetUnorderedAccessViews(0, 1, &VisibilityUAV, nullptr);
 
@@ -761,11 +761,24 @@ void UOcclusionRenderer::CreateHiZResource(ID3D11Device* InDevice)
 		return;
 	}
 
+	// Create a single SRV for the entire mip chain (for SampleLevel in OcclusionTest)
+	D3D11_SHADER_RESOURCE_VIEW_DESC FullMipSRVDesc = {};
+	FullMipSRVDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	FullMipSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	FullMipSRVDesc.Texture2D.MostDetailedMip = 0;
+	FullMipSRVDesc.Texture2D.MipLevels = MipLevels;
+	hResult = InDevice->CreateShaderResourceView(HiZTexture, &FullMipSRVDesc, &HiZFullMipShaderResourceView);
+	if (FAILED(hResult))
+	{
+		return;
+	}
+
 	HiZShaderResourceViews.resize(MipLevels);
 	HiZUnorderedAccessViews.resize(MipLevels);
 
 	for (UINT i = 0; i < MipLevels; ++i)
 	{
+		// Create individual SRVs for each mip level (for CSSetShaderResources in GenerateHiZ)
 		D3D11_SHADER_RESOURCE_VIEW_DESC ShaderResourceViewDesc = {};
 		ShaderResourceViewDesc.Format = DXGI_FORMAT_R32_FLOAT;
 		ShaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
@@ -776,6 +789,8 @@ void UOcclusionRenderer::CreateHiZResource(ID3D11Device* InDevice)
 		{
 			return;
 		}
+
+		// Create individual UAVs for each mip level
 		D3D11_UNORDERED_ACCESS_VIEW_DESC UnorderedAccessViewDesc = {};
 		UnorderedAccessViewDesc.Format = DXGI_FORMAT_R32_FLOAT;
 		UnorderedAccessViewDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
@@ -878,13 +893,19 @@ void UOcclusionRenderer::ReleaseHiZResource()
 		HiZTexture->Release();
 		HiZTexture = nullptr;
 	}
+	if (HiZFullMipShaderResourceView)
+	{
+		HiZFullMipShaderResourceView->Release();
+		HiZFullMipShaderResourceView = nullptr;
+	}
 	for (ID3D11ShaderResourceView* SRV : HiZShaderResourceViews)
 	{
-		SRV->Release();
+		if (SRV) SRV->Release();
 	}
+	HiZShaderResourceViews.clear();
 	for (ID3D11UnorderedAccessView* UAV : HiZUnorderedAccessViews)
 	{
-		UAV->Release();
+		if (UAV) UAV->Release();
 	}
 	HiZUnorderedAccessViews.clear();
 

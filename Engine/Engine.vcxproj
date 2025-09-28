@@ -587,9 +587,11 @@
   <ItemGroup>
     <FxCompile Include="Asset\Shader\DepthPS.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="Asset\Shader\DepthVS.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="Asset\Shader\HiZCopyDepthCS.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_MT|x64'">true</ExcludedFromBuild>

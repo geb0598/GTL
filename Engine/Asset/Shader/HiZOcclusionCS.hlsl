@@ -52,22 +52,22 @@ void main(uint3 DispatchThreadID : SV_DispatchThreadID)
     float mip = floor(log2(max(maxDim, 1.0f)));
     mip = clamp(mip, 0, MipLevels - 1);
 
-    // AABB의 클립 공간 코너 UV 좌표 계산
-    float2 cornerUVs[4];
-    cornerUVs[0] = ClipToTexCoord(minClip.xy); // Top-Left
-    cornerUVs[1] = ClipToTexCoord(float2(maxClip.x, minClip.y)); // Top-Right
-    cornerUVs[2] = ClipToTexCoord(float2(minClip.x, maxClip.y)); // Bottom-Left
-    cornerUVs[3] = ClipToTexCoord(maxClip.xy); // Bottom-Right
-    
+    // AABB의 클립 공간을 3x3 그리드로 나누어 UV 좌표 계산
     bool isVisible = false;
-    for (int i = 0; i < 4; ++i)
+    for (int y = 0; y < 3; ++y)
     {
-        float occluderZ = HiZTexture.SampleLevel(Sampler_LinearClamp, cornerUVs[i], mip).r;
-        if (minZ < occluderZ) // 객체의 가장 가까운 Z가 Hi-Z 맵의 깊이보다 가까우면 가시적
+        for (int x = 0; x < 3; ++x)
         {
-            isVisible = true;
-            break;
+            float2 sampleClip = lerp(minClip, maxClip, float2(x / 2.0f, y / 2.0f));
+            float2 sampleUV = ClipToTexCoord(sampleClip);
+            float occluderZ = HiZTexture.SampleLevel(Sampler_LinearClamp, sampleUV, mip).r;
+            if (minZ < occluderZ) // 객체의 가장 가까운 Z가 Hi-Z 맵의 깊이보다 가까우면 가시적
+            {
+                isVisible = true;
+                break;
+            }
         }
+        if (isVisible) break;
     }
 
     VisibilityBuffer[volumeIndex] = isVisible ? 1 : 0;
