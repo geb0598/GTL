@@ -88,3 +88,55 @@ private:
 	// 순서대로 left, right, bottom, top, near, far
 	FPlane Planes[6];
 };
+
+template<typename E>
+constexpr typename std::enable_if_t<std::is_enum_v<E>, E>
+operator&(E lhs, E rhs) noexcept {
+	// underlying_type_t를 이용해서 enum class의 기저 타입 추출  (uint32, char ...)
+	using EnumBaseType = std::underlying_type_t<E>;
+
+	// 열거형을 Basetype으로 캐스팅 후 연산
+	// 다시 열거형으로 캐스팅
+	return static_cast<E>(static_cast<EnumBaseType>(lhs) & static_cast<EnumBaseType>(rhs));
+}
+
+template<typename E>
+constexpr typename std::enable_if_t<std::is_enum_v<E>, E>
+operator|(E lhs, E rhs) noexcept {
+	// underlying_type_t를 이용해서 enum class의 기저 타입 추출  (uint32, char ...)
+	using EnumBaseType = std::underlying_type_t<E>;
+
+	return static_cast<E>(static_cast<EnumBaseType>(lhs) | static_cast<EnumBaseType>(rhs));
+}
+
+template<typename E>
+constexpr typename std::enable_if_t<std::is_enum_v<E>, E&>
+operator&=(E& lhs, E rhs) noexcept {
+	// underlying_type_t를 이용해서 enum class의 기저 타입 추출  (uint32, char ...)
+	using EnumBaseType = std::underlying_type_t<E>;
+
+	// 참조로 캐스팅
+	auto& Value = reinterpret_cast<EnumBaseType&>(lhs);
+	Value &= static_cast<EnumBaseType>(rhs);
+	return lhs;
+}
+
+template<typename E>
+constexpr typename std::enable_if_t<std::is_enum_v<E>, E&>
+operator|=(E& lhs, E rhs) noexcept {
+	// underlying_type_t를 이용해서 enum class의 기저 타입 추출  (uint32, char ...)
+	using EnumBaseType = std::underlying_type_t<E>;
+
+	// 참조로 캐스팅
+	auto& Value = reinterpret_cast<EnumBaseType&>(lhs);
+	Value |= static_cast<EnumBaseType>(rhs);
+	return lhs;
+}
+
+// enum class를 basetype으로 캐스팅하는 함수
+template<typename E>
+constexpr std::underlying_type_t<E> ToBaseType(E InEnum) noexcept
+{
+	using BaseType = std::underlying_type_t<E>;
+	return static_cast<BaseType>(InEnum);
+}

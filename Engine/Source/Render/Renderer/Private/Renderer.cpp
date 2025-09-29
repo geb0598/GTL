@@ -486,6 +486,7 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 	CommandLists.clear();
 
 #else
+	//PROFILE_SCOPE("Single Culling", ULevelManager::GetInstance().GetCurrentLevel()->GetVisiblePrimitiveComponents(InCurrentCamera))
 	const auto PrimitiveComponents = ULevelManager::GetInstance().GetCurrentLevel()->GetVisiblePrimitiveComponents(InCurrentCamera);
 	for (auto& PrimitiveComponent : PrimitiveComponents/*ULevelManager::GetInstance().GetCurrentLevel()->GetLevelPrimitiveComponents()*/)	{
 		// TODO(KHJ) Visible 여기서 Control 하고 있긴 한데 맞는지 Actor 단위 렌더링 할 때도 이렇게 써야할지 고민 필요

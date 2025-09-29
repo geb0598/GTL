@@ -322,7 +322,7 @@ void UBVHManager::ConvertComponentsToPrimitives(
 	}
 }
 
-void UBVHManager::FrustumCull(FFrustumCull& InFrustum, TArray<UPrimitiveComponent*>& OutVisibleComponents)
+void UBVHManager::FrustumCull(FFrustumCull& InFrustum, TArray<TObjectPtr<UPrimitiveComponent>>& OutVisibleComponents)
 {
 	OutVisibleComponents.clear();
 
@@ -332,7 +332,7 @@ void UBVHManager::FrustumCull(FFrustumCull& InFrustum, TArray<UPrimitiveComponen
 		return;
 	}
 
-	TraverseForCulling(RootIndex, InFrustum, 0x3F, OutVisibleComponents);
+	TraverseForCulling(RootIndex, InFrustum, ToBaseType(EFrustumPlane::All), OutVisibleComponents);
 }
 
 void UBVHManager::CollectNodeBounds(TArray<FAABB>& OutBounds) const
@@ -347,7 +347,7 @@ void UBVHManager::CollectNodeBounds(TArray<FAABB>& OutBounds) const
 }
 
 void UBVHManager::TraverseForCulling(uint32 NodeIndex, FFrustumCull& InFrustum, uint32 InMask,
-	TArray<UPrimitiveComponent*>& OutVisibleComponents)
+	TArray<TObjectPtr<UPrimitiveComponent>>& OutVisibleComponents)
 {
 	// 목적: 현재 노드를 검사하고, 그 결과에 따라 자식 노드로 재귀 호출할지 결정한다.
 	// 1. 입력: CurrentNode, Frustum, VisibleList, ParentMask
@@ -394,15 +394,18 @@ void UBVHManager::TraverseForCulling(uint32 NodeIndex, FFrustumCull& InFrustum, 
 										 EPlaneIndex::Bottom, EPlaneIndex::Top,
 										 EPlaneIndex::Near, EPlaneIndex::Far};
 
-	EFrustumTestResult Result{};
+
 
 	uint32 ChildMask = 0;
+	EFrustumTestResult OverallResult = EFrustumTestResult::CompletelyInside;
 	// Plane Test
-	for (const auto& PlaneIndex : PlaneIndices)
+	for (int i = 0; i < 6; i++)
 	{
-		if (InMask & static_cast<uint32>(PlaneMasks[static_cast<uint32>(PlaneIndex)]))
+		EFrustumPlane CurrentPlaneFlag = static_cast<EFrustumPlane>(1 << i);
+		EPlaneIndex CurrentPlaneIndex = static_cast<EPlaneIndex>(i);
+		if (InMask & ToBaseType(CurrentPlaneFlag))
 		{
-			Result = InFrustum.TestAABBWithPlane(CurrentBound, PlaneIndex);
+			EFrustumTestResult Result = InFrustum.TestAABBWithPlane(CurrentBound, CurrentPlaneIndex);
 			// 완전히 바깥인 경우 return
 			// 더 이상 검사할 필요가 없음
 			if (Result == EFrustumTestResult::CompletelyOutside)
@@ -411,14 +414,15 @@ void UBVHManager::TraverseForCulling(uint32 NodeIndex, FFrustumCull& InFrustum, 
 			}
 			else if (Result == EFrustumTestResult::Intersect)
 			{
-				ChildMask |= static_cast<uint32>(EFrustumPlane::Left);
+				OverallResult = EFrustumTestResult::Intersect;
+				ChildMask |= ToBaseType(PlaneMasks[static_cast<uint32>(CurrentPlaneIndex)]);
 			}
 		}
 	}
 
 	// 완전히 안쪽인 경우
 	// 모든 자식의 primitive를 outvisiblecomp에 추가 후 순회 종료
-	if (Result == EFrustumTestResult::CompletelyInside)
+	if (OverallResult == EFrustumTestResult::CompletelyInside)
 	{
 		AddAllPrimitives(NodeIndex, OutVisibleComponents);
 		return;
@@ -446,17 +450,26 @@ void UBVHManager::TraverseForCulling(uint32 NodeIndex, FFrustumCull& InFrustum, 
 
 }
 
-void UBVHManager::AddAllPrimitives(uint32 NodeIndex, TArray<UPrimitiveComponent*>& OutVisibleComponents)
+void UBVHManager::AddAllPrimitives(uint32 NodeIndex, TArray<TObjectPtr<UPrimitiveComponent>>& OutVisibleComponents)
 {
 	if (NodeIndex < 0 || NodeIndex >= Nodes.size())
 	{
 		return;
 	}
 
-	size_t Count = Nodes[NodeIndex].Start + Nodes[NodeIndex].Count;
-	for (size_t i = Nodes[NodeIndex].Start; i < Count; i++)
+	FBVHNode CurrentNode = Nodes[NodeIndex];
+	if (CurrentNode.bIsLeaf)
 	{
-		OutVisibleComponents.push_back(Primitives[i].Primitive);
+		size_t Count = CurrentNode.Start + CurrentNode.Count;
+		for (size_t i = CurrentNode.Start; i < Count; i++)
+		{
+			OutVisibleComponents.push_back(Primitives[i].Primitive);
+		}
+		return;
 	}
+
+	// completely inside가 중간노드인 경우 leaf노드로 재귀
+	AddAllPrimitives(CurrentNode.LeftChild, OutVisibleComponents);
+	AddAllPrimitives(CurrentNode.RightChild, OutVisibleComponents);
 }
 

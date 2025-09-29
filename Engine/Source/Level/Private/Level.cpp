@@ -207,22 +207,26 @@ TArray<TObjectPtr<UPrimitiveComponent>> ULevel::GetVisiblePrimitiveComponents(UC
 	}
 
 	Frustum->Update(InCamera);
-	for (auto& PrimitiveComponent : LevelPrimitiveComponents)
-	{
-		// 이미 보이지 않는 primitive는 컬링할 필요 X
-		// Primitive visibility는 toggle로 제어되는 중
-		if (PrimitiveComponent == nullptr || !PrimitiveComponent->IsVisible())
-		{
-			continue;
-		}
+	// UBV Tree를 순회하며 컬링
+	UBVHManager::GetInstance().FrustumCull(*Frustum, VisibleComponents);
 
-		FAABB TargetAABB{};
-		PrimitiveComponent->GetWorldAABB(TargetAABB.Min, TargetAABB.Max);
-		if (Frustum->IsInFrustum(TargetAABB) == EFrustumTestResult::Inside)
-		{
-			VisibleComponents.push_back(PrimitiveComponent);
-		}
-	}
+	// 선형탐색으로 컬링
+	// for (auto& PrimitiveComponent : LevelPrimitiveComponents)
+	// {
+	// 	// 이미 보이지 않는 primitive는 컬링할 필요 X
+	// 	// Primitive visibility는 toggle로 제어되는 중
+	// 	if (PrimitiveComponent == nullptr || !PrimitiveComponent->IsVisible())
+	//  	{
+	//  		continue;
+	//  	}
+	//
+	//  	FAABB TargetAABB{};
+	//  	PrimitiveComponent->GetWorldAABB(TargetAABB.Min, TargetAABB.Max);
+	//  	if (Frustum->IsInFrustum(TargetAABB) == EFrustumTestResult::Inside)
+	//  	{
+	//  		VisibleComponents.push_back(PrimitiveComponent);
+	// 	}
+	// }
 
 	// 값으로 반환하지만 Return Value Optimize가 컴파일러 단계에서 이뤄짐
 	// 성능 측정해볼 필요 있음
