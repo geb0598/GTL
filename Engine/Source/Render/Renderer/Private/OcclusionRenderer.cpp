@@ -189,44 +189,46 @@ void UOcclusionRenderer::BuildScreenSpaceBoundingVolumes(
 			{ WorldMax.X, WorldMax.Y, WorldMax.Z }
 		};
 
-		        // --- (3) Clip 공간 AABB 초기화 ---
-				FVector4 ClipMin(FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX);
-				FVector4 ClipMax(-FLT_MAX, -FLT_MAX, -FLT_MAX, -FLT_MAX);
-		
-				// --- (4) 각 코너 변환 후 Min/Max 업데이트 ---
-				for (int j = 0; j < 8; ++j)
-				{
-					FVector4 clipPos = FMatrix::VectorMultiply(
-						FVector4(corners[j].X, corners[j].Y, corners[j].Z, 1.0f),
-						ViewProjMatrix
-					);
-		
-					if (clipPos.W <= 0.0f) continue; // Discard points behind or on the projection plane
-		
-					FVector4 ndcPos(
-						clipPos.X / clipPos.W,
-						clipPos.Y / clipPos.W,
-						clipPos.Z / clipPos.W,
-						1.0f // Set W to 1.0f for NDC
-					);
-		
-					ClipMin.X = std::min(ClipMin.X, ndcPos.X);
-					ClipMin.Y = std::min(ClipMin.Y, ndcPos.Y);
-					ClipMin.Z = std::min(ClipMin.Z, ndcPos.Z);
-					ClipMin.W = std::min(ClipMin.W, ndcPos.W);
-		
-					ClipMax.X = std::max(ClipMax.X, ndcPos.X);
-					ClipMax.Y = std::max(ClipMax.Y, ndcPos.Y);
-					ClipMax.Z = std::max(ClipMax.Z, ndcPos.Z);
-					ClipMax.W = std::max(ClipMax.W, ndcPos.W);
-				}
+		// --- (3) Clip 공간 AABB 초기화 ---
+		FVector4 ClipMin(FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX);
+		FVector4 ClipMax(-FLT_MAX, -FLT_MAX, -FLT_MAX, -FLT_MAX);
+
+		// --- (4) 각 코너 변환 후 Min/Max 업데이트 ---
+		for (int j = 0; j < 8; ++j)
+		{
+			FVector4 clipPos = FMatrix::VectorMultiply(
+				FVector4(corners[j].X, corners[j].Y, corners[j].Z, 1.0f),
+				ViewProjMatrix
+			);
+
+			if (clipPos.W <= 0.0f) continue; // Discard points behind or on the projection plane
+
+			FVector4 ndcPos(
+				clipPos.X / clipPos.W,
+				clipPos.Y / clipPos.W,
+				clipPos.Z / clipPos.W,
+				1.0f // Set W to 1.0f for NDC
+			);
+
+			ndcPos.X = std::clamp(ndcPos.X, -1.0f, 1.0f);
+			ndcPos.Y = std::clamp(ndcPos.Y, -1.0f, 1.0f);
+			ndcPos.Z = std::clamp(ndcPos.Z, 0.0f, 1.0f); 
+
+			ClipMin.X = std::min(ClipMin.X, ndcPos.X);
+			ClipMin.Y = std::min(ClipMin.Y, ndcPos.Y);
+			ClipMin.Z = std::min(ClipMin.Z, ndcPos.Z);
+			ClipMin.W = std::min(ClipMin.W, ndcPos.W);
+
+			ClipMax.X = std::max(ClipMax.X, ndcPos.X);
+			ClipMax.Y = std::max(ClipMax.Y, ndcPos.Y);
+			ClipMax.Z = std::max(ClipMax.Z, ndcPos.Z);
+			ClipMax.W = std::max(ClipMax.W, ndcPos.W);
+		}
 		// --- (5) 결과 저장 ---
 		BoundingVolumes[i] = { ClipMin, ClipMax };
 	}
 #endif
 }
-
-
 
 void UOcclusionRenderer::GenerateHiZ(
 	ID3D11Device* InDevice,
@@ -567,7 +569,7 @@ void UOcclusionRenderer::CreateShader(ID3D11Device* InDevice)
 
 	// Create HiZSamplerState
 	D3D11_SAMPLER_DESC SamplerDesc = {};
-	SamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR; // Changed to POINT filtering
+	SamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 	SamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
 	SamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
 	SamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;

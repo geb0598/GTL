@@ -26,7 +26,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
     float depth2 = g_InputTexture.SampleLevel(Sampler_LinearClamp, (prevMipCoord + float2(0.5f, 1.5f)) / (float2)(g_TextureSize * 2), g_MipLevel - 1).r;
     float depth3 = g_InputTexture.SampleLevel(Sampler_LinearClamp, (prevMipCoord + float2(1.5f, 1.5f)) / (float2)(g_TextureSize * 2), g_MipLevel - 1).r;
 
-    float minDepth = max(max(depth0, depth1), max(depth2, depth3));
+    float maxDepth = max(max(depth0, depth1), max(depth2, depth3));
 
-    g_OutputTexture[DTid.xy] = minDepth;
+    g_OutputTexture[DTid.xy] = maxDepth;
 }
