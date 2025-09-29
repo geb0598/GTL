@@ -395,13 +395,13 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 	{
 		return;
 	}
-
 	TObjectPtr<UBillBoardComponent> BillBoard = nullptr;
 
 #ifdef MULTI_THREADING
 	static ThreadPool Pool(NUM_WORKER_THREADS);
 
-	const auto& PrimitiveComponents = ULevelManager::GetInstance().GetCurrentLevel()->GetLevelPrimitiveComponents();
+	//const auto& PrimitiveComponents = ULevelManager::GetInstance().GetCurrentLevel()->GetLevelPrimitiveComponents();
+	const auto PrimitiveComponents = ULevelManager::GetInstance().GetCurrentLevel()->GetVisiblePrimitiveComponents(InCurrentCamera);
 	const size_t NumPrimitives = PrimitiveComponents.size();
 	const size_t ChunkSize = (NumPrimitives + NUM_WORKER_THREADS - 1) / NUM_WORKER_THREADS;
 
@@ -486,7 +486,9 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 	CommandLists.clear();
 
 #else
-	for (auto& PrimitiveComponent : ULevelManager::GetInstance().GetCurrentLevel()->GetLevelPrimitiveComponents())	{
+	//PROFILE_SCOPE("Single Culling", ULevelManager::GetInstance().GetCurrentLevel()->GetVisiblePrimitiveComponents(InCurrentCamera))
+	const auto PrimitiveComponents = ULevelManager::GetInstance().GetCurrentLevel()->GetVisiblePrimitiveComponents(InCurrentCamera);
+	for (auto& PrimitiveComponent : PrimitiveComponents/*ULevelManager::GetInstance().GetCurrentLevel()->GetLevelPrimitiveComponents()*/)	{
 		// TODO(KHJ) Visible 여기서 Control 하고 있긴 한데 맞는지 Actor 단위 렌더링 할 때도 이렇게 써야할지 고민 필요
 		if (!PrimitiveComponent || !PrimitiveComponent->IsVisible())
 		{

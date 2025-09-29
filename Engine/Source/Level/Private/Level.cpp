@@ -2,22 +2,17 @@
 #include "Level/Public/Level.h"
 
 #include "Actor/Public/Actor.h"
-#include "Component/Public/BillBoardComponent.h"
 #include "Component/Public/PrimitiveComponent.h"
 #include "Manager/Level/Public/LevelManager.h"
 #include "Manager/UI/Public/UIManager.h"
 #include "Utility/Public/JsonSerializer.h"
-#include "Actor/Public/CubeActor.h"
-#include "Actor/Public/SphereActor.h"
-#include "Actor/Public/TriangleActor.h"
-#include "Actor/Public/SquareActor.h"
 #include "Factory/Public/NewObject.h"
 #include "Core/Public/Object.h"
-#include "Factory/Public/FactorySystem.h"
 #include "Manager/Config/Public/ConfigManager.h"
 #include "Render/Renderer/Public/Renderer.h"
 #include "Editor/Public/Viewport.h"
 #include "Utility/Public/ActorTypeMapper.h"
+#include "Editor/Public/FrustumCull.h"
 #include "Component/Mesh/Public/StaticMeshComponent.h"
 #include "Editor/Public/Camera.h"
 
@@ -28,7 +23,7 @@
 ULevel::ULevel() = default;
 
 ULevel::ULevel(const FName& InName)
-	: UObject(InName)
+	: UObject(InName), Frustum(NewObject<FFrustumCull>())
 {
 }
 
@@ -123,19 +118,15 @@ void ULevel::Update()
 	uint64 AllocatedByte = GetAllocatedBytes();
 	uint32 AllocatedCount = GetAllocatedCount();
 
-	LevelPrimitiveComponents.clear();
-	//Deprecated : EditorPrimitive는 에디터에서 처리
-	//EditorPrimitiveComponents.clear();
+	// 최적화 게임잼을 위해 잠시 주석처리
+	// for (auto& Actor : LevelActors)
+	// {
+	// 	if (Actor)
+	// 	{
+	// 		Actor->Tick();
+	// 	}
+	// }
 
-	//AActor* pOldActor = nullptr;
-	for (auto& Actor : LevelActors)
-	{
-		if (Actor)
-		{
-			Actor->Tick();
-			AddLevelPrimitiveComponent(Actor);
-		}
-	}
 	TickLODUpdate();
 }
 
@@ -163,6 +154,28 @@ void ULevel::Cleanup()
 
 	// 4. 선택된 액터 참조를 안전하게 해제합니다.
 	SelectedActor = nullptr;
+
+	if (Frustum)
+	{
+		delete Frustum;
+		Frustum = nullptr;
+	}
+}
+
+void ULevel::InitializeActorsInLevel()
+{
+	LevelPrimitiveComponents.clear();
+	for (auto& Actor : LevelActors)
+	{
+		if (Actor)
+		{
+			AddLevelPrimitiveComponent(Actor);
+		}
+	}
+
+	TArray<FBVHPrimitive> BVHPrimitives;
+	UBVHManager::GetInstance().ConvertComponentsToBVHPrimitives(LevelPrimitiveComponents, BVHPrimitives);
+	UBVHManager::GetInstance().Build(BVHPrimitives);
 }
 
 AActor* ULevel::SpawnActorToLevel(UClass* InActorClass, const FName& InName)
@@ -173,23 +186,61 @@ AActor* ULevel::SpawnActorToLevel(UClass* InActorClass, const FName& InName)
 	}
 
 	AActor* NewActor = NewObject<AActor>(nullptr, TObjectPtr(InActorClass), InName);
-	if (NewActor)
+
+	if (!NewActor) return nullptr;
+
+	if (InName != FName::GetNone())
 	{
-		if (InName != FName::GetNone())
-		{
-			NewActor->SetName(InName);
-		}
-		LevelActors.push_back(TObjectPtr(NewActor));
-		NewActor->BeginPlay();
-
-		TArray<FBVHPrimitive> BVHPrimitives;
-		UBVHManager::GetInstance().ConvertComponentsToPrimitives(LevelPrimitiveComponents, BVHPrimitives);
-		UBVHManager::GetInstance().Build(BVHPrimitives);
-
-		return NewActor;
+		NewActor->SetName(InName);
 	}
 
-	return nullptr;
+	LevelActors.push_back(TObjectPtr(NewActor));
+	NewActor->BeginPlay();
+
+	if (this == ULevelManager::GetInstance().GetCurrentLevel())
+	{
+		AddLevelPrimitiveComponent(NewActor);
+		TArray<FBVHPrimitive> BVHPrimitives;
+		UBVHManager::GetInstance().ConvertComponentsToBVHPrimitives(LevelPrimitiveComponents, BVHPrimitives);
+		UBVHManager::GetInstance().Build(BVHPrimitives);
+	}
+
+	return NewActor;
+}
+
+TArray<TObjectPtr<UPrimitiveComponent>> ULevel::GetVisiblePrimitiveComponents(UCamera* InCamera)
+{
+	TArray<TObjectPtr<UPrimitiveComponent>> VisibleComponents{};
+	if (Frustum == nullptr || InCamera == nullptr)
+	{
+		return VisibleComponents;
+	}
+
+	Frustum->Update(InCamera);
+	// UBV Tree를 순회하며 컬링
+	UBVHManager::GetInstance().FrustumCull(*Frustum, VisibleComponents);
+
+	// 선형탐색으로 컬링
+	// for (auto& PrimitiveComponent : LevelPrimitiveComponents)
+	// {
+	// 	// 이미 보이지 않는 primitive는 컬링할 필요 X
+	// 	// Primitive visibility는 toggle로 제어되는 중
+	// 	if (PrimitiveComponent == nullptr || !PrimitiveComponent->IsVisible())
+	//  	{
+	//  		continue;
+	//  	}
+	//
+	//  	FAABB TargetAABB{};
+	//  	PrimitiveComponent->GetWorldAABB(TargetAABB.Min, TargetAABB.Max);
+	//  	if (Frustum->IsInFrustum(TargetAABB) == EFrustumTestResult::Inside)
+	//  	{
+	//  		VisibleComponents.push_back(PrimitiveComponent);
+	// 	}
+	// }
+
+	// 값으로 반환하지만 Return Value Optimize가 컴파일러 단계에서 이뤄짐
+	// 성능 측정해볼 필요 있음
+	return VisibleComponents;
 }
 
 void ULevel::AddLevelPrimitiveComponent(AActor* Actor)
@@ -198,33 +249,34 @@ void ULevel::AddLevelPrimitiveComponent(AActor* Actor)
 
 	for (auto& Component : Actor->GetOwnedComponents())
 	{
-		if (Component->GetComponentType() >= EComponentType::Primitive)
-		{
-			TObjectPtr<UPrimitiveComponent> PrimitiveComponent = Cast<UPrimitiveComponent>(Component);
+		if (!(Component->GetComponentType() >= EComponentType::Primitive)) continue;
+
+		TObjectPtr<UPrimitiveComponent> PrimitiveComponent = Cast<UPrimitiveComponent>(Component);
 
 			if (!PrimitiveComponent)
 			{
 				continue;
 			}
 
-			/* 3가지 경우 존재.
-			1: primitive show flag가 꺼져 있으면, 도형, 빌보드 모두 렌더링 안함.
-			2: primitive show flag가 켜져 있고, billboard show flag가 켜져 있으면, 도형, 빌보드 모두 렌더링
-			3: primitive show flag가 켜져 있고, billboard show flag가 꺼져 있으면, 도형은 렌더링 하지만, 빌보드는 렌더링 안함. */
-			// 빌보드는 무조건 피킹이 된 actor의 빌보드여야 렌더링 가능
-			if (PrimitiveComponent->IsVisible() && (ShowFlags & EEngineShowFlags::SF_Primitives))
-			{
-				if (PrimitiveComponent->GetPrimitiveType() != EPrimitiveType::BillBoard)
-				{
-					LevelPrimitiveComponents.push_back(PrimitiveComponent);
-				}
-				else if (PrimitiveComponent->GetPrimitiveType() == EPrimitiveType::BillBoard && (ShowFlags & EEngineShowFlags::SF_BillboardText) && (ULevelManager::GetInstance().GetCurrentLevel()->GetSelectedActor() == Actor))
-				{
-					//TObjectPtr<UBillBoardComponent> BillBoard = Cast<UBillBoardComponent>(PrimitiveComponent);
-					//BillBoard->UpdateRotationMatrix();
-					LevelPrimitiveComponents.push_back(PrimitiveComponent);
-				}
-			}
+		/* 3가지 경우 존재.
+		1: primitive show flag가 꺼져 있으면, 도형, 빌보드 모두 렌더링 안함.
+		2: primitive show flag가 켜져 있고, billboard show flag가 켜져 있으면, 도형, 빌보드 모두 렌더링
+		3: primitive show flag가 켜져 있고, billboard show flag가 꺼져 있으면, 도형은 렌더링 하지만, 빌보드는 렌더링 안함. */
+		// 빌보드는 무조건 피킹이 된 actor의 빌보드여야 렌더링 가능
+		if (!PrimitiveComponent->IsVisible() && (ShowFlags & EEngineShowFlags::SF_Primitives))
+		{
+			return;
+		}
+
+		if (PrimitiveComponent->GetPrimitiveType() != EPrimitiveType::BillBoard)
+		{
+			LevelPrimitiveComponents.push_back(PrimitiveComponent);
+		}
+		else if (PrimitiveComponent->GetPrimitiveType() == EPrimitiveType::BillBoard && (ShowFlags & EEngineShowFlags::SF_BillboardText) && (ULevelManager::GetInstance().GetCurrentLevel()->GetSelectedActor() == Actor))
+		{
+			//TObjectPtr<UBillBoardComponent> BillBoard = Cast<UBillBoardComponent>(PrimitiveComponent);
+			//BillBoard->UpdateRotationMatrix();
+			LevelPrimitiveComponents.push_back(PrimitiveComponent);
 		}
 	}
 }
@@ -236,13 +288,15 @@ void ULevel::SetSelectedActor(AActor* InActor)
 	{
 		for (auto& Component : SelectedActor->GetOwnedComponents())
 		{
-			if (Component->GetComponentType() >= EComponentType::Primitive)
+			if (!(Component->GetComponentType() >= EComponentType::Primitive))
 			{
-				TObjectPtr<UPrimitiveComponent> PrimitiveComponent = Cast<UPrimitiveComponent>(Component);
-				if (PrimitiveComponent->IsVisible())
-				{
-					PrimitiveComponent->SetColor({ 0.f, 0.f, 0.f, 0.f });
-				}
+				continue;
+			}
+
+			TObjectPtr<UPrimitiveComponent> PrimitiveComponent = Cast<UPrimitiveComponent>(Component);
+			if (PrimitiveComponent->IsVisible())
+			{
+				PrimitiveComponent->SetColor({ 0.f, 0.f, 0.f, 0.f });
 			}
 		}
 	}
@@ -253,18 +307,19 @@ void ULevel::SetSelectedActor(AActor* InActor)
 	}
 	SelectedActor = InActor;
 
-	if (SelectedActor)
+	if (!SelectedActor)
 	{
-		for (auto& Component : SelectedActor->GetOwnedComponents())
+		return;
+	}
+
+	for (auto& Component : SelectedActor->GetOwnedComponents())
+	{
+		if (!(Component->GetComponentType() >= EComponentType::Primitive)) continue;
+
+		TObjectPtr<UPrimitiveComponent> PrimitiveComponent = Cast<UPrimitiveComponent>(Component);
+		if (PrimitiveComponent->IsVisible())
 		{
-			if (Component->GetComponentType() >= EComponentType::Primitive)
-			{
-				TObjectPtr<UPrimitiveComponent> PrimitiveComponent = Cast<UPrimitiveComponent>(Component);
-				if (PrimitiveComponent->IsVisible())
-				{
-					PrimitiveComponent->SetColor({ 1.f, 0.8f, 0.2f, 0.4f });
-				}
-			}
+			PrimitiveComponent->SetColor({ 1.f, 0.8f, 0.2f, 0.4f });
 		}
 	}
 }

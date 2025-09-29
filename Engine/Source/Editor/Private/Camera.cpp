@@ -4,6 +4,8 @@
 #include "Manager/Time/Public/TimeManager.h"
 #include "Manager/Config/Public/ConfigManager.h"
 
+IMPLEMENT_CLASS(UCamera, UObject)
+
 UCamera::UCamera() :
 	ViewProjConstants(FViewProjConstants()),
 	RelativeLocation(FVector(-15.0f, 0.f, 10.0f)), RelativeRotation(FVector(0, 0, 0)),

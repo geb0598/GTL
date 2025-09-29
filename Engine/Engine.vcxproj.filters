@@ -104,9 +104,6 @@
     <ClCompile Include="Source\Core\Private\Object.cpp">
       <Filter>Source\Core\Private</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Core\Public\WindowsBinReader.cpp">
-      <Filter>Source\Core\Public</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Editor\Private\SplitterWindow.cpp">
       <Filter>Source\Editor\Private</Filter>
     </ClCompile>
@@ -343,6 +340,14 @@
     </ClCompile>
     <ClCompile Include="Source\Utility\Private\ActorTypeMapper.cpp">
       <Filter>Source\Utility\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\Private\PlatformTime.cpp" />
+    <ClCompile Include="Source\Core\Private\ScopeCycleCounter.cpp" />
+    <ClCompile Include="Source\Editor\Private\FrustumCull.cpp" />
+    <ClCompile Include="Source\Manager\Asset\Private\LODMaker.cpp" />
+    <ClCompile Include="Source\Manager\BVH\private\BVHManager.cpp" />
+    <ClCompile Include="Source\Core\Private\WindowsBinReader.cpp">
+      <Filter>Source\Core\Private</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -716,6 +721,12 @@
     <ClInclude Include="Source\Utility\Public\ActorTypeMapper.h">
       <Filter>Source\Utility\Public</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Core\Public\PlatformTime.h" />
+    <ClInclude Include="Source\Core\Public\ScopeCycleCounter.h" />
+    <ClInclude Include="Source\Editor\Public\FrustumCull.h" />
+    <ClInclude Include="Source\Manager\Asset\Public\LODMaker.h" />
+    <ClInclude Include="Source\Manager\BVH\public\BVHManager.h" />
+    <ClInclude Include="Source\Physics\Public\RayIntersection.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Source">

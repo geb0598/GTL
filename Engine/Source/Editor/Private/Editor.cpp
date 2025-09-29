@@ -347,6 +347,7 @@ void UEditor::ProcessMouseInput(ULevel* InLevel)
 	CurrentCamera = &CurrentViewport->Camera;
 
 	TObjectPtr<AActor> ActorPicked = InLevel->GetSelectedActor();
+	UPrimitiveComponent* PrimitiveCollided = nullptr;
 
 	if (ActorPicked)
 	{
@@ -421,7 +422,7 @@ void UEditor::ProcessMouseInput(ULevel* InLevel)
 			Gizmo.SetGizmoDirection(EGizmoDirection::None);
 		}
 
-		TArray<TObjectPtr<UPrimitiveComponent>> Candidate =
+		const TArray<TObjectPtr<UPrimitiveComponent>>& Candidates =
 			ULevelManager::GetInstance().GetCurrentLevel()->GetLevelPrimitiveComponents();
 
 		if (!ImGui::GetIO().WantCaptureMouse && InputManager.IsKeyPressed(EKeyInput::MouseLeft))
@@ -431,11 +432,12 @@ void UEditor::ProcessMouseInput(ULevel* InLevel)
 				UStatOverlay::GetInstance().NumPickingAttempts++;
 				FScopeCycleCounter PickCounter;
 
-				UPrimitiveComponent* PrimitiveCollided = ObjectPicker.PickPrimitive(WorldRay, Candidate, &ActorDistance);
+				PrimitiveCollided = ObjectPicker.PickPrimitive(WorldRay, Candidates, &ActorDistance);
 				ActorPicked = PrimitiveCollided ? PrimitiveCollided->GetOwner() : nullptr;
 
-				UStatOverlay::GetInstance().LastPickingTime = PickCounter.Finish();
-				UStatOverlay::GetInstance().CumulativePickingTime += UStatOverlay::GetInstance().LastPickingTime;
+				double Time = PickCounter.Finish();
+				UStatOverlay::GetInstance().LastPickingTime = Time;
+				UStatOverlay::GetInstance().CumulativePickingTime += Time;
 			}
 		}
 
@@ -462,6 +464,7 @@ void UEditor::ProcessMouseInput(ULevel* InLevel)
 			}
 		}
 	}
+
 }
 
 FVector UEditor::GetGizmoDragLocation(UCamera* InActiveCamera, FRay& WorldRay)

@@ -13,6 +13,7 @@ class AGizmo;
 class AGrid;
 class AActor;
 class UPrimitiveComponent;
+class FFrustumCull;
 
 /**
  * @brief Level Show Flag Enum
@@ -56,7 +57,10 @@ public:
 		return LevelPrimitiveComponents;
 	}
 
+	TArray<TObjectPtr<UPrimitiveComponent>> GetVisiblePrimitiveComponents(UCamera* InCamera);
+
 	void AddLevelPrimitiveComponent(AActor* Actor);
+	void InitializeActorsInLevel();
 
 	AActor* SpawnActorToLevel(UClass* InActorClass, const FName& InName = FName::GetNone());
 
@@ -85,6 +89,8 @@ public:
 private:
 	TArray<TObjectPtr<AActor>> LevelActors;
 	TArray<TObjectPtr<UPrimitiveComponent>> LevelPrimitiveComponents;	// 액터의 하위 컴포넌트는 액터에서 관리&해제됨
+
+	FFrustumCull* Frustum = nullptr;
 
 	// 지연 삭제를 위한 리스트
 	TArray<AActor*> ActorsToDelete;
