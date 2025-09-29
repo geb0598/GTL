@@ -258,6 +258,7 @@ void UOcclusionRenderer::GenerateHiZ(
 	// 2. 다운샘플링 루프 (Mip 1 ~ N-1)
 	// ========================================================= //
 	InDeviceContext->CSSetShader(HiZDownSampleShader, nullptr, 0);
+	InDeviceContext->CSSetSamplers(0, 1, &HiZSamplerState);
 
 	for (UINT Mip = 1; Mip < MipLevels; ++Mip)
 	{
@@ -291,10 +292,12 @@ void UOcclusionRenderer::GenerateHiZ(
 			ID3D11ShaderResourceView* NullSRV  = nullptr;
 			ID3D11UnorderedAccessView* NullUAV = nullptr;
 			ID3D11Buffer* NullCB			   = nullptr;
+			ID3D11SamplerState* NullSampler = nullptr;
 
 			InDeviceContext->CSSetShaderResources(0, 1, &NullSRV);
 			InDeviceContext->CSSetUnorderedAccessViews(0, 1, &NullUAV, nullptr);
 			InDeviceContext->CSSetConstantBuffers(0, 1, &NullCB);
+			InDeviceContext->CSSetSamplers(0, 1, &NullSampler);
 		}
 	}
 

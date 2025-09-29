@@ -52,7 +52,7 @@ public:
 
 private:
 	static constexpr size_t NUM_WORKER_THREADS = 8;
-	static constexpr size_t OCCLUSION_HISTORY_SIZE = 8;
+	static constexpr size_t OCCLUSION_HISTORY_SIZE = 4;
 
 	void CreateShader(ID3D11Device* InDevice);
 	void CreateHiZResource(ID3D11Device* InDevice);
