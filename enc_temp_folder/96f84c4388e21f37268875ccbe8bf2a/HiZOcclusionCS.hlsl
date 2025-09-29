@@ -81,9 +81,9 @@ void main(uint3 DispatchThreadID : SV_DispatchThreadID)
 	else
 	{
         // 2. 중앙에서 가려졌다면, 그리드 전체를 순회하며 확인
-		for (int y = 0; y <= 5; ++y)
+		for (int y = 0; y < 5; ++y)
 		{
-			for (int x = 0; x <= 5; ++x)
+			for (int x = 0; x < 5; ++x)
 			{
 				float2 sampleClip = lerp(minClip, maxClip, float2(x / 5.0f, y / 5.0f));
 				float2 sampleUV = ClipToTexCoord(sampleClip);

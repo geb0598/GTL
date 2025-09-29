@@ -58,11 +58,14 @@ void UOcclusionRenderer::BuildScreenSpaceBoundingVolumes(
 	// ========================================================= //
 	// 1. 준비: 기존 데이터 클리어 & 리사이즈
 	// ========================================================= //
+	if (PrimitiveComponents.empty())
+		return;
+
 	BoundingVolumes.clear();
 	BoundingVolumes.resize(PrimitiveComponents.size());
 
-	if (PrimitiveComponents.empty())
-		return;
+	PrimitiveComponentUUIDs.clear();
+	PrimitiveComponentUUIDs.resize(PrimitiveComponents.size());
 
 	FViewProjConstants ViewProj = InCamera->GetFViewProjConstants();
 	FMatrix ViewProjMatrix = ViewProj.View * ViewProj.Projection;
@@ -91,6 +94,7 @@ void UOcclusionRenderer::BuildScreenSpaceBoundingVolumes(
 					BoundingVolumes[j] = { FVector4(0, 0, 0, 0), FVector4(0, 0, 0, 0) };
 					continue;
 				}
+				PrimitiveComponentUUIDs[j] = PrimitiveComponents[j]->GetUUID();
 
 				// --- (1) 월드 공간 AABB 가져오기 ---
 				FVector WorldMin, WorldMax;
@@ -167,6 +171,7 @@ void UOcclusionRenderer::BuildScreenSpaceBoundingVolumes(
 			BoundingVolumes[i] = { FVector4(0, 0, 0, 0), FVector4(0, 0, 0, 0) };
 			continue;
 		}
+		PrimitiveComponentUUIDs[i] = PrimitiveComponents[i]->GetUUID();
 
 		// --- (1) 월드 공간 AABB 가져오기 ---
 		FVector WorldMin, WorldMax;
@@ -204,11 +209,6 @@ void UOcclusionRenderer::BuildScreenSpaceBoundingVolumes(
 						clipPos.Z / clipPos.W,
 						1.0f // Set W to 1.0f for NDC
 					);
-		
-					// Clamp NDC coordinates to [-1, 1] range for X and Y, and [0, 1] for Z
-					ndcPos.X = std::clamp(ndcPos.X, -1.0f, 1.0f);
-					ndcPos.Y = std::clamp(ndcPos.Y, -1.0f, 1.0f);
-					ndcPos.Z = std::clamp(ndcPos.Z, 0.0f, 1.0f); // Assuming Z is [0, 1] based on projection matrix analysis
 		
 					ClipMin.X = std::min(ClipMin.X, ndcPos.X);
 					ClipMin.Y = std::min(ClipMin.Y, ndcPos.Y);
@@ -303,10 +303,7 @@ void UOcclusionRenderer::GenerateHiZ(
 }
 
 
-void UOcclusionRenderer::OcclusionTest(
-	ID3D11Device* InDevice,
-	ID3D11DeviceContext* InDeviceContext,
-	TArray<bool>& OutVisibilityResults)
+void UOcclusionRenderer::OcclusionTest(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext)
 {
 	// ========================================================= //
 	// 초기화: 입력이 비어있으면 바로 리턴
@@ -315,8 +312,6 @@ void UOcclusionRenderer::OcclusionTest(
 	{
 		return;
 	}
-
-	OutVisibilityResults.resize(BoundingVolumes.size(), true);
 
 	// ========================================================= //
 	// 1. 상수 버퍼 업데이트
@@ -431,7 +426,9 @@ void UOcclusionRenderer::OcclusionTest(
 		uint32* flags = reinterpret_cast<uint32*>(MappedResource.pData);
 		for (size_t i = 0; i < BoundingVolumes.size(); ++i)
 		{
-			OutVisibilityResults[i] = (flags[i] == 1);
+			auto& history = VisibilityHistory[PrimitiveComponentUUIDs[i]];
+			history <<= 1;
+			history |= (flags[i] == 1 ? 1u : 0u);
 		}
 		InDeviceContext->Unmap(ReadbackBuffer, 0);
 	}
@@ -444,6 +441,22 @@ void UOcclusionRenderer::OcclusionTest(
 	if (ReadbackBuffer) ReadbackBuffer->Release();
 	if (BVSRV) BVSRV->Release();
 	if (BVBuffer) BVBuffer->Release();
+}
+
+bool UOcclusionRenderer::IsPrimitiveVisible(const UPrimitiveComponent* InPrimitiveComponent) const
+{
+	if (!InPrimitiveComponent)
+	{
+		return true;
+	}
+
+	uint32 PrimitiveComponentUUID = InPrimitiveComponent->GetUUID();
+	auto It = VisibilityHistory.find(PrimitiveComponentUUID);
+	if (It != VisibilityHistory.end())
+	{
+		return It->second.any();
+	}
+	return true;
 }
 
 void UOcclusionRenderer::CreateShader(ID3D11Device* InDevice)
@@ -554,7 +567,7 @@ void UOcclusionRenderer::CreateShader(ID3D11Device* InDevice)
 
 	// Create HiZSamplerState
 	D3D11_SAMPLER_DESC SamplerDesc = {};
-	SamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	SamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR; // Changed to POINT filtering
 	SamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
 	SamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
 	SamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -580,8 +593,6 @@ void UOcclusionRenderer::CreateShader(ID3D11Device* InDevice)
 		return;
 	}
 }
-
-
 
 void UOcclusionRenderer::CreateHiZResource(ID3D11Device* InDevice)
 {

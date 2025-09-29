@@ -156,7 +156,7 @@ void UDeviceResources::CreateDepthBuffer()
 	dsDesc.Height = Height;
 	dsDesc.MipLevels = 1;
 	dsDesc.ArraySize = 1;
-	dsDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
+	dsDesc.Format = DXGI_FORMAT_R32_TYPELESS; // Changed to R32_TYPELESS for 32-bit float depth
 	dsDesc.SampleDesc.Count = 1;
 	dsDesc.SampleDesc.Quality = 0;
 	dsDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -166,13 +166,13 @@ void UDeviceResources::CreateDepthBuffer()
 	Device->CreateTexture2D(&dsDesc, nullptr, &DepthBuffer);
 
 	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
-	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	dsvDesc.Format = DXGI_FORMAT_D32_FLOAT; // Changed DSV format to D32_FLOAT
 	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 	dsvDesc.Texture2D.MipSlice = 0;
 	Device->CreateDepthStencilView(DepthBuffer, &dsvDesc, &DepthStencilView);
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC ShaderResourceViewDesc = {};
-	ShaderResourceViewDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	ShaderResourceViewDesc.Format = DXGI_FORMAT_R32_FLOAT; // Changed SRV format to R32_FLOAT
 	ShaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 	ShaderResourceViewDesc.Texture2D.MipLevels = 1;
 	Device->CreateShaderResourceView(DepthBuffer, &ShaderResourceViewDesc, &DepthShaderResourceView);
@@ -249,7 +249,7 @@ void UDeviceResources::CopyDepthSRVToPreviousFrameSRV()
 
 	// Create SRV for the new texture
 	D3D11_SHADER_RESOURCE_VIEW_DESC ShaderResourceViewDesc = {};
-	ShaderResourceViewDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	ShaderResourceViewDesc.Format = DXGI_FORMAT_R32_FLOAT; // Changed SRV format to R32_FLOAT
 	ShaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 	ShaderResourceViewDesc.Texture2D.MipLevels = 1;
 	hr = Device->CreateShaderResourceView(newPreviousFrameDepthTexture, &ShaderResourceViewDesc, &PreviousFrameDepthSRV);

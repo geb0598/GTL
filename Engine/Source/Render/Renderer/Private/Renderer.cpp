@@ -357,6 +357,7 @@ void URenderer::ReleaseDepthStencilState()
 // Renderer.cpp
 void URenderer::Update()
 {
+
 	RenderBegin();
 	// FViewportClient로부터 모든 뷰포트를 가져옵니다.
 	for (FViewportClient& ViewportClient : ViewportClient->GetViewports())
@@ -395,10 +396,12 @@ void URenderer::Update()
  */
 void URenderer::RenderBegin() const
 {
+
+
 	auto* RenderTargetView = DeviceResources->GetRenderTargetView();
 	GetDeviceContext()->ClearRenderTargetView(RenderTargetView, ClearColor);
-	//auto* DepthStencilView = DeviceResources->GetDepthStencilView();
-	//GetDeviceContext()->ClearDepthStencilView(DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	auto* DepthStencilView = DeviceResources->GetDepthStencilView();
+	GetDeviceContext()->ClearDepthStencilView(DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 	ID3D11RenderTargetView* rtvs[] = { RenderTargetView }; // 배열 생성
 
@@ -421,25 +424,18 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 
 	auto& OcclusionRenderer = UOcclusionRenderer::GetInstance();
 
-	// Depth Pre-Pass
-	//PROFILE_SCOPE("DepthPrePass",
-	//	OcclusionRenderer.DepthPrePass(GetDeviceContext(), InCurrentCamera, PrimitiveComponents)
-	//);
-
-	TArray<bool> VisibilityResults;
 	if (bIsFirstPass)
 	{
 		bIsFirstPass = false;
-		VisibilityResults.resize(PrimitiveComponents.size(), true);
 	}
 	else
 	{
 		// Unbind the DepthStencilView so it can be used as an SRV for HiZ generation
-		ID3D11RenderTargetView* NullRTVs[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = { nullptr };
-		ID3D11DepthStencilView* NullDSV = nullptr;
-		GetDeviceContext()->OMSetRenderTargets(0, NullRTVs, NullDSV);
+		//ID3D11RenderTargetView* NullRTVs[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = { nullptr };
+		//ID3D11DepthStencilView* NullDSV = nullptr;
+		//GetDeviceContext()->OMSetRenderTargets(0, NullRTVs, NullDSV);
 
-		DeviceResources->CopyDepthSRVToPreviousFrameSRV();
+		GetDeviceContext()->Flush(); // Added Flush to ensure previous frame's depth copy is complete
 
 		// HiZ 생성 (uses the depth buffer from the *previous* frame as an SRV)
 		PROFILE_SCOPE("GenerateHiZ",
@@ -453,26 +449,13 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 
 		// 오클루전 테스트
 		PROFILE_SCOPE("OcclusionTest",
-			OcclusionRenderer.OcclusionTest(GetDevice(), GetDeviceContext(), VisibilityResults)
+			OcclusionRenderer.OcclusionTest(GetDevice(), GetDeviceContext())
 		);
 
 		// Rebind the DepthStencilView for the current frame's main rendering pass
 		ID3D11RenderTargetView* RTV = DeviceResources->GetRenderTargetView();
 		GetDeviceContext()->OMSetRenderTargets(1, &RTV, DeviceResources->GetDepthStencilView());
-
-		// Clear the DepthStencilView for the current frame's main rendering pass
-		auto* DepthStencilView = DeviceResources->GetDepthStencilView();
-		GetDeviceContext()->ClearDepthStencilView(DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 	}
-
-
-	UE_LOG("Total Primitives: %d", PrimitiveComponents.size());
-	int CulledCnt = 0;
-	for (size_t i = 0; i < VisibilityResults.size(); ++i)
-	{
-		CulledCnt += !VisibilityResults[i];
-	}
-	UE_LOG("Culled Primitives: %d", CulledCnt);
 
 	TObjectPtr<UBillBoardComponent> BillBoard = nullptr;
 
@@ -563,10 +546,19 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 	CommandLists.clear();
 
 #else
+	int CullCount = 0;
 	for (size_t i = 0; i < PrimitiveComponents.size(); ++i) {
 		auto PrimitiveComponent = PrimitiveComponents[i];
 		// TODO(KHJ) Visible 여기서 Control 하고 있긴 한데 맞는지 Actor 단위 렌더링 할 때도 이렇게 써야할지 고민 필요
-		if (!PrimitiveComponent || !PrimitiveComponent->IsVisible() || !VisibilityResults[i])
+
+		// ======================== DEBUG ========================== //
+		if (!OcclusionRenderer.IsPrimitiveVisible(PrimitiveComponent))
+		{
+			++CullCount;
+		}
+		// ======================== DEBUG ========================== //
+
+		if (!PrimitiveComponent || !PrimitiveComponent->IsVisible() || !OcclusionRenderer.IsPrimitiveVisible(PrimitiveComponent))
 		{
 			continue;
 		}
@@ -596,11 +588,16 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 			break;
 		}
 	}
+
+	UE_LOG("Primitive Count: %d", PrimitiveComponents.size());
+	UE_LOG("Culled Count:	 %d", CullCount);
+
 #endif
 	if (BillBoard)
 	{
 		RenderBillboard(BillBoard, InCurrentCamera);
 	}
+	
 }
 
 /**
@@ -695,6 +692,8 @@ void URenderer::RenderPrimitiveIndexed(UPipeline& InPipeline, const FEditorPrimi
  */
 void URenderer::RenderEnd() const
 {
+	DeviceResources->CopyDepthSRVToPreviousFrameSRV();
+
 	GetSwapChain()->Present(0, 0); // 1: VSync 활성화
 }
 

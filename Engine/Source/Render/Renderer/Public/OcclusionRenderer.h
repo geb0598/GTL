@@ -1,5 +1,7 @@
 #pragma once
 
+#include <bitset>
+
 #include <d3d11.h>
 
 #include "Global/Types.h"
@@ -44,10 +46,13 @@ public:
 
 	void GenerateHiZ(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, ID3D11ShaderResourceView* InDepthShaderResourceView);
 
-	void OcclusionTest(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, TArray<bool>& OutVisibilityResults);
+	void OcclusionTest(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext);
+
+	bool IsPrimitiveVisible(const UPrimitiveComponent* InPrimitiveComponent) const;
 
 private:
 	static constexpr size_t NUM_WORKER_THREADS = 8;
+	static constexpr size_t OCCLUSION_HISTORY_SIZE = 8;
 
 	void CreateShader(ID3D11Device* InDevice);
 	void CreateHiZResource(ID3D11Device* InDevice);
@@ -84,12 +89,15 @@ private:
 	[[deprecated]] ID3D11Buffer* BoundingVolumeBuffer = nullptr;
 	[[deprecated]] ID3D11ShaderResourceView* BoundingVolumeShaderResourceView = nullptr;
 	TArray<FBoundingVolume> BoundingVolumes;
+	TArray<uint32> PrimitiveComponentUUIDs;
 
 	ID3D11Buffer* HiZOcclusionConstantBuffer = nullptr;
 	ID3D11SamplerState* HiZSamplerState = nullptr;
 
 	uint32 Width;
 	uint32 Height;
+
+	TMap<uint32, std::bitset<OCCLUSION_HISTORY_SIZE>> VisibilityHistory;
 
 	//ThreadPool Pool;
 };
