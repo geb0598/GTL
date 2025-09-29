@@ -9,6 +9,7 @@
 #include "Manager/Level/Public/LevelManager.h"
 #include "Actor/Public/Actor.h"
 #include "Component/Mesh/Public/StaticMeshComponent.h"
+#include "Render/Renderer/Public/Renderer.h"
 
 
 class ULevelManager;
@@ -60,6 +61,7 @@ void UMainBarWidget::RenderWidget()
 		RenderShowFlagsMenu();
 		RenderGraphicsMenu();
 		RenderLODMenu();
+		RenderOcclusionCullingMenu();
 		RenderWindowsMenu();
 		RenderHelpMenu();
 
@@ -461,6 +463,33 @@ void UMainBarWidget::RenderLODMenu()
 		ImGui::Text("제곱거리 사용 (성능 최적화):");
 		ImGui::Text("LOD 1: %.0f² = %.0f", lodDistance1, lodDistance1 * lodDistance1);
 		ImGui::Text("LOD 2: %.0f² = %.0f", lodDistance2, lodDistance2 * lodDistance2);
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
+ * @brief Occlusion Culling 메뉴를 렌더링하는 함수
+ * 오클루전 컬링 활성화/비활성화 토글
+ */
+void UMainBarWidget::RenderOcclusionCullingMenu()
+{
+	if (ImGui::BeginMenu("Occlusion Culling"))
+	{
+		URenderer& RendererInstance = URenderer::GetInstance();
+
+		// 오클루전 컬링 활성화/비활성화 토글
+		bool bOcclusionCullingEnabled = RendererInstance.GetOcclusionCullingEnabled();
+		if (ImGui::MenuItem("Occlusion Culling 활성화", nullptr, bOcclusionCullingEnabled))
+		{
+			RendererInstance.SetOcclusionCullingEnabled(!bOcclusionCullingEnabled);
+			UE_LOG("MainBarWidget: Occlusion Culling %s", !bOcclusionCullingEnabled ? "활성화" : "비활성화");
+		}
+
+		ImGui::Separator();
+
+		// 현재 상태 표시
+		ImGui::Text("현재 상태: %s", bOcclusionCullingEnabled ? "활성화됨" : "비활성화됨");
 
 		ImGui::EndMenu();
 	}

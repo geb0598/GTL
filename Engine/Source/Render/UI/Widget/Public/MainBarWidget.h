@@ -36,6 +36,7 @@ private:
 	static void RenderShowFlagsMenu();
 	static void RenderGraphicsMenu();
 	static void RenderLODMenu();
+	static void RenderOcclusionCullingMenu();
 	static void RenderHelpMenu();
 
 	static void SaveCurrentLevel();

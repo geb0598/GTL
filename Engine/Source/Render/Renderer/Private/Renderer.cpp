@@ -426,7 +426,11 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 
 	const auto PrimitiveComponents = ULevelManager::GetInstance().GetCurrentLevel()->GetVisiblePrimitiveComponents(InCurrentCamera);
 
-	PerformOcclusionCulling(InCurrentCamera, PrimitiveComponents);
+	// ImGui 창 옆 키고 끌 수 있는 메뉴 넣기
+	if (bOcclusionCulling)
+	{
+		PerformOcclusionCulling(InCurrentCamera, PrimitiveComponents);
+	}
 
 #ifdef MULTI_THREADING
 	RenderLevel_MultiThreaded(InCurrentCamera, InViewportClient, PrimitiveComponents);
@@ -932,7 +936,7 @@ ID3D11Buffer* URenderer::CreateIndexBuffer(const void* InIndices, uint32 InByteW
  * @param InWidth 새로운 창 너비
  * @param InHeight 새로운 창 높이
  */
-void URenderer::OnResize(uint32 InWidth, uint32 InHeight) 
+void URenderer::OnResize(uint32 InWidth, uint32 InHeight)
 {
 	// 필수 리소스가 유효하지 않으면 Early Return
 	if (!DeviceResources || !GetDevice() || !GetDeviceContext() || !GetSwapChain())

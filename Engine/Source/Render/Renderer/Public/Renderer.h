@@ -117,8 +117,10 @@ public:
 	UDeviceResources* GetDeviceResources() const { return DeviceResources; }
 	FViewport* GetViewportClient() const { return ViewportClient; }
 	bool GetIsResizing() const { return bIsResizing; }
+	bool GetOcclusionCullingEnabled() const { return bOcclusionCulling; }
 
 	void SetIsResizing(bool isResizing) { bIsResizing = isResizing; }
+	void SetOcclusionCullingEnabled(bool bEnabled) { bOcclusionCulling = bEnabled; }
 
 private:
 	void PerformOcclusionCulling(UCamera* InCurrentCamera, const TArray<TObjectPtr<UPrimitiveComponent>>& InPrimitiveComponents);
@@ -187,6 +189,7 @@ private:
 	bool bIsResizing = false;
 
 	bool bIsFirstPass = true;
+	bool bOcclusionCulling = true;
 
 	constexpr static size_t NUM_WORKER_THREADS = 4;
 
