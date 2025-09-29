@@ -91,14 +91,8 @@ void USceneHierarchyWidget::RenderWidget()
 	{
 		if (SearchFilter.empty())
 		{
-			// 전체 Actor 리스트 가상화 렌더링
-			TArray<int32> AllIndices;
-			AllIndices.reserve(LevelActors.size());
-			for (int32 i = 0; i < LevelActors.size(); ++i)
-			{
-				AllIndices.push_back(i);
-			}
-			RenderVirtualizedActorList(LevelActors, AllIndices);
+			// 캐시된 AllIndices 사용 (매 프레임 생성 제거)
+			RenderVirtualizedActorList(LevelActors, CachedAllIndices);
 		}
 		else
 		{
@@ -642,6 +636,14 @@ void USceneHierarchyWidget::UpdateCacheIfNeeded(const TArray<TObjectPtr<AActor>>
 
 		// 캐시에 저장
 		ActorPrimitiveCache[Actor] = std::move(Cache);
+	}
+
+	// AllIndices 배열도 함께 캐시 (한 번만 생성)
+	CachedAllIndices.clear();
+	CachedAllIndices.reserve(InLevelActors.size());
+	for (int32 i = 0; i < InLevelActors.size(); ++i)
+	{
+		CachedAllIndices.push_back(i);
 	}
 
 	// 변경 감지를 위한 데이터 업데이트

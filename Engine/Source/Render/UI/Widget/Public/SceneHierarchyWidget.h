@@ -34,6 +34,7 @@ private:
 	// 가상화 렌더링
 	static constexpr float ITEM_HEIGHT = 20.0f; // 각 Actor 항목의 높이
 	static constexpr int32 BUFFER_ITEMS = 5; // 위아래 버퍼 항목 개수
+	mutable TArray<int32> CachedAllIndices; // 전체 인덱스 배열 캐시
 
 	// 이름 변경 기능
 	TObjectPtr<AActor> RenamingActor = nullptr;
@@ -84,7 +85,7 @@ private:
 
 	void UpdateCacheIfNeeded(const TArray<TObjectPtr<AActor>>& InLevelActors) const;
 	bool HasActorListChanged(const TArray<TObjectPtr<AActor>>& InLevelActors) const;
-	void InvalidateCache() { ActorPrimitiveCache.clear(); LastCachedLevel = nullptr; LastActorCount = 0; LastActorList.clear(); }
+	void InvalidateCache() { ActorPrimitiveCache.clear(); LastCachedLevel = nullptr; LastActorCount = 0; LastActorList.clear(); CachedAllIndices.clear(); }
 
 	// 가상화 헬퍼 함수들
 	void RenderVirtualizedActorList(const TArray<TObjectPtr<AActor>>& InActors, const TArray<int32>& InIndices);
