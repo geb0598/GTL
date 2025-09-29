@@ -58,6 +58,7 @@ void UMainBarWidget::RenderWidget()
 		RenderFileMenu();
 		RenderViewMenu();
 		RenderShowFlagsMenu();
+		RenderGraphicsMenu();
 		RenderLODMenu();
 		RenderWindowsMenu();
 		RenderHelpMenu();
@@ -321,6 +322,77 @@ void UMainBarWidget::RenderShowFlagsMenu()
 }
 
 /**
+ * @brief 그래픽 품질 메뉴를 렌더링하는 함수
+ * LOD 레벨을 강제로 고정하는 그래픽 품질 설정
+ */
+void UMainBarWidget::RenderGraphicsMenu()
+{
+	if (ImGui::BeginMenu("그래픽"))
+	{
+		// LevelManager에서 현재 레벨 가져오기
+		ULevelManager& LevelMgr = ULevelManager::GetInstance();
+		ULevel* CurrentLevel = LevelMgr.GetCurrentLevel();
+		if (!CurrentLevel)
+		{
+			ImGui::Text("현재 레벨을 찾을 수 없습니다");
+			ImGui::EndMenu();
+			return;
+		}
+
+		// 그래픽 품질 설정 (LOD 강제 고정)
+		// 0: 울트라 (LOD0만 보임), 1: 높음 (자동 LOD), 2: 보통 (LOD1만 보임), 3: 낮음 (LOD2만 보임)
+		static int graphicsQuality = 1; // 기본값: 높음 (자동 LOD)
+
+		ImGui::Text("그래픽 품질:");
+
+		if (ImGui::RadioButton("울트라 (최고 품질)", graphicsQuality == 0))
+		{
+			graphicsQuality = 0;
+			CurrentLevel->SetGraphicsQuality(0);
+		}
+
+		if (ImGui::RadioButton("높음 (자동 LOD)", graphicsQuality == 1))
+		{
+			graphicsQuality = 1;
+			CurrentLevel->SetGraphicsQuality(1);
+		}
+
+		if (ImGui::RadioButton("보통 (중간 품질)", graphicsQuality == 2))
+		{
+			graphicsQuality = 2;
+			CurrentLevel->SetGraphicsQuality(2);
+		}
+
+		if (ImGui::RadioButton("낮음 (최저 품질)", graphicsQuality == 3))
+		{
+			graphicsQuality = 3;
+			CurrentLevel->SetGraphicsQuality(3);
+		}
+
+		ImGui::Separator();
+
+		// 현재 설정 표시
+		switch(graphicsQuality)
+		{
+			case 0:
+				ImGui::Text("현재 설정: 울트라 - LOD0만 표시 (원본 품질)");
+				break;
+			case 1:
+				ImGui::Text("현재 설정: 높음 - 거리 기반 자동 LOD");
+				break;
+			case 2:
+				ImGui::Text("현재 설정: 보통 - LOD1만 표시 (중간 품질)");
+				break;
+			case 3:
+				ImGui::Text("현재 설정: 낮음 - LOD2만 표시 (최저 품질)");
+				break;
+		}
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
  * @brief LOD 메뉴를 렌더링하는 함수
  * LOD 시스템의 활성화/비활성화 및 레벨 설정
  */
@@ -343,33 +415,7 @@ void UMainBarWidget::RenderLODMenu()
 		if (ImGui::MenuItem("LOD 활성화", nullptr, bGlobalLODEnabled))
 		{
 			bGlobalLODEnabled = !bGlobalLODEnabled;
-			UE_LOG("MainBarWidget: 전역 LOD %s", bGlobalLODEnabled ? "활성화됨" : "비활성화됨");
-
-			// 모든 StaticMeshComponent에 LOD 설정 적용
-			ULevelManager& LevelMgr = ULevelManager::GetInstance();
-			ULevel* CurrentLevel = LevelMgr.GetCurrentLevel();
-			if (CurrentLevel)
-			{
-				// Level의 모든 Actor를 순회하여 StaticMeshComponent 찾기
-				const TArray<TObjectPtr<AActor>>& LevelActors = CurrentLevel->GetLevelActors();
-				for (const TObjectPtr<AActor>& ActorPtr : LevelActors)
-				{
-					AActor* Actor = ActorPtr.Get();
-					if (Actor)
-					{
-						// Actor의 모든 Component 순회
-						const TArray<TObjectPtr<UActorComponent>>& Components = Actor->GetOwnedComponents();
-						for (const TObjectPtr<UActorComponent>& ComponentPtr : Components)
-						{
-							UActorComponent* Component = ComponentPtr.Get();
-							if (UStaticMeshComponent* MeshComp = dynamic_cast<UStaticMeshComponent*>(Component))
-							{
-								MeshComp->SetLODEnabled(bGlobalLODEnabled);
-							}
-						}
-					}
-				}
-			}
+			CurrentLevel->SetGlobalLODEnabled(bGlobalLODEnabled);
 		}
 
 		ImGui::Separator();
@@ -380,125 +426,35 @@ void UMainBarWidget::RenderLODMenu()
 		if (ImGui::RadioButton("LOD 0,1,2 허용", minLODLevel == 0))
 		{
 			minLODLevel = 0;
-			// 모든 StaticMeshComponent에 적용
-			const TArray<TObjectPtr<AActor>>& LevelActors = CurrentLevel->GetLevelActors();
-			for (const TObjectPtr<AActor>& ActorPtr : LevelActors)
-			{
-				AActor* Actor = ActorPtr.Get();
-				if (Actor)
-				{
-					const TArray<TObjectPtr<UActorComponent>>& Components = Actor->GetOwnedComponents();
-					for (const TObjectPtr<UActorComponent>& ComponentPtr : Components)
-					{
-						UActorComponent* Component = ComponentPtr.Get();
-						if (UStaticMeshComponent* MeshComp = dynamic_cast<UStaticMeshComponent*>(Component))
-						{
-							MeshComp->SetMinLODLevel(0);
-						}
-					}
-				}
-			}
-			UE_LOG("MainBarWidget: 모든 LOD 허용 (0,1,2)");
+			CurrentLevel->SetMinLODLevel(0);
 		}
 		ImGui::SameLine();
 		if (ImGui::RadioButton("LOD 1,2만 허용", minLODLevel == 1))
 		{
 			minLODLevel = 1;
-			// 모든 StaticMeshComponent에 적용
-			const TArray<TObjectPtr<AActor>>& LevelActors = CurrentLevel->GetLevelActors();
-			for (const TObjectPtr<AActor>& ActorPtr : LevelActors)
-			{
-				AActor* Actor = ActorPtr.Get();
-				if (Actor)
-				{
-					const TArray<TObjectPtr<UActorComponent>>& Components = Actor->GetOwnedComponents();
-					for (const TObjectPtr<UActorComponent>& ComponentPtr : Components)
-					{
-						UActorComponent* Component = ComponentPtr.Get();
-						if (UStaticMeshComponent* MeshComp = dynamic_cast<UStaticMeshComponent*>(Component))
-						{
-							MeshComp->SetMinLODLevel(1);
-						}
-					}
-				}
-			}
-			UE_LOG("MainBarWidget: LOD 0 금지, LOD 1,2만 허용");
+			CurrentLevel->SetMinLODLevel(1);
 		}
 		ImGui::SameLine();
 		if (ImGui::RadioButton("LOD 2만 허용", minLODLevel == 2))
 		{
 			minLODLevel = 2;
-			// 모든 StaticMeshComponent에 적용
-			const TArray<TObjectPtr<AActor>>& LevelActors = CurrentLevel->GetLevelActors();
-			for (const TObjectPtr<AActor>& ActorPtr : LevelActors)
-			{
-				AActor* Actor = ActorPtr.Get();
-				if (Actor)
-				{
-					const TArray<TObjectPtr<UActorComponent>>& Components = Actor->GetOwnedComponents();
-					for (const TObjectPtr<UActorComponent>& ComponentPtr : Components)
-					{
-						UActorComponent* Component = ComponentPtr.Get();
-						if (UStaticMeshComponent* MeshComp = dynamic_cast<UStaticMeshComponent*>(Component))
-						{
-							MeshComp->SetMinLODLevel(2);
-						}
-					}
-				}
-			}
-			UE_LOG("MainBarWidget: LOD 0,1 금지, LOD 2만 허용 (최저 품질)");
+			CurrentLevel->SetMinLODLevel(2);
 		}
 
 		ImGui::Separator();
 
 		// LOD 거리 설정
-		static float lodDistance1 = 10.0f;
-		static float lodDistance2 = 20.0f;
+		static float lodDistance1 = 20.0f;
+		static float lodDistance2 = 40.0f;
 
 		ImGui::Text("LOD 전환 거리:");
 		if (ImGui::SliderFloat("LOD 1 거리", &lodDistance1, 10.0f, 200.0f, "%.1f"))
 		{
-			// 거리 변경 시 모든 StaticMeshComponent에 적용
-			const TArray<TObjectPtr<AActor>>& LevelActors = CurrentLevel->GetLevelActors();
-			for (const TObjectPtr<AActor>& ActorPtr : LevelActors)
-			{
-				AActor* Actor = ActorPtr.Get();
-				if (Actor)
-				{
-					const TArray<TObjectPtr<UActorComponent>>& Components = Actor->GetOwnedComponents();
-					for (const TObjectPtr<UActorComponent>& ComponentPtr : Components)
-					{
-						UActorComponent* Component = ComponentPtr.Get();
-						if (UStaticMeshComponent* MeshComp = dynamic_cast<UStaticMeshComponent*>(Component))
-						{
-							MeshComp->SetLODDistance1(lodDistance1);
-						}
-					}
-				}
-			}
-			UE_LOG("MainBarWidget: LOD 1 거리를 %.1f로 설정", lodDistance1);
+			CurrentLevel->SetLODDistance1(lodDistance1);
 		}
 		if (ImGui::SliderFloat("LOD 2 거리", &lodDistance2, 20.0f, 400.0f, "%.1f"))
 		{
-			// 거리 변경 시 모든 StaticMeshComponent에 적용
-			const TArray<TObjectPtr<AActor>>& LevelActors = CurrentLevel->GetLevelActors();
-			for (const TObjectPtr<AActor>& ActorPtr : LevelActors)
-			{
-				AActor* Actor = ActorPtr.Get();
-				if (Actor)
-				{
-					const TArray<TObjectPtr<UActorComponent>>& Components = Actor->GetOwnedComponents();
-					for (const TObjectPtr<UActorComponent>& ComponentPtr : Components)
-					{
-						UActorComponent* Component = ComponentPtr.Get();
-						if (UStaticMeshComponent* MeshComp = dynamic_cast<UStaticMeshComponent*>(Component))
-						{
-							MeshComp->SetLODDistance2(lodDistance2);
-						}
-					}
-				}
-			}
-			UE_LOG("MainBarWidget: LOD 2 거리를 %.1f로 설정", lodDistance2);
+			CurrentLevel->SetLODDistance2(lodDistance2);
 		}
 
 		// 제곱거리 정보 표시 (성능 최적화 정보)

@@ -73,6 +73,15 @@ public:
 	void UpdateLODForAllMeshes();
 	void TickLODUpdate();
 
+	// Graphics Quality Control
+	void SetGraphicsQuality(int32 QualityLevel);
+
+	// LOD Control Functions
+	void SetGlobalLODEnabled(bool bEnabled);
+	void SetMinLODLevel(int32 MinLevel);
+	void SetLODDistance1(float Distance);
+	void SetLODDistance2(float Distance);
+
 private:
 	TArray<TObjectPtr<AActor>> LevelActors;
 	TArray<TObjectPtr<UPrimitiveComponent>> LevelPrimitiveComponents;	// 액터의 하위 컴포넌트는 액터에서 관리&해제됨

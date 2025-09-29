@@ -132,7 +132,7 @@ void ULevel::Update()
 	{
 		if (Actor)
 		{
-			// Actor->Tick();
+			Actor->Tick();
 			AddLevelPrimitiveComponent(Actor);
 		}
 	}
@@ -399,7 +399,7 @@ void ULevel::UpdateLODForAllMeshes()
 				UActorComponent* Component = ComponentPtr.Get();
 				if (UStaticMeshComponent* MeshComp = dynamic_cast<UStaticMeshComponent*>(Component))
 				{
-					if (MeshComp->IsLODEnabled())
+					if (MeshComp->IsLODEnabled() || MeshComp->IsForcedLODEnabled())
 					{
 						MeshComp->UpdateLODBasedOnDistance(CameraPosition);
 					}
@@ -407,4 +407,187 @@ void ULevel::UpdateLODForAllMeshes()
 			}
 		}
 	}
+}
+
+void ULevel::SetGraphicsQuality(int32 QualityLevel)
+{
+	// 0: 울트라 (LOD0만), 1: 높음 (자동 LOD), 2: 보통 (LOD1만), 3: 낮음 (LOD2만)
+
+	// 레벨의 모든 StaticMeshComponent에 대해 그래픽 품질 설정 적용
+	FVector CameraPosition;
+	URenderer* RendererPtr = &URenderer::GetInstance();
+	if (RendererPtr)
+	{
+		FViewport* Viewport = RendererPtr->GetViewportClient();
+		if (Viewport)
+		{
+			UCamera* Camera = Viewport->GetActiveCamera();
+			if (Camera)
+			{
+				CameraPosition = Camera->GetLocation();
+			}
+		}
+	}
+
+	for (const TObjectPtr<AActor>& ActorPtr : LevelActors)
+	{
+		AActor* Actor = ActorPtr.Get();
+		if (Actor)
+		{
+			const TArray<TObjectPtr<UActorComponent>>& Components = Actor->GetOwnedComponents();
+			for (const TObjectPtr<UActorComponent>& ComponentPtr : Components)
+			{
+				UActorComponent* Component = ComponentPtr.Get();
+				if (UStaticMeshComponent* MeshComp = dynamic_cast<UStaticMeshComponent*>(Component))
+				{
+					switch (QualityLevel)
+					{
+					case 0: // 울트라 (LOD0 강제 고정)
+						MeshComp->SetLODEnabled(false);
+						MeshComp->SetForcedLODLevel(0);
+						MeshComp->SetLODLevel(0);
+						break;
+
+					case 1: // 높음 (자동 LOD)
+						MeshComp->SetLODEnabled(true);
+						MeshComp->SetForcedLODLevel(-1);
+						MeshComp->UpdateLODBasedOnDistance(CameraPosition);
+						break;
+
+					case 2: // 보통 (LOD1 강제 고정)
+						MeshComp->SetLODEnabled(false);
+						MeshComp->SetForcedLODLevel(1);
+						MeshComp->SetLODLevel(1);
+						break;
+
+					case 3: // 낮음 (LOD2 강제 고정)
+						MeshComp->SetLODEnabled(false);
+						MeshComp->SetForcedLODLevel(2);
+						MeshComp->SetLODLevel(2);
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	// 로그 출력
+	switch (QualityLevel)
+	{
+	case 0:
+		UE_LOG("Level: 그래픽 품질을 울트라로 설정 (LOD0 강제 고정)");
+		break;
+	case 1:
+		UE_LOG("Level: 그래픽 품질을 높음으로 설정 (자동 LOD)");
+		break;
+	case 2:
+		UE_LOG("Level: 그래픽 품질을 보통으로 설정 (LOD1 강제 고정)");
+		break;
+	case 3:
+		UE_LOG("Level: 그래픽 품질을 낮음으로 설정 (LOD2 강제 고정)");
+		break;
+	}
+}
+
+void ULevel::SetGlobalLODEnabled(bool bEnabled)
+{
+	// 레벨의 모든 StaticMeshComponent에 대해 LOD 활성화/비활성화 설정
+	for (const TObjectPtr<AActor>& ActorPtr : LevelActors)
+	{
+		AActor* Actor = ActorPtr.Get();
+		if (Actor)
+		{
+			const TArray<TObjectPtr<UActorComponent>>& Components = Actor->GetOwnedComponents();
+			for (const TObjectPtr<UActorComponent>& ComponentPtr : Components)
+			{
+				UActorComponent* Component = ComponentPtr.Get();
+				if (UStaticMeshComponent* MeshComp = dynamic_cast<UStaticMeshComponent*>(Component))
+				{
+					MeshComp->SetLODEnabled(bEnabled);
+				}
+			}
+		}
+	}
+
+	UE_LOG("Level: 전역 LOD %s", bEnabled ? "활성화됨" : "비활성화됨");
+}
+
+void ULevel::SetMinLODLevel(int32 MinLevel)
+{
+	// 레벨의 모든 StaticMeshComponent에 대해 최소 LOD 레벨 설정
+	for (const TObjectPtr<AActor>& ActorPtr : LevelActors)
+	{
+		AActor* Actor = ActorPtr.Get();
+		if (Actor)
+		{
+			const TArray<TObjectPtr<UActorComponent>>& Components = Actor->GetOwnedComponents();
+			for (const TObjectPtr<UActorComponent>& ComponentPtr : Components)
+			{
+				UActorComponent* Component = ComponentPtr.Get();
+				if (UStaticMeshComponent* MeshComp = dynamic_cast<UStaticMeshComponent*>(Component))
+				{
+					MeshComp->SetMinLODLevel(MinLevel);
+				}
+			}
+		}
+	}
+
+	switch (MinLevel)
+	{
+	case 0:
+		UE_LOG("Level: 모든 LOD 허용 (0,1,2)");
+		break;
+	case 1:
+		UE_LOG("Level: LOD 0 금지, LOD 1,2만 허용");
+		break;
+	case 2:
+		UE_LOG("Level: LOD 0,1 금지, LOD 2만 허용 (최저 품질)");
+		break;
+	}
+}
+
+void ULevel::SetLODDistance1(float Distance)
+{
+	// 레벨의 모든 StaticMeshComponent에 대해 LOD1 전환 거리 설정
+	for (const TObjectPtr<AActor>& ActorPtr : LevelActors)
+	{
+		AActor* Actor = ActorPtr.Get();
+		if (Actor)
+		{
+			const TArray<TObjectPtr<UActorComponent>>& Components = Actor->GetOwnedComponents();
+			for (const TObjectPtr<UActorComponent>& ComponentPtr : Components)
+			{
+				UActorComponent* Component = ComponentPtr.Get();
+				if (UStaticMeshComponent* MeshComp = dynamic_cast<UStaticMeshComponent*>(Component))
+				{
+					MeshComp->SetLODDistance1(Distance);
+				}
+			}
+		}
+	}
+
+	UE_LOG("Level: LOD 1 거리를 %.1f로 설정", Distance);
+}
+
+void ULevel::SetLODDistance2(float Distance)
+{
+	// 레벨의 모든 StaticMeshComponent에 대해 LOD2 전환 거리 설정
+	for (const TObjectPtr<AActor>& ActorPtr : LevelActors)
+	{
+		AActor* Actor = ActorPtr.Get();
+		if (Actor)
+		{
+			const TArray<TObjectPtr<UActorComponent>>& Components = Actor->GetOwnedComponents();
+			for (const TObjectPtr<UActorComponent>& ComponentPtr : Components)
+			{
+				UActorComponent* Component = ComponentPtr.Get();
+				if (UStaticMeshComponent* MeshComp = dynamic_cast<UStaticMeshComponent*>(Component))
+				{
+					MeshComp->SetLODDistance2(Distance);
+				}
+			}
+		}
+	}
+
+	UE_LOG("Level: LOD 2 거리를 %.1f로 설정", Distance);
 }

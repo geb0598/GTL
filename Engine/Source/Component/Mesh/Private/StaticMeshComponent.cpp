@@ -155,10 +155,8 @@ void UStaticMeshComponent::SetMaterial(int32 Index, UMaterial* InMaterial)
 // LOD System Implementation
 void UStaticMeshComponent::SetLODLevel(int32 LODLevel)
 {
-	if (!bLODEnabled || !StaticMesh)
+	if (!StaticMesh)
 	{
-		// UE_LOG("SetLODLevel: Early return - LODEnabled=%s, StaticMesh=%s",
-			// bLODEnabled ? "true" : "false", StaticMesh ? "valid" : "nullptr");
 		return;
 	}
 
@@ -166,7 +164,7 @@ void UStaticMeshComponent::SetLODLevel(int32 LODLevel)
 	LODLevel = std::max(LODLevel, 0);
 
 	// StaticMesh에서 사용 가능한 LOD 개수 확인
-	int32 MaxLODs = StaticMesh->HasLODs() ? static_cast<int32>(StaticMesh->GetNumLODs()) : 0;
+	int32 MaxLODs = StaticMesh->HasLODs() ? StaticMesh->GetNumLODs() : 0;
 
 	// LOD 메시가 없는 경우 원본만 사용하도록 제한
 	if (!StaticMesh->HasLODs() && LODLevel > 0)
@@ -181,36 +179,25 @@ void UStaticMeshComponent::SetLODLevel(int32 LODLevel)
 	// UE_LOG("SetLODLevel: Setting LOD level to %d", LODLevel);
 	CurrentLODLevel = LODLevel;
 
-	// 렌더링 데이터만 업데이트 (SetStaticMesh 호출하지 않음)
-	UAssetManager& AssetManager = UAssetManager::GetInstance();
+	// 강제 설정 되어 있으면 강제로 바꾸기
+	if (IsForcedLODEnabled())
+	{
+		CurrentLODLevel = ForcedLODLevel;
+	}
+	// 강제 설정은 안되어 있지만 LOD도 안 켜진 경우 항상 원본 사용
+	else if (!IsForcedLODEnabled() && !bLODEnabled)
+	{
+		CurrentLODLevel = 0;
+	}
 
-	if (LODLevel == 0)
+	if (CurrentLODLevel == 0)
 	{
 		// 원본 메시로 완전히 다시 로드 (SetStaticMesh와 동일한 방식)
 		// UE_LOG("SetLODLevel: Using original mesh: %s", OriginalMeshPath.ToString().data());
+		SetStaticMesh(OriginalMeshPath);
 
-		UStaticMesh* NewStaticMesh = FObjManager::LoadObjStaticMesh(OriginalMeshPath);
-		if (NewStaticMesh)
-		{
-			StaticMesh = NewStaticMesh;
-
-			Vertices = &(StaticMesh.Get()->GetVertices());
-			VertexBuffer = AssetManager.GetVertexBuffer(OriginalMeshPath);
-			NumVertices = static_cast<uint32>(Vertices->size());
-
-			Indices = &(StaticMesh.Get()->GetIndices());
-			IndexBuffer = AssetManager.GetIndexBuffer(OriginalMeshPath);
-			NumIndices = static_cast<uint32>(Indices->size());
-
-			RenderState.CullMode = ECullMode::Back;
-			RenderState.FillMode = EFillMode::Solid;
-			BoundingBox = &AssetManager.GetStaticMeshAABB(OriginalMeshPath);
-
-			// UE_LOG("SetLODLevel: Restored original - Vertices=%d, Indices=%d, VB=%s, IB=%s",
-				// NumVertices, NumIndices, VertexBuffer ? "valid" : "null", IndexBuffer ? "valid" : "null");
-		}
 	}
-	else if (StaticMesh->HasLODs() && LODLevel <= static_cast<int32>(StaticMesh->GetNumLODs()))
+	else if (StaticMesh->HasLODs() && CurrentLODLevel <= StaticMesh->GetNumLODs())
 	{
 		// LOD 경로 구성 (원본 경로에서 LOD 경로 생성)
 		FString OriginalPathStr = OriginalMeshPath.ToString();
@@ -220,7 +207,7 @@ void UStaticMeshComponent::SetLODLevel(int32 LODLevel)
 		FString OriginalStem = OriginalPath.stem().string();
 		std::filesystem::path LODDir = OriginalPath.parent_path() / "LOD";
 
-		FString LODSuffix = (LODLevel == 1) ? "_lod_050" : "_lod_025";
+		FString LODSuffix = (CurrentLODLevel == 1) ? "_lod_050" : "_lod_025";
 		std::filesystem::path LODPath = LODDir / (OriginalStem + LODSuffix + ".obj");
 
 		FString LODPathStr = LODPath.string();
@@ -228,34 +215,31 @@ void UStaticMeshComponent::SetLODLevel(int32 LODLevel)
 		FName LODPathName(LODPathStr);
 
 		// UE_LOG("SetLODLevel: Using LOD mesh: %s", LODPathName.ToString().data());
+		SetStaticMesh(LODPathName);
 
-		// LOD 메시로 완전히 새로 로드
-		UStaticMesh* NewLODStaticMesh = FObjManager::LoadObjStaticMesh(LODPathName);
-		if (NewLODStaticMesh)
-		{
-			StaticMesh = NewLODStaticMesh;
-
-			Vertices = &(StaticMesh.Get()->GetVertices());
-			VertexBuffer = AssetManager.GetVertexBuffer(LODPathName);
-			NumVertices = static_cast<uint32>(Vertices->size());
-
-			Indices = &(StaticMesh.Get()->GetIndices());
-			IndexBuffer = AssetManager.GetIndexBuffer(LODPathName);
-			NumIndices = static_cast<uint32>(Indices->size());
-
-			RenderState.CullMode = ECullMode::Back;
-			RenderState.FillMode = EFillMode::Solid;
-			BoundingBox = &AssetManager.GetStaticMeshAABB(LODPathName);
-
-			// UE_LOG("SetLODLevel: LOD mesh updated - Vertices=%d, Indices=%d, VB=%s, IB=%s",
-				// NumVertices, NumIndices, VertexBuffer ? "valid" : "null", IndexBuffer ? "valid" : "null");
-		}
 	}
 }
 
 void UStaticMeshComponent::UpdateLODBasedOnDistance(const FVector& CameraPosition)
 {
-	if (!bLODEnabled || !StaticMesh)
+	if (!StaticMesh)
+		return;
+
+	// 강제 LOD 레벨이 설정된 경우, 자동 LOD를 무시하고 강제 LOD 사용
+	if (IsForcedLODEnabled())
+	{
+		int32 NewLODLevel = ForcedLODLevel;
+
+		// LOD 레벨이 변경된 경우에만 업데이트
+		if (NewLODLevel != CurrentLODLevel)
+		{
+			SetLODLevel(NewLODLevel);
+		}
+		return;
+	}
+
+	// 자동 LOD가 비활성화된 경우 리턴
+	if (!bLODEnabled)
 		return;
 
 	FVector ComponentPosition = GetRelativeLocation();
@@ -281,10 +265,7 @@ void UStaticMeshComponent::UpdateLODBasedOnDistance(const FVector& CameraPositio
 	}
 
 	// 최소 LOD 레벨 제한 적용
-	if (NewLODLevel < MinLODLevel)
-	{
-		NewLODLevel = MinLODLevel;
-	}
+	NewLODLevel = std::max(NewLODLevel, MinLODLevel);
 
 	// LOD 레벨이 변경된 경우에만 업데이트
 	if (NewLODLevel != CurrentLODLevel)
@@ -297,29 +278,4 @@ void UStaticMeshComponent::TickComponent()
 {
 	// 부모 클래스의 TickComponent 호출
 	Super::TickComponent();
-
-	// LOD가 활성화되어 있고 StaticMesh가 존재할 때만 LOD 업데이트
-	if (bLODEnabled && StaticMesh)
-	{
-		// 모든 객체가 유효한지 확인
-		URenderer* RendererPtr = nullptr;
-		try {
-			RendererPtr = &URenderer::GetInstance();
-		}
-		catch (...) {
-			return; // Renderer가 초기화되지 않은 경우
-		}
-
-		if (!RendererPtr) return;
-
-		FViewport* Viewport = RendererPtr->GetViewportClient();
-		if (!Viewport) return;
-
-		UCamera* Camera = Viewport->GetActiveCamera();
-		if (!Camera) return;
-
-		// 카메라 위치가 유효한지 확인하고 LOD 업데이트
-		FVector CameraPosition = Camera->GetLocation();
-		UpdateLODBasedOnDistance(CameraPosition);
-	}
 }

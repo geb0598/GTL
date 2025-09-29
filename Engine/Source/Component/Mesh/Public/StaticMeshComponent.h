@@ -47,6 +47,11 @@ public:
 	void SetMinLODLevel(int32 MinLevel) { MinLODLevel = MinLevel; }
 	int32 GetMinLODLevel() const { return MinLODLevel; }
 
+	// Forced LOD Level Control
+	void SetForcedLODLevel(int32 ForcedLevel) { ForcedLODLevel = ForcedLevel; }
+	int32 GetForcedLODLevel() const { return ForcedLODLevel; }
+	bool IsForcedLODEnabled() const { return ForcedLODLevel >= 0; }
+
 	void TickComponent() override;
 
 	void EnableScroll() { bIsScrollEnabled = true; }
@@ -65,9 +70,10 @@ private:
 	// LOD System
 	int32 CurrentLODLevel = 0;
 	bool bLODEnabled = true;
-	float LODDistanceSquared1 = 100.0f;  // LOD 1 전환 거리 제곱 (10^2)
-	float LODDistanceSquared2 = 400.0f; // LOD 2 전환 거리 제곱 (20^2)
+	float LODDistanceSquared1 = 400.0f;  // LOD 1 전환 거리 제곱 (20^2)
+	float LODDistanceSquared2 = 1600.0f; // LOD 2 전환 거리 제곱 (40^2)
 	int32 MinLODLevel = 0;  // 최소 허용 LOD 레벨 (0=모든LOD, 1=LOD1,2만, 2=LOD2만)
+	int32 ForcedLODLevel = -1;  // 강제 LOD 레벨 (-1=자동, 0~2=강제 LOD)
 	FName OriginalMeshPath;  // 원본 메시 경로 저장
 
 	// Scroll
