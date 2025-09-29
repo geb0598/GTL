@@ -163,11 +163,12 @@ void UStaticMeshComponent::SetLODLevel(int32 LODLevel)
 	// LOD 레벨 유효성 검사
 	LODLevel = std::max(LODLevel, 0);
 
-	// StaticMesh에서 사용 가능한 LOD 개수 확인
-	int32 MaxLODs = StaticMesh->HasLODs() ? StaticMesh->GetNumLODs() : 0;
+	// 원본 StaticMesh에서 사용 가능한 LOD 개수 확인
+	UStaticMesh* OriginalMesh = FObjManager::LoadObjStaticMesh(OriginalMeshPath);
+	int32 MaxLODs = (OriginalMesh && OriginalMesh->HasLODs()) ? OriginalMesh->GetNumLODs() : 0;
 
 	// LOD 메시가 없는 경우 원본만 사용하도록 제한
-	if (!StaticMesh->HasLODs() && LODLevel > 0)
+	if ((!OriginalMesh || !OriginalMesh->HasLODs()) && LODLevel > 0)
 	{
 		LODLevel = 0;
 	}
@@ -197,7 +198,7 @@ void UStaticMeshComponent::SetLODLevel(int32 LODLevel)
 		SetStaticMesh(OriginalMeshPath);
 
 	}
-	else if (StaticMesh->HasLODs() && CurrentLODLevel <= StaticMesh->GetNumLODs())
+	else if (OriginalMesh && OriginalMesh->HasLODs() && CurrentLODLevel <= OriginalMesh->GetNumLODs())
 	{
 		// LOD 경로 구성 (원본 경로에서 LOD 경로 생성)
 		FString OriginalPathStr = OriginalMeshPath.ToString();
