@@ -1,5 +1,6 @@
 #pragma once
 
+struct FVector4;
 struct FArchive; // @note: 직렬화 지원용 헤더
 struct FMatrix;
 
@@ -334,6 +335,11 @@ struct FVector4
 	float Length() const
 	{
 		return sqrtf(X * X + Y * Y + Z * Z + W * W);
+	}
+
+	float LengthSquared() const
+	{
+		return (X * X) + (Y * Y) + (Z * Z) + (W * W);
 	}
 
 	void Normalize()

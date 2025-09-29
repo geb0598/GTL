@@ -307,3 +307,12 @@
         UE_LOG("=== Multiple Enum Values ==="); \
         ([&]{ ENUM_LOG_VALUE(__VA_ARGS__); }(), ...); \
     } while(0)
+
+#define PROFILE_SCOPE(name, expr) \
+{ \
+auto __start = std::chrono::high_resolution_clock::now(); \
+expr; \
+auto __end = std::chrono::high_resolution_clock::now(); \
+double __ms = std::chrono::duration<double, std::milli>(__end - __start).count(); \
+UE_LOG("%s took %.3f ms", name, __ms); \
+}

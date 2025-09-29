@@ -343,6 +343,7 @@
     </ClCompile>
     <ClCompile Include="Source\Core\Private\PlatformTime.cpp" />
     <ClCompile Include="Source\Core\Private\ScopeCycleCounter.cpp" />
+    <ClCompile Include="Source\Editor\Private\FrustumCull.cpp" />
     <ClCompile Include="Source\Manager\Asset\Private\LODMaker.cpp" />
     <ClCompile Include="Source\Manager\BVH\private\BVHManager.cpp" />
     <ClCompile Include="Source\Core\Private\WindowsBinReader.cpp">
@@ -722,6 +723,7 @@
     </ClInclude>
     <ClInclude Include="Source\Core\Public\PlatformTime.h" />
     <ClInclude Include="Source\Core\Public\ScopeCycleCounter.h" />
+    <ClInclude Include="Source\Editor\Public\FrustumCull.h" />
     <ClInclude Include="Source\Manager\Asset\Public\LODMaker.h" />
     <ClInclude Include="Source\Manager\BVH\public\BVHManager.h" />
     <ClInclude Include="Source\Physics\Public\RayIntersection.h" />

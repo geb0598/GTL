@@ -533,4 +533,6 @@ editor.ini
 
 !Engine/Data**
 
+# Gemini
+GEMINI.md
 Document/*
