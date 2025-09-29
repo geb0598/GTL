@@ -484,9 +484,14 @@ void UBVHManager::TraverseForCulling(uint32 NodeIndex, FFrustumCull& InFrustum, 
 
 	uint32 ChildMask = 0;
 	EFrustumTestResult OverallResult = EFrustumTestResult::CompletelyInside;
+
+	// Near/Far 평면을 먼저 검사 (더 높은 확률로 culling 가능)
+	static const int PlaneOrder[6] = { 4, 5, 0, 1, 2, 3 }; // Near, Far, Left, Right, Bottom, Top
+
 	// Plane Test
-	for (int i = 0; i < 6; i++)
+	for (int idx = 0; idx < 6; idx++)
 	{
+		int i = PlaneOrder[idx];
 		EFrustumPlane CurrentPlaneFlag = static_cast<EFrustumPlane>(1 << i);
 		EPlaneIndex CurrentPlaneIndex = static_cast<EPlaneIndex>(i);
 		if (InMask & ToBaseType(CurrentPlaneFlag))

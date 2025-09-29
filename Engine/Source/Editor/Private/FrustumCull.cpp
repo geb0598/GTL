@@ -64,10 +64,12 @@ void FFrustumCull::Update(UCamera* InCamera)
 
 EFrustumTestResult FFrustumCull::IsInFrustum(const FAABB& TargetAABB)
 {
-	// TODO : BVH 적용 시 교차 검사 필요
-	// 교차 시 leaf이면 rendering, 아니면 다음 노드 탐색
-	for (int i =0; i < 6; i++)
+	// Near/Far 평면을 먼저 검사 (더 높은 확률로 culling 가능)
+	static const int PlaneOrder[6] = { 4, 5, 0, 1, 2, 3 }; // Near, Far, Left, Right, Bottom, Top
+
+	for (int idx = 0; idx < 6; idx++)
 	{
+		int i = PlaneOrder[idx];
 		const FPlane& Plane = Planes[i];
 
 		// 평면의 법선 방향으로 가장 멀리 있는 꼭짓점
@@ -83,10 +85,9 @@ EFrustumTestResult FFrustumCull::IsInFrustum(const FAABB& TargetAABB)
 						+ Plane.ConstantD;
 		if (Distance < 0.0f)
 		{
-			// Invisible
+			// Invisible - early out
 			return EFrustumTestResult::Outside;
 		}
-
 	}
 	// Visible
 	return EFrustumTestResult::Inside;
@@ -100,7 +101,7 @@ const EFrustumTestResult FFrustumCull::TestAABBWithPlane(const FAABB& TargetAABB
 
 EFrustumTestResult FFrustumCull::CheckPlane(const FAABB& TargetAABB, const EPlaneIndex Index)
 {
-	FPlane Plane = Planes[static_cast<uint8>(Index)];
+	const FPlane& Plane = Planes[static_cast<uint8>(Index)];
 
 	FVector PositiveVertex{};
 	PositiveVertex.X = (Plane.NormalVector.X >= 0.0f) ? TargetAABB.Max.X : TargetAABB.Min.X;
