@@ -1,6 +1,10 @@
 #include "pch.h"
 #include "Manager/BVH/public/BVHManager.h"
+
+#include "Core/Public/ScopeCycleCounter.h"
 #include "Editor/Public/ObjectPicker.h"
+#include "Component/Mesh/Public/StaticMeshComponent.h"
+#include "Component/Mesh/Public/StaticMesh.h"
 
 IMPLEMENT_SINGLETON_CLASS_BASE(UBVHManager)
 
@@ -123,6 +127,17 @@ void UBVHManager::Refit()
 		Prim.Primitive->GetWorldAABB(WorldMin, WorldMax);
 		Prim.Bounds = FAABB(WorldMin, WorldMax);
 		Prim.Center = (WorldMin + WorldMax) * 0.5f;
+		Prim.WorldToModel = Prim.Primitive->GetWorldTransformMatrixInverse();
+		Prim.PrimitiveType = Prim.Primitive->GetPrimitiveType();
+		Prim.StaticMesh = nullptr;
+
+		if (Prim.PrimitiveType == EPrimitiveType::StaticMesh)
+		{
+			if (auto* StaticMeshComponent = static_cast<UStaticMeshComponent*>(Prim.Primitive))
+			{
+				Prim.StaticMesh = StaticMeshComponent->GetStaticMesh();
+			}
+		}
 	}
 
 	// Step 2: Recompute node bounds bottom-up
@@ -162,141 +177,201 @@ FAABB UBVHManager::RefitRecursive(int NodeIndex)
 
 bool UBVHManager::Raycast(const FRay& InRay, UPrimitiveComponent*& HitComponent, float& HitT) const
 {
-	HitComponent = nullptr;
+    HitComponent = nullptr;
 
-	if (RootIndex < 0 || Nodes.empty())
-		return false;
+    if (RootIndex < 0 || Nodes.empty())
+    {
+        return false;
+    }
 
-	HitT = FLT_MAX;
-	int HitObjectIndex = -1;
+    HitT = FLT_MAX;
+    int HitObjectIndex = -1;
 
-	RaycastRecursive(RootIndex, InRay, HitT, HitObjectIndex);
-	// RaycastIterative(InRay, HitT, HitObjectIndex);
-	if (HitObjectIndex == -1)
-	{
-		return false;
-	}
+    RaycastIterative(InRay, HitT, HitObjectIndex);
+    if (HitObjectIndex == -1)
+    {
+        return false;
+    }
 
-	HitComponent = Primitives[HitObjectIndex].Primitive;
-	return true;
+    HitComponent = Primitives[HitObjectIndex].Primitive;
+    return true;
 }
 
 void UBVHManager::RaycastRecursive(int NodeIndex, const FRay& InRay, float& OutClosestHit, int& OutHitObject) const
 {
-	const FBVHNode& Node = Nodes[NodeIndex];
+    const FBVHNode& Node = Nodes[NodeIndex];
 
-	float tmin;
-	if (!Node.Bounds.RaycastHit(InRay, &tmin))
-		return;
+    float tmin = 0.0f;
+    if (!Node.Bounds.RaycastHit(InRay, &tmin) || tmin > OutClosestHit)
+    {
+        return;
+    }
 
-	// Prune farther intersections
-	if (tmin > OutClosestHit)
-		return;
+    if (Node.bIsLeaf)
+    {
+        for (int i = 0; i < Node.Count; ++i)
+        {
+            const FBVHPrimitive& Prim = Primitives[Node.Start + i];
+            if (!Prim.Primitive || !Prim.Primitive->IsVisible())
+            {
+                continue;
+            }
 
-	if (Node.bIsLeaf)
-	{
-		for (int i = 0; i < Node.Count; i++)
-		{
-			const FBVHPrimitive& Prim = Primitives[Node.Start + i];
-			float t;
-			if (!Prim.Bounds.RaycastHit(InRay, &t)) continue;
-			if (!ObjectPicker.DoesRayIntersectPrimitive_MollerTrumbore(InRay, Prim.Primitive, &t)) continue;
-			if (t < OutClosestHit)
-			{
-				OutClosestHit = t;
-				OutHitObject = Node.Start + i;
-			}
-			break;
-		}
-	}
-	else
-	{
-		RaycastRecursive(Node.LeftChild, InRay, OutClosestHit, OutHitObject);
-		RaycastRecursive(Node.RightChild, InRay, OutClosestHit, OutHitObject);
-	}
+            float boxT = 0.0f;
+            if (!Prim.Bounds.RaycastHit(InRay, &boxT) || boxT > OutClosestHit)
+            {
+                continue;
+            }
+
+            float candidateDistance = OutClosestHit;
+            bool bHitPrimitive = false;
+
+            if (Prim.PrimitiveType == EPrimitiveType::StaticMesh && Prim.StaticMesh)
+            {
+                FRay ModelRay;
+                ModelRay.Origin = InRay.Origin * Prim.WorldToModel;
+                ModelRay.Direction = InRay.Direction * Prim.WorldToModel;
+                ModelRay.Direction.Normalize();
+
+                bHitPrimitive = Prim.StaticMesh->RaycastTriangleBVH(ModelRay, candidateDistance);
+            }
+            else
+            {
+                bHitPrimitive = ObjectPicker.DoesRayIntersectPrimitive_MollerTrumbore(InRay, Prim.Primitive, &candidateDistance);
+            }
+
+            if (bHitPrimitive && candidateDistance < OutClosestHit)
+            {
+                OutClosestHit = candidateDistance;
+                OutHitObject = Node.Start + i;
+                break;
+            }
+        }
+    }
+    else
+    {
+        RaycastRecursive(Node.LeftChild, InRay, OutClosestHit, OutHitObject);
+        RaycastRecursive(Node.RightChild, InRay, OutClosestHit, OutHitObject);
+    }
 }
 
 void UBVHManager::RaycastIterative(const FRay& InRay, float& OutClosestHit, int& OutHitObject) const
 {
-    struct StackEntry { int NodeIndex; float tmin; };
-    StackEntry stack[64]; // depth is ~log2(N), 64 is plenty for 50k
-    int stackPtr = 0;
+    struct FStackEntry
+    {
+        int NodeIndex;
+        float Distance;
+    };
 
-    stack[stackPtr++] = { RootIndex, 0.0f };
+    FStackEntry stack[64];
+    int stackPtr = 0;
+    const int stackCapacity = static_cast<int>(sizeof(stack) / sizeof(stack[0]));
+
+    auto Push = [&](int node, float distance)
+    {
+        if (stackPtr < stackCapacity)
+        {
+            stack[stackPtr++] = { node, distance };
+        }
+    };
+
+    Push(RootIndex, 0.0f);
 
     while (stackPtr > 0)
     {
-        // Pop
-        StackEntry entry = stack[--stackPtr];
-        int nodeIndex = entry.NodeIndex;
+        const FStackEntry entry = stack[--stackPtr];
+        const int nodeIndex = entry.NodeIndex;
 
-        if (nodeIndex < 0 || nodeIndex >= (int)Nodes.size())
+        if (nodeIndex < 0 || nodeIndex >= static_cast<int>(Nodes.size()))
+        {
             continue;
+        }
 
         const FBVHNode& Node = Nodes[nodeIndex];
 
-        float tmin;
-        if (!Node.Bounds.RaycastHit(InRay, &tmin))
+        float tmin = 0.0f;
+        if (!Node.Bounds.RaycastHit(InRay, &tmin) || tmin > OutClosestHit)
+        {
             continue;
-        if (tmin > OutClosestHit) // farther than known closest
-            continue;
+        }
 
         if (Node.bIsLeaf)
         {
-            for (int i = 0; i < Node.Count; i++)
+            for (int i = 0; i < Node.Count; ++i)
             {
                 const FBVHPrimitive& Prim = Primitives[Node.Start + i];
-                float t;
-                if (Prim.Bounds.RaycastHit(InRay, &t) &&
-                    ObjectPicker.DoesRayIntersectPrimitive_MollerTrumbore(InRay, Prim.Primitive, &t))
+                if (!Prim.Primitive || !Prim.Primitive->IsVisible())
                 {
-                    if (t < OutClosestHit)
-                    {
-                        OutClosestHit = t;
-                        OutHitObject  = Node.Start + i;
-                    }
+                    continue;
+                }
+
+                float boxT = 0.0f;
+                if (!Prim.Bounds.RaycastHit(InRay, &boxT) || boxT > OutClosestHit)
+                {
+                    continue;
+                }
+
+                float candidateDistance = OutClosestHit;
+                bool bHitPrimitive = false;
+
+                if (Prim.PrimitiveType == EPrimitiveType::StaticMesh && Prim.StaticMesh)
+                {
+                    FRay ModelRay;
+                    ModelRay.Origin = InRay.Origin * Prim.WorldToModel;
+                    ModelRay.Direction = InRay.Direction * Prim.WorldToModel;
+                    ModelRay.Direction.Normalize();
+
+                    bHitPrimitive = Prim.StaticMesh->RaycastTriangleBVH(ModelRay, candidateDistance);
+                }
+                else
+                {
+                    bHitPrimitive = ObjectPicker.DoesRayIntersectPrimitive_MollerTrumbore(InRay, Prim.Primitive, &candidateDistance);
+                }
+
+                if (bHitPrimitive && candidateDistance < OutClosestHit)
+                {
+                    OutClosestHit = candidateDistance;
+                    OutHitObject = Node.Start + i;
+                    break;
                 }
             }
         }
         else
         {
-            // Check both children
-            float tLeft, tRight;
-            bool hitLeft  = Nodes[Node.LeftChild].Bounds.RaycastHit(InRay, &tLeft);
-            bool hitRight = Nodes[Node.RightChild].Bounds.RaycastHit(InRay, &tRight);
+            const int leftChild = Node.LeftChild;
+            const int rightChild = Node.RightChild;
+
+            float leftDistance = 0.0f;
+            const bool hitLeft = (leftChild != -1) && Nodes[leftChild].Bounds.RaycastHit(InRay, &leftDistance) && leftDistance <= OutClosestHit;
+
+            float rightDistance = 0.0f;
+            const bool hitRight = (rightChild != -1) && Nodes[rightChild].Bounds.RaycastHit(InRay, &rightDistance) && rightDistance <= OutClosestHit;
 
             if (hitLeft && hitRight)
             {
-                // Push far child first, near child last (so near is popped first)
-                if (tLeft < tRight)
+                if (leftDistance < rightDistance)
                 {
-                    if (tRight < OutClosestHit)
-                        stack[stackPtr++] = { Node.RightChild, tRight };
-                    if (tLeft < OutClosestHit)
-                        stack[stackPtr++] = { Node.LeftChild, tLeft };
+                    Push(rightChild, rightDistance);
+                    Push(leftChild, leftDistance);
                 }
                 else
                 {
-                    if (tLeft < OutClosestHit)
-                        stack[stackPtr++] = { Node.LeftChild, tLeft };
-                    if (tRight < OutClosestHit)
-                        stack[stackPtr++] = { Node.RightChild, tRight };
+                    Push(leftChild, leftDistance);
+                    Push(rightChild, rightDistance);
                 }
             }
-            else if (hitLeft && tLeft < OutClosestHit)
+            else if (hitLeft)
             {
-                stack[stackPtr++] = { Node.LeftChild, tLeft };
+                Push(leftChild, leftDistance);
             }
-            else if (hitRight && tRight < OutClosestHit)
+            else if (hitRight)
             {
-                stack[stackPtr++] = { Node.RightChild, tRight };
+                Push(rightChild, rightDistance);
             }
         }
     }
 }
-
-
-void UBVHManager::ConvertComponentsToPrimitives(
+void UBVHManager::ConvertComponentsToBVHPrimitives(
 	const TArray<TObjectPtr<UPrimitiveComponent>>& InComponents, TArray<FBVHPrimitive>& OutPrimitives)
 {
 	OutPrimitives.clear();
@@ -315,6 +390,17 @@ void UBVHManager::ConvertComponentsToPrimitives(
 		Primitive.Bounds = FAABB(WorldMin, WorldMax);
 		Primitive.Center = (WorldMin + WorldMax) * 0.5f;
 		Primitive.Primitive = Component;
+		Primitive.WorldToModel = Component->GetWorldTransformMatrixInverse();
+		Primitive.PrimitiveType = Component->GetPrimitiveType();
+		Primitive.StaticMesh = nullptr;
+
+		if (Primitive.PrimitiveType == EPrimitiveType::StaticMesh)
+		{
+			if (auto* StaticMeshComponent = static_cast<UStaticMeshComponent*>(Component))
+			{
+				Primitive.StaticMesh = StaticMeshComponent->GetStaticMesh();
+			}
+		}
 
 		OutPrimitives.push_back(Primitive);
 	}
@@ -330,4 +416,3 @@ void UBVHManager::CollectNodeBounds(TArray<FAABB>& OutBounds) const
 		OutBounds.push_back(Node.Bounds);
 	}
 }
-

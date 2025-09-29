@@ -61,6 +61,8 @@ struct FVector
 	 */
 	FVector operator*(float InRatio) const;
 
+	FVector operator/(float InRatio) const;
+
 	/**
 	 * @brief 자신의 벡터에 다른 벡터를 가산하는 함수
 	 */
@@ -77,6 +79,11 @@ struct FVector
 	FVector& operator*=(float InRatio);
 
 	FVector& operator/=(float InRatio);
+
+	bool operator!=(const FVector& Other) const
+	{
+		return !(*this == Other);
+	}
 
 	/**
 	 * @brief 자신의 벡터의 각 성분의 부호를 반전한 값을 반환
