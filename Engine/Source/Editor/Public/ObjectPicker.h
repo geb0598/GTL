@@ -19,8 +19,10 @@ public:
 		UPrimitiveComponent* InPrimitive, float* OutShortestDistance) const;
 
 private:
+	bool RaycastMeshTrianglesBVH(const FRay& ModelRay, UPrimitiveComponent* InPrimitive, float& InOutDistance, bool& OutHit) const;
 	bool DoesRayIntersectPrimitive(UCamera* InActiveCamera, const FRay& InWorldRay, UPrimitiveComponent* InPrimitive, const FMatrix& InModelMatrix, float* OutShortestDistance);
 	FRay GetModelRay(const FRay& Ray, UPrimitiveComponent* Primitive) const;
 	bool DoesRayIntersectTriangle(const FRay& InRay, UPrimitiveComponent* InPrimitive,
 		const FVector& Vertex1, const FVector& Vertex2, const FVector& Vertex3, float* OutDistance) const;
 };
+

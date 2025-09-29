@@ -1,5 +1,7 @@
 #include "pch.h"
 #include "Manager/BVH/public/BVHManager.h"
+
+#include "Core/Public/ScopeCycleCounter.h"
 #include "Editor/Public/ObjectPicker.h"
 
 IMPLEMENT_SINGLETON_CLASS_BASE(UBVHManager)
@@ -330,4 +332,3 @@ void UBVHManager::CollectNodeBounds(TArray<FAABB>& OutBounds) const
 		OutBounds.push_back(Node.Bounds);
 	}
 }
-

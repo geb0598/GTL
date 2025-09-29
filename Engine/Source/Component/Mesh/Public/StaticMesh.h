@@ -3,13 +3,31 @@
 #include "Core/Public/Object.h"       // UObject 기반 클래스 및 매크로
 #include "Core/Public/ObjectPtr.h" // TObjectPtr 사용
 #include "Global/CoreTypes.h"        // TArray 등
-
+#include "Physics/Public/AABB.h"
 // 전방 선언: FStaticMesh의 전체 정의를 포함할 필요 없이 포인터만 사용
+
 struct FMeshSection
 {
 	uint32 StartIndex;
 	uint32 IndexCount;
 	uint32 MaterialSlot;
+};
+
+struct FTriangleBVHPrimitive
+{
+	FAABB Bounds;
+	FVector Center;
+	uint32 Indices[3];
+};
+
+struct FTriangleBVHNode
+{
+	FAABB Bounds;
+	int32 LeftChild = -1;
+	int32 RightChild = -1;
+	int32 Start = 0;
+	int32 Count = 0;
+	bool bIsLeaf = false;
 };
 
 // Cooked Data
@@ -29,8 +47,13 @@ struct FStaticMesh
 	// --- 3. 연결 정보 (Sections) ---
 	// 각 재질을 어떤 기하 구간에 칠할지에 대한 지시서
 	TArray<FMeshSection> Sections;
-};
 
+	// Triangle BVH cache (mutable so we can build lazily in const accessors)
+	mutable bool bTriangleBVHDirty = true;
+	mutable int32 TriangleBVHRoot = -1;
+	mutable TArray<FTriangleBVHNode> TriangleBVHNodes;
+	mutable TArray<FTriangleBVHPrimitive> TriangleBVHPrimitives;
+};
 
 /**
  * @brief FStaticMesh(Cooked Data)를 엔진 오브젝트 시스템에 통합하는 래퍼 클래스.
@@ -66,6 +89,8 @@ public:
 	TArray<FNormalVertex>& GetVertices();
 	const TArray<uint32>& GetIndices() const;
 
+	bool RaycastTriangleBVH(const FRay& ModelRay, float& InOutDistance) const;
+
 	// Material Data
 	UMaterial* GetMaterial(int32 MaterialIndex) const;
 	void SetMaterial(int32 MaterialIndex, UMaterial* Material);
@@ -76,6 +101,8 @@ public:
 	bool IsValid() const { return StaticMeshAsset != nullptr; }
 
 private:
+	void EnsureTriangleBVH() const;
+
 	// 실제 데이터 본체(FStaticMesh)에 대한 비소유(non-owning) 포인터.
 	// 이 데이터의 실제 소유권 및 생명주기는 AssetManager가 책임집니다.
 	TObjectPtr<FStaticMesh> StaticMeshAsset;

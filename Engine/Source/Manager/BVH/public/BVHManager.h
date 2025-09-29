@@ -16,6 +16,15 @@ struct FBVHNode
 	bool bIsLeaf = false;
 };
 
+struct TriBVHNode {
+	FAABB Bounds;
+	int LeftChild;    // -1 if leaf
+	int RightChild;   // -1 if leaf
+	int Start;        // index into triangle array
+	int Count;        // number of triangles in leaf
+	bool bIsLeaf;
+};
+
 struct FBVHPrimitive
 {
 	FVector Center;
@@ -49,12 +58,12 @@ private:
 	void RaycastRecursive(int NodeIndex, const FRay& InRay, float& OutClosestHit, int& OutHitObject) const;
 	void CollectNodeBounds(TArray<FAABB>& OutBounds) const;
 
+	UObjectPicker ObjectPicker;
+
 	TArray<FBVHNode> Nodes;
 	TArray<FBVHPrimitive> Primitives;
 	int RootIndex = -1;
 	bool bDebugDrawEnabled = true;
 
 	TArray<FAABB> Boxes;
-
-	UObjectPicker ObjectPicker;
 };
