@@ -49,12 +49,12 @@ void main(uint3 DispatchThreadID : SV_DispatchThreadID)
 	float2 clipSize = maxClip - minClip;
 	float2 screenPixelSize = clipSize * ScreenSize;
 	float maxDim = max(screenPixelSize.x, screenPixelSize.y);
-	float baseMip = log2(max(maxDim, 1.0f));
+	float baseMip = log2(max(maxDim, 1.0f)) + 1.0f;
 	baseMip = clamp(baseMip, 0, MipLevels - 1);
 
     // 테스트할 Mip 레벨 범위
 	uint mipStart = (uint) baseMip;
-	uint mipEnd = min(mipStart + 3, MipLevels - 1);
+	uint mipEnd = min(mipStart + 2, MipLevels - 1);
 
     // AABB의 클립 공간을 6x6 그리드로 나누어 UV 좌표 계산
 	bool isVisible = false;

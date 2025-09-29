@@ -24,6 +24,7 @@
 #include "cpp-thread-pool/thread_pool.h"
 #endif
 
+#ifdef _
 #define PROFILE_SCOPE(name, expr) \
     { \
         auto __start = std::chrono::high_resolution_clock::now(); \
@@ -32,6 +33,12 @@
         double __ms = std::chrono::duration<double, std::milli>(__end - __start).count(); \
         UE_LOG("%s took %.3f ms", name, __ms); \
     }
+#endif
+
+#define PROFILE_SCOPE(name, expr) \
+{ \
+	expr; \
+}
 
 IMPLEMENT_SINGLETON_CLASS_BASE(URenderer)
 
@@ -426,6 +433,8 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 
 	auto& OcclusionRenderer = UOcclusionRenderer::GetInstance();
 
+	int CullCount = 0;
+
 	if (bIsFirstPass)
 	{
 		bIsFirstPass = false;
@@ -478,7 +487,7 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 
 		if (StartIndex >= EndIndex) continue;
 
-		Futures.emplace_back(Pool.Enqueue([this, StartIndex, EndIndex, &PrimitiveComponents, &VisibilityResults, InCurrentCamera, i, &InViewportClient]()
+		Futures.emplace_back(Pool.Enqueue([this, StartIndex, EndIndex, &PrimitiveComponents, &OcclusionRenderer, i, &InViewportClient]()
 		{
 			ID3D11DeviceContext* DeferredContext = DeferredContexts[i];
 			if (!DeferredContext)
@@ -501,7 +510,7 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 			for (size_t j = StartIndex; j < EndIndex; ++j)
 			{
 				UPrimitiveComponent* PrimitiveComponent = PrimitiveComponents[j];
-				if (!PrimitiveComponent || !PrimitiveComponent->IsVisible() || !VisibilityResults[j])
+				if (!PrimitiveComponent || !PrimitiveComponent->IsVisible() || !OcclusionRenderer.IsPrimitiveVisible(PrimitiveComponent))
 				{
 					continue;
 				}
@@ -548,7 +557,6 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 	CommandLists.clear();
 
 #else
-	int CullCount = 0;
 	for (size_t i = 0; i < PrimitiveComponents.size(); ++i) {
 		auto PrimitiveComponent = PrimitiveComponents[i];
 		//PROFILE_SCOPE("Single Culling", ULevelManager::GetInstance().GetCurrentLevel()->GetVisiblePrimitiveComponents(InCurrentCamera))
@@ -592,8 +600,8 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 		}
 	}
 
-	UE_LOG("Primitive Count: %d", PrimitiveComponents.size());
-	UE_LOG("Culled Count:	 %d", CullCount);
+	//UE_LOG("Primitive Count: %d", PrimitiveComponents.size());
+	//UE_LOG("Culled Count:	 %d", CullCount);
 
 #endif
 	if (BillBoard)

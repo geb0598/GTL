@@ -12,6 +12,8 @@
 #include <d3dcompiler.h>
 #pragma comment(lib, "d3dcompiler")
 
+#define MULTI_THREADING
+
 IMPLEMENT_SINGLETON_CLASS_BASE(UOcclusionRenderer)
 
 UOcclusionRenderer::UOcclusionRenderer() = default;
