@@ -88,71 +88,7 @@ void UOcclusionRenderer::BuildScreenSpaceBoundingVolumes(
 
 		Futures.emplace_back(Pool.Enqueue([this, StartIndex, EndIndex, &PrimitiveComponents, ViewProjMatrix]()
 		{
-			for (size_t j = StartIndex; j < EndIndex; ++j)
-			{
-				const auto& Primitive = PrimitiveComponents[j];
-				if (!Primitive)
-				{
-					BoundingVolumes[j] = { FVector4(0, 0, 0, 0), FVector4(0, 0, 0, 0) };
-					continue;
-				}
-				PrimitiveComponentUUIDs[j] = PrimitiveComponents[j]->GetUUID();
-
-				// --- (1) 월드 공간 AABB 가져오기 ---
-				FVector WorldMin, WorldMax;
-				Primitive->GetWorldAABB(WorldMin, WorldMax);
-
-				// --- (2) 8개 코너 생성 ---
-				FVector corners[8] = {
-					{ WorldMin.X, WorldMin.Y, WorldMin.Z },
-					{ WorldMax.X, WorldMin.Y, WorldMin.Z },
-					{ WorldMin.X, WorldMax.Y, WorldMin.Z },
-					{ WorldMin.X, WorldMin.Y, WorldMax.Z },
-					{ WorldMax.X, WorldMax.Y, WorldMin.Z },
-					{ WorldMax.X, WorldMin.Y, WorldMax.Z },
-					{ WorldMin.X, WorldMax.Y, WorldMax.Z },
-					{ WorldMax.X, WorldMax.Y, WorldMax.Z }
-				};
-
-				// --- (3) Clip 공간 AABB 초기화 ---
-				FVector4 ClipMin(FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX);
-				FVector4 ClipMax(-FLT_MAX, -FLT_MAX, -FLT_MAX, -FLT_MAX);
-
-				// --- (4) 각 코너 변환 후 Min/Max 업데이트 ---
-				for (int k = 0; k < 8; ++k) // Changed loop variable from j to k to avoid conflict
-				{
-					FVector4 clipPos = FMatrix::VectorMultiply(
-						FVector4(corners[k].X, corners[k].Y, corners[k].Z, 1.0f),
-						ViewProjMatrix
-					);
-
-					if (clipPos.W <= 0.0f) continue; // Discard points behind or on the projection plane
-
-					FVector4 ndcPos(
-						clipPos.X / clipPos.W,
-						clipPos.Y / clipPos.W,
-						clipPos.Z / clipPos.W,
-						1.0f // Set W to 1.0f for NDC
-					);
-
-					// Clamp NDC coordinates to [-1, 1] range for X and Y, and [0, 1] for Z
-					ndcPos.X = std::clamp(ndcPos.X, -1.0f, 1.0f);
-					ndcPos.Y = std::clamp(ndcPos.Y, -1.0f, 1.0f);
-					ndcPos.Z = std::clamp(ndcPos.Z, 0.0f, 1.0f); // Assuming Z is [0, 1] based on projection matrix analysis
-
-					ClipMin.X = std::min(ClipMin.X, ndcPos.X);
-					ClipMin.Y = std::min(ClipMin.Y, ndcPos.Y);
-					ClipMin.Z = std::min(ClipMin.Z, ndcPos.Z);
-					ClipMin.W = std::min(ClipMin.W, ndcPos.W);
-
-					ClipMax.X = std::max(ClipMax.X, ndcPos.X);
-					ClipMax.Y = std::max(ClipMax.Y, ndcPos.Y);
-					ClipMax.Z = std::max(ClipMax.Z, ndcPos.Z);
-					ClipMax.W = std::max(ClipMax.W, ndcPos.W);
-				}
-				// --- (5) 결과 저장 ---
-				BoundingVolumes[j] = { ClipMin, ClipMax };
-			}
+			ProcessBoundingVolume(StartIndex, EndIndex, PrimitiveComponents, ViewProjMatrix);
 		}));
 	}
 
@@ -162,18 +98,21 @@ void UOcclusionRenderer::BuildScreenSpaceBoundingVolumes(
 	}
 
 #else // Single-threaded version
-	// ========================================================= //
-	// 2. 프리미티브 루프
-	// ========================================================= //
-	for (size_t i = 0; i < PrimitiveComponents.size(); ++i)
+	ProcessBoundingVolume(0, PrimitiveComponents.size(), PrimitiveComponents, ViewProjMatrix);
+#endif
+}
+
+void UOcclusionRenderer::ProcessBoundingVolume(size_t InStartIndex, size_t InEndIndex, const TArray<TObjectPtr<UPrimitiveComponent>>& InPrimitiveComponents, const FMatrix& InViewProjMatrix)
+{
+	for (size_t i = InStartIndex; i < InEndIndex; ++i)
 	{
-		const auto& Primitive = PrimitiveComponents[i];
+		const auto& Primitive = InPrimitiveComponents[i];
 		if (!Primitive)
 		{
 			BoundingVolumes[i] = { FVector4(0, 0, 0, 0), FVector4(0, 0, 0, 0) };
 			continue;
 		}
-		PrimitiveComponentUUIDs[i] = PrimitiveComponents[i]->GetUUID();
+		PrimitiveComponentUUIDs[i] = InPrimitiveComponents[i]->GetUUID();
 
 		// --- (1) 월드 공간 AABB 가져오기 ---
 		FVector WorldMin, WorldMax;
@@ -200,7 +139,7 @@ void UOcclusionRenderer::BuildScreenSpaceBoundingVolumes(
 		{
 			FVector4 clipPos = FMatrix::VectorMultiply(
 				FVector4(corners[j].X, corners[j].Y, corners[j].Z, 1.0f),
-				ViewProjMatrix
+				InViewProjMatrix
 			);
 
 			if (clipPos.W <= 0.0f) continue; // Discard points behind or on the projection plane
@@ -212,9 +151,10 @@ void UOcclusionRenderer::BuildScreenSpaceBoundingVolumes(
 				1.0f // Set W to 1.0f for NDC
 			);
 
+			// Clamp NDC coordinates to [-1, 1] range for X and Y, and [0, 1] for Z
 			ndcPos.X = std::clamp(ndcPos.X, -1.0f, 1.0f);
 			ndcPos.Y = std::clamp(ndcPos.Y, -1.0f, 1.0f);
-			ndcPos.Z = std::clamp(ndcPos.Z, 0.0f, 1.0f); 
+			ndcPos.Z = std::clamp(ndcPos.Z, 0.0f, 1.0f); // Assuming Z is [0, 1] based on projection matrix analysis
 
 			ClipMin.X = std::min(ClipMin.X, ndcPos.X);
 			ClipMin.Y = std::min(ClipMin.Y, ndcPos.Y);
@@ -229,8 +169,8 @@ void UOcclusionRenderer::BuildScreenSpaceBoundingVolumes(
 		// --- (5) 결과 저장 ---
 		BoundingVolumes[i] = { ClipMin, ClipMax };
 	}
-#endif
 }
+
 
 void UOcclusionRenderer::GenerateHiZ(
 	ID3D11Device* InDevice,

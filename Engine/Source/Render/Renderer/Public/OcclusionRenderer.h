@@ -60,6 +60,9 @@ private:
 	void ReleaseShader();
 	void ReleaseHiZResource();
 
+	void ProcessBoundingVolume(size_t InStartIndex, size_t InEndIndex, const TArray<TObjectPtr<UPrimitiveComponent>>& InPrimitiveComponents, const FMatrix& InViewProjMatrix);
+
+
 	/** @note: UOcclusionRenderer에서는 Device와 DeviceContext의 수명을 관리하지 않음*/
 	ID3D11Device* Device = nullptr;
 	ID3D11DeviceContext* DeviceContext = nullptr;
