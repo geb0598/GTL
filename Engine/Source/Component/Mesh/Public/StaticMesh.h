@@ -66,6 +66,12 @@ public:
 	TArray<FNormalVertex>& GetVertices();
 	const TArray<uint32>& GetIndices() const;
 
+	// LOD System
+	void AddLODMesh(FStaticMesh* LODMesh);
+	FStaticMesh* GetLODMesh(int32 LODLevel) const;
+	int32 GetNumLODs() const { return LODMeshes.size(); }
+	bool HasLODs() const { return !LODMeshes.empty(); }
+
 	// Material Data
 	UMaterial* GetMaterial(int32 MaterialIndex) const;
 	void SetMaterial(int32 MaterialIndex, UMaterial* Material);
@@ -79,6 +85,9 @@ private:
 	// 실제 데이터 본체(FStaticMesh)에 대한 비소유(non-owning) 포인터.
 	// 이 데이터의 실제 소유권 및 생명주기는 AssetManager가 책임집니다.
 	TObjectPtr<FStaticMesh> StaticMeshAsset;
+
+	// LOD Meshes (LOD0 = 원본, LOD1 = 50%, LOD2 = 25%)
+	TArray<FStaticMesh*> LODMeshes;
 
 	TArray<UMaterial*> Materials;
 };

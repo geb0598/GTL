@@ -108,6 +108,25 @@ void FMatrix::operator*=(const FMatrix& InOtherMatrix)
 	*this = (*this) * InOtherMatrix;
 }
 
+FMatrix FMatrix::operator+(const FMatrix& Other) const
+{
+	FMatrix Result;
+	for (int i = 0; i < 4; ++i) for (int j = 0; j < 4; ++j) Result.Data[i][j] = Data[i][j] + Other.Data[i][j];
+	return Result;
+}
+
+FMatrix& FMatrix::operator+=(const FMatrix& Other)
+{
+	for (int i = 0; i < 4; ++i)
+	{
+		for (int j = 0; j < 4; ++j)
+		{
+			Data[i][j] += Other.Data[i][j];
+		}
+	}
+	return *this;
+}
+
 /**
 * @brief Position의 정보를 행렬로 변환하여 제공하는 함수
 */
@@ -334,5 +353,38 @@ FMatrix FMatrix::Transpose() const
 	_mm_storeu_ps(out.Data[3], row3);
 
 	return out;
+}
+
+float FMatrix::Determinant() const
+{
+	return Data[0][0] * (Data[1][1] * (Data[2][2] * Data[3][3] - Data[2][3] * Data[3][2]) - Data[1][2] * (Data[2][1] * Data[3][3] - Data[2][3] * Data[3][1]) + Data[1][3] * (Data[2][1] * Data[3][2] - Data[2][2] * Data[3][1]))
+		- Data[0][1] * (Data[1][0] * (Data[2][2] * Data[3][3] - Data[2][3] * Data[3][2]) - Data[1][2] * (Data[2][0] * Data[3][3] - Data[2][3] * Data[3][0]) + Data[1][3] * (Data[2][0] * Data[3][2] - Data[2][2] * Data[3][0]))
+		+ Data[0][2] * (Data[1][0] * (Data[2][1] * Data[3][3] - Data[2][3] * Data[3][1]) - Data[1][1] * (Data[2][0] * Data[3][3] - Data[2][3] * Data[3][0]) + Data[1][3] * (Data[2][0] * Data[3][1] - Data[2][1] * Data[3][0]))
+		- Data[0][3] * (Data[1][0] * (Data[2][1] * Data[3][2] - Data[2][2] * Data[3][1]) - Data[1][1] * (Data[2][0] * Data[3][2] - Data[2][2] * Data[3][0]) + Data[1][2] * (Data[2][0] * Data[3][1] - Data[2][1] * Data[3][0]));
+}
+
+FMatrix FMatrix::Inverse() const
+{
+	FMatrix Inv = {};
+	float Det = Determinant();
+	if (fabs(Det) < std::numeric_limits<float>::epsilon()) { return FMatrix::Identity(); }
+	float InvDet = 1.0f / Det;
+	Inv.Data[0][0] = (Data[1][1] * (Data[2][2] * Data[3][3] - Data[2][3] * Data[3][2]) - Data[1][2] * (Data[2][1] * Data[3][3] - Data[2][3] * Data[3][1]) + Data[1][3] * (Data[2][1] * Data[3][2] - Data[2][2] * Data[3][1])) * InvDet;
+	Inv.Data[0][1] = -(Data[0][1] * (Data[2][2] * Data[3][3] - Data[2][3] * Data[3][2]) - Data[0][2] * (Data[2][1] * Data[3][3] - Data[2][3] * Data[3][1]) + Data[0][3] * (Data[2][1] * Data[3][2] - Data[2][2] * Data[3][1])) * InvDet;
+	Inv.Data[0][2] = (Data[0][1] * (Data[1][2] * Data[3][3] - Data[1][3] * Data[3][2]) - Data[0][2] * (Data[1][1] * Data[3][3] - Data[1][3] * Data[3][1]) + Data[0][3] * (Data[1][1] * Data[3][2] - Data[1][2] * Data[3][1])) * InvDet;
+	Inv.Data[0][3] = -(Data[0][1] * (Data[1][2] * Data[2][3] - Data[1][3] * Data[2][2]) - Data[0][2] * (Data[1][1] * Data[2][3] - Data[1][3] * Data[2][1]) + Data[0][3] * (Data[1][1] * Data[2][2] - Data[1][2] * Data[2][1])) * InvDet;
+	Inv.Data[1][0] = -(Data[1][0] * (Data[2][2] * Data[3][3] - Data[2][3] * Data[3][2]) - Data[1][2] * (Data[2][0] * Data[3][3] - Data[2][3] * Data[3][0]) + Data[1][3] * (Data[2][0] * Data[3][2] - Data[2][2] * Data[3][0])) * InvDet;
+	Inv.Data[1][1] = (Data[0][0] * (Data[2][2] * Data[3][3] - Data[2][3] * Data[3][2]) - Data[0][2] * (Data[2][0] * Data[3][3] - Data[2][3] * Data[3][0]) + Data[0][3] * (Data[2][0] * Data[3][2] - Data[2][2] * Data[3][0])) * InvDet;
+	Inv.Data[1][2] = -(Data[0][0] * (Data[1][2] * Data[3][3] - Data[1][3] * Data[3][2]) - Data[0][2] * (Data[1][0] * Data[3][3] - Data[1][3] * Data[3][0]) + Data[0][3] * (Data[1][0] * Data[3][2] - Data[1][2] * Data[3][0])) * InvDet;
+	Inv.Data[1][3] = (Data[0][0] * (Data[1][2] * Data[2][3] - Data[1][3] * Data[2][2]) - Data[0][2] * (Data[1][0] * Data[2][3] - Data[1][3] * Data[2][0]) + Data[0][3] * (Data[1][0] * Data[2][2] - Data[1][2] * Data[2][0])) * InvDet;
+	Inv.Data[2][0] = (Data[1][0] * (Data[2][1] * Data[3][3] - Data[2][3] * Data[3][1]) - Data[1][1] * (Data[2][0] * Data[3][3] - Data[2][3] * Data[3][0]) + Data[1][3] * (Data[2][0] * Data[3][1] - Data[2][1] * Data[3][0])) * InvDet;
+	Inv.Data[2][1] = -(Data[0][0] * (Data[2][1] * Data[3][3] - Data[2][3] * Data[3][1]) - Data[0][1] * (Data[2][0] * Data[3][3] - Data[2][3] * Data[3][0]) + Data[0][3] * (Data[2][0] * Data[3][1] - Data[2][1] * Data[3][0])) * InvDet;
+	Inv.Data[2][2] = (Data[0][0] * (Data[1][1] * Data[3][3] - Data[1][3] * Data[3][1]) - Data[0][1] * (Data[1][0] * Data[3][3] - Data[1][3] * Data[3][0]) + Data[0][3] * (Data[1][0] * Data[3][1] - Data[1][1] * Data[3][0])) * InvDet;
+	Inv.Data[2][3] = -(Data[0][0] * (Data[1][1] * Data[2][3] - Data[1][3] * Data[2][1]) - Data[0][1] * (Data[1][0] * Data[2][3] - Data[1][3] * Data[2][0]) + Data[0][3] * (Data[1][0] * Data[2][1] - Data[1][1] * Data[2][0])) * InvDet;
+	Inv.Data[3][0] = -(Data[1][0] * (Data[2][1] * Data[3][2] - Data[2][2] * Data[3][1]) - Data[1][1] * (Data[2][0] * Data[3][2] - Data[2][2] * Data[3][0]) + Data[1][2] * (Data[2][0] * Data[3][1] - Data[2][1] * Data[3][0])) * InvDet;
+	Inv.Data[3][1] = (Data[0][0] * (Data[2][1] * Data[3][2] - Data[2][2] * Data[3][1]) - Data[0][1] * (Data[2][0] * Data[3][2] - Data[2][2] * Data[3][0]) + Data[0][2] * (Data[2][0] * Data[3][1] - Data[2][1] * Data[3][0])) * InvDet;
+	Inv.Data[3][2] = -(Data[0][0] * (Data[1][1] * Data[3][2] - Data[1][2] * Data[3][1]) - Data[0][1] * (Data[1][0] * Data[3][2] - Data[1][2] * Data[3][0]) + Data[0][2] * (Data[1][0] * Data[3][1] - Data[1][1] * Data[3][0])) * InvDet;
+	Inv.Data[3][3] = (Data[0][0] * (Data[1][1] * Data[2][2] - Data[1][2] * Data[2][1]) - Data[0][1] * (Data[1][0] * Data[2][2] - Data[1][2] * Data[2][0]) + Data[0][2] * (Data[1][0] * Data[2][1] - Data[1][1] * Data[2][0])) * InvDet;
+	return Inv;
 }
 
