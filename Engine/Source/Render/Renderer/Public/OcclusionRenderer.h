@@ -40,6 +40,9 @@ public:
 	{
 		Width = InWidth;
 		Height = InHeight;
+
+		ReleaseHiZResource();
+		CreateHiZResource(Device);
 	}
 
 	void BuildScreenSpaceBoundingVolumes(ID3D11DeviceContext* InDeviceContext, UCamera* InCamera, const TArray<TObjectPtr<UPrimitiveComponent>>& InPrimitiveComponents);

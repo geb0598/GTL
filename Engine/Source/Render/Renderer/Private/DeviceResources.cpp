@@ -263,6 +263,46 @@ void UDeviceResources::CopyDepthSRVToPreviousFrameSRV()
 	newPreviousFrameDepthTexture->Release(); // Release the texture, the SRV holds a reference
 }
 
+void UDeviceResources::OnWindowSizeChanged(uint32 InWidth, uint32 InHeight)
+{
+	if (InWidth == Width && InHeight == Height)
+	{
+		return;
+	}
+
+	// Ensure width and height are at least 1 to avoid issues with D3D11_TEXTURE2D_DESC
+	Width = std::max(1u, InWidth);
+	Height = std::max(1u, InHeight);
+
+	// Release all outstanding references to the swap chain's buffers.
+	ReleaseFrameBuffer();
+	ReleaseDepthBuffer();
+
+	// Clear the render target and depth stencil views from the device context
+	// to ensure no lingering references prevent ResizeBuffers from succeeding.
+	DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
+	DeviceContext->Flush(); // Ensure all pending commands are executed
+
+	// Preserve the existing buffer count and format.
+	// Automatically choose the width and height to match the client rect for HWNDs.
+	HRESULT hr = SwapChain->ResizeBuffers(0, Width, Height, DXGI_FORMAT_UNKNOWN, 0);
+
+	if (FAILED(hr))
+	{
+		// Log the error for debugging
+		// You might want to assert here or handle the error more robustly
+		// For now, just return to prevent further crashes
+		return;
+	}
+
+	// Recreate the render target view and depth stencil view.
+	CreateFrameBuffer();
+	CreateDepthBuffer();
+
+	// Update the viewport to match the new dimensions.
+	UpdateViewport();
+}
+
 void UDeviceResources::CreateFactories()
 {
 	// Direct2D 팩토리 생성

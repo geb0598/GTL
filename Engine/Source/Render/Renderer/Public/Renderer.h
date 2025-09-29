@@ -83,7 +83,7 @@ public:
 	void RenderPrimitiveIndexed(UPipeline& InPipeline, const FEditorPrimitive& InPrimitive, const FRenderState& InRenderState,
 		bool bInUseBaseConstantBuffer, uint32 InStride, uint32 InIndexBufferStride);
 
-	void OnResize(uint32 Inwidth = 0, uint32 InHeight = 0) const;
+	void OnResize(uint32 Inwidth = 0, uint32 InHeight = 0);
 
 	// Create function
 	void CreateVertexShaderAndInputLayout(const wstring& InFilePath,

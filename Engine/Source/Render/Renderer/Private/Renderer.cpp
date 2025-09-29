@@ -930,7 +930,7 @@ ID3D11Buffer* URenderer::CreateIndexBuffer(const void* InIndices, uint32 InByteW
  * @param InWidth 새로운 창 너비
  * @param InHeight 새로운 창 높이
  */
-void URenderer::OnResize(uint32 InWidth, uint32 InHeight) const
+void URenderer::OnResize(uint32 InWidth, uint32 InHeight) 
 {
 	// 필수 리소스가 유효하지 않으면 Early Return
 	if (!DeviceResources || !GetDevice() || !GetDeviceContext() || !GetSwapChain())
@@ -938,24 +938,11 @@ void URenderer::OnResize(uint32 InWidth, uint32 InHeight) const
 		return;
 	}
 
-	// 기존 버퍼들 해제
-	DeviceResources->ReleaseFrameBuffer();
-	DeviceResources->ReleaseDepthBuffer();
-	GetDeviceContext()->OMSetRenderTargets(0, nullptr, nullptr);
+	if (InWidth == 0 || InHeight == 0) return;
 
-	// SwapChain 버퍼 크기 재설정
 	UStatOverlay::GetInstance().PreResize();
-	HRESULT Result = GetSwapChain()->ResizeBuffers(2, InWidth, InHeight, DXGI_FORMAT_UNKNOWN, 0);
-	if (FAILED(Result))
-	{
-		UE_LOG("OnResize Failed");
-		return;
-	}
 
-	// 버퍼 재생성 및 렌더 타겟 설정
-	DeviceResources->UpdateViewport();
-	DeviceResources->CreateFrameBuffer();
-	DeviceResources->CreateDepthBuffer();
+	DeviceResources->OnWindowSizeChanged(InWidth, InHeight);
 
 	// 새로운 렌더 타겟 바인딩
 	auto* RenderTargetView = DeviceResources->GetRenderTargetView();
@@ -964,6 +951,8 @@ void URenderer::OnResize(uint32 InWidth, uint32 InHeight) const
 	UStatOverlay::GetInstance().OnResize();
 
 	UOcclusionRenderer::GetInstance().Resize(InWidth, InHeight);
+
+	bIsFirstPass = true;
 }
 
 /**

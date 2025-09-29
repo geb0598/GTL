@@ -30,6 +30,7 @@ public:
 	void CopyDepthSRVToPreviousFrameSRV();
 	const D3D11_VIEWPORT& GetViewportInfo() const { return ViewportInfo; }
 	void UpdateViewport(float InMenuBarHeight = 0.f);
+	void OnWindowSizeChanged(uint32 InWidth, uint32 InHeight);
 
 	// Direct2D/DirectWrite factory getters
 	ID2D1Factory* GetD2DFactory() const { return D2DFactory; }
