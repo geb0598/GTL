@@ -20,9 +20,7 @@
 
 #include "Render/Renderer/Public/OcclusionRenderer.h"
 
-#ifdef MULTI_THREADING
 #include "cpp-thread-pool/thread_pool.h"
-#endif
 
 #ifdef _
 #define PROFILE_SCOPE(name, expr) \
@@ -421,59 +419,110 @@ void URenderer::RenderBegin() const
  */
 void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewportClient)
 {
-	// Level 없으면 Early Return
 	if (!ULevelManager::GetInstance().GetCurrentLevel())
 	{
 		return;
 	}
 
-	// const auto& PrimitiveComponents = ULevelManager::GetInstance().GetCurrentLevel()->GetLevelPrimitiveComponents();
-
 	const auto PrimitiveComponents = ULevelManager::GetInstance().GetCurrentLevel()->GetVisiblePrimitiveComponents(InCurrentCamera);
 
-	auto& OcclusionRenderer = UOcclusionRenderer::GetInstance();
+	PerformOcclusionCulling(InCurrentCamera, PrimitiveComponents);
 
-	int CullCount = 0;
+#ifdef MULTI_THREADING
+	RenderLevel_MultiThreaded(InCurrentCamera, InViewportClient, PrimitiveComponents);
+#else
+	RenderLevel_SingleThreaded(InCurrentCamera, InViewportClient, PrimitiveComponents);
+#endif
+}
+
+void URenderer::PerformOcclusionCulling(UCamera* InCurrentCamera, const TArray<TObjectPtr<UPrimitiveComponent>>& InPrimitiveComponents)
+{
+	auto& OcclusionRenderer = UOcclusionRenderer::GetInstance();
 
 	if (bIsFirstPass)
 	{
 		bIsFirstPass = false;
+		return;
 	}
-	else
+
+	GetDeviceContext()->Flush();
+
+	PROFILE_SCOPE("GenerateHiZ",
+		OcclusionRenderer.GenerateHiZ(GetDevice(), GetDeviceContext(), DeviceResources->GetPreviousFrameDepthSRV())
+	);
+
+	PROFILE_SCOPE("BuildScreenSpaceBoundingVolumes",
+		OcclusionRenderer.BuildScreenSpaceBoundingVolumes(GetDeviceContext(), InCurrentCamera, InPrimitiveComponents)
+	);
+
+	PROFILE_SCOPE("OcclusionTest",
+		OcclusionRenderer.OcclusionTest(GetDevice(), GetDeviceContext())
+	);
+
+	ID3D11RenderTargetView* RTV = DeviceResources->GetRenderTargetView();
+	GetDeviceContext()->OMSetRenderTargets(1, &RTV, DeviceResources->GetDepthStencilView());
+}
+
+void URenderer::RenderPrimitiveComponent(UPipeline& InPipeline, UPrimitiveComponent* InPrimitiveComponent, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferColor, ID3D11Buffer* InConstantBufferMaterial)
+{
+	switch (InPrimitiveComponent->GetPrimitiveType())
 	{
-		// Unbind the DepthStencilView so it can be used as an SRV for HiZ generation
-		//ID3D11RenderTargetView* NullRTVs[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = { nullptr };
-		//ID3D11DepthStencilView* NullDSV = nullptr;
-		//GetDeviceContext()->OMSetRenderTargets(0, NullRTVs, NullDSV);
-
-		GetDeviceContext()->Flush(); // Added Flush to ensure previous frame's depth copy is complete
-
-		// HiZ 생성 (uses the depth buffer from the *previous* frame as an SRV)
-		PROFILE_SCOPE("GenerateHiZ",
-			OcclusionRenderer.GenerateHiZ(GetDevice(), GetDeviceContext(), DeviceResources->GetPreviousFrameDepthSRV())
-		);
-
-		// 화면 공간 bounding volume 구축
-		PROFILE_SCOPE("BuildScreenSpaceBoundingVolumes",
-			OcclusionRenderer.BuildScreenSpaceBoundingVolumes(GetDeviceContext(), InCurrentCamera, PrimitiveComponents)
-		);
-
-		// 오클루전 테스트
-		PROFILE_SCOPE("OcclusionTest",
-			OcclusionRenderer.OcclusionTest(GetDevice(), GetDeviceContext())
-		);
-
-		// Rebind the DepthStencilView for the current frame's main rendering pass
-		ID3D11RenderTargetView* RTV = DeviceResources->GetRenderTargetView();
-		GetDeviceContext()->OMSetRenderTargets(1, &RTV, DeviceResources->GetDepthStencilView());
+	case EPrimitiveType::BillBoard:
+		// Billboards are rendered on the main thread after all other primitives
+		break;
+	case EPrimitiveType::StaticMesh:
+		RenderStaticMesh(InPipeline, Cast<UStaticMeshComponent>(InPrimitiveComponent), InRasterizerState, InConstantBufferModels, InConstantBufferMaterial);
+		break;
+	default:
+		RenderPrimitiveDefault(InPipeline, InPrimitiveComponent, InRasterizerState, InConstantBufferModels, InConstantBufferColor);
+		break;
 	}
+}
 
+void URenderer::RenderLevel_SingleThreaded(UCamera* InCurrentCamera, FViewportClient& InViewportClient, const TArray<TObjectPtr<UPrimitiveComponent>>& InPrimitiveComponents)
+{
+	auto& OcclusionRenderer = UOcclusionRenderer::GetInstance();
 	TObjectPtr<UBillBoardComponent> BillBoard = nullptr;
 
-#ifdef MULTI_THREADING
+	for (size_t i = 0; i < InPrimitiveComponents.size(); ++i)
+	{
+		auto PrimitiveComponent = InPrimitiveComponents[i];
+
+		if (!PrimitiveComponent || !PrimitiveComponent->IsVisible() || !OcclusionRenderer.IsPrimitiveVisible(PrimitiveComponent))
+		{
+			continue;
+		}
+
+		FRenderState RenderState = PrimitiveComponent->GetRenderState();
+		const EViewModeIndex ViewMode = ULevelManager::GetInstance().GetEditor()->GetViewMode();
+		if (ViewMode == EViewModeIndex::VMI_Wireframe)
+		{
+			RenderState.CullMode = ECullMode::None;
+			RenderState.FillMode = EFillMode::WireFrame;
+		}
+		ID3D11RasterizerState* LoadedRasterizerState = GetRasterizerState(RenderState);
+
+		if (PrimitiveComponent->GetPrimitiveType() == EPrimitiveType::BillBoard)
+		{
+			BillBoard = Cast<UBillBoardComponent>(PrimitiveComponent);
+		}
+		else
+		{
+			RenderPrimitiveComponent(*Pipeline, PrimitiveComponent, LoadedRasterizerState, ConstantBufferModels, ConstantBufferColor, ConstantBufferMaterial);
+		}
+	}
+
+	if (BillBoard)
+	{
+		RenderBillboard(BillBoard, InCurrentCamera);
+	}
+}
+
+void URenderer::RenderLevel_MultiThreaded(UCamera* InCurrentCamera, FViewportClient& InViewportClient, const TArray<TObjectPtr<UPrimitiveComponent>>& InPrimitiveComponents)
+{
 	static ThreadPool Pool(NUM_WORKER_THREADS);
 
-	const size_t NumPrimitives = PrimitiveComponents.size();
+	const size_t NumPrimitives = InPrimitiveComponents.size();
 	const size_t ChunkSize = (NumPrimitives + NUM_WORKER_THREADS - 1) / NUM_WORKER_THREADS;
 
 	CommandLists.clear();
@@ -487,7 +536,7 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 
 		if (StartIndex >= EndIndex) continue;
 
-		Futures.emplace_back(Pool.Enqueue([this, StartIndex, EndIndex, &PrimitiveComponents, &OcclusionRenderer, i, &InViewportClient]()
+		Futures.emplace_back(Pool.Enqueue([this, StartIndex, EndIndex, &InPrimitiveComponents, i, &InViewportClient]()
 		{
 			ID3D11DeviceContext* DeferredContext = DeferredContexts[i];
 			if (!DeferredContext)
@@ -509,8 +558,8 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 
 			for (size_t j = StartIndex; j < EndIndex; ++j)
 			{
-				UPrimitiveComponent* PrimitiveComponent = PrimitiveComponents[j];
-				if (!PrimitiveComponent || !PrimitiveComponent->IsVisible() || !OcclusionRenderer.IsPrimitiveVisible(PrimitiveComponent))
+				UPrimitiveComponent* PrimitiveComponent = InPrimitiveComponents[j];
+				if (!PrimitiveComponent || !PrimitiveComponent->IsVisible() || !UOcclusionRenderer::GetInstance().IsPrimitiveVisible(PrimitiveComponent))
 				{
 					continue;
 				}
@@ -524,18 +573,7 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 				}
 				ID3D11RasterizerState* LoadedRasterizerState = GetRasterizerState(RenderState);
 
-				switch (PrimitiveComponent->GetPrimitiveType())
-				{
-				case EPrimitiveType::BillBoard:
-					// Billboards are rendered on the main thread after all other primitives
-					break;
-				case EPrimitiveType::StaticMesh:
-					RenderStaticMesh(ThreadPipeline, Cast<UStaticMeshComponent>(PrimitiveComponent), LoadedRasterizerState, ThreadCBModels, ThreadCBMaterials);
-					break;
-				default:
-					RenderPrimitiveDefault(ThreadPipeline, PrimitiveComponent, LoadedRasterizerState, ThreadCBModels, ThreadCBColors);
-					break;
-				}
+				RenderPrimitiveComponent(ThreadPipeline, PrimitiveComponent, LoadedRasterizerState, ThreadCBModels, ThreadCBColors, ThreadCBMaterials);
 			}
 			DeferredContext->FinishCommandList(FALSE, &CommandLists[i]);
 		}));
@@ -556,59 +594,19 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 	}
 	CommandLists.clear();
 
-#else
-	for (size_t i = 0; i < PrimitiveComponents.size(); ++i) {
-		auto PrimitiveComponent = PrimitiveComponents[i];
-		//PROFILE_SCOPE("Single Culling", ULevelManager::GetInstance().GetCurrentLevel()->GetVisiblePrimitiveComponents(InCurrentCamera))
-		// TODO(KHJ) Visible 여기서 Control 하고 있긴 한데 맞는지 Actor 단위 렌더링 할 때도 이렇게 써야할지 고민 필요
-
-		// ======================== DEBUG ========================== //
-		if (!OcclusionRenderer.IsPrimitiveVisible(PrimitiveComponent))
+	TObjectPtr<UBillBoardComponent> BillBoard = nullptr;
+	for (size_t i = 0; i < InPrimitiveComponents.size(); ++i)
+	{
+		if (InPrimitiveComponents[i]->GetPrimitiveType() == EPrimitiveType::BillBoard)
 		{
-			++CullCount;
-		}
-		// ======================== DEBUG ========================== //
-
-		if (!PrimitiveComponent || !PrimitiveComponent->IsVisible() || !OcclusionRenderer.IsPrimitiveVisible(PrimitiveComponent))
-		{
-			continue;
-		}
-
-		// Get view mode from editor
-		FRenderState RenderState = PrimitiveComponent->GetRenderState();
-		const EViewModeIndex ViewMode = ULevelManager::GetInstance().GetEditor()->GetViewMode();
-		if (ViewMode == EViewModeIndex::VMI_Wireframe)
-		{
-			RenderState.CullMode = ECullMode::None;
-			RenderState.FillMode = EFillMode::WireFrame;
-		}
-		ID3D11RasterizerState* LoadedRasterizerState = GetRasterizerState(RenderState);
-
-		switch (PrimitiveComponent->GetPrimitiveType())
-		{
-		case EPrimitiveType::BillBoard:
-			BillBoard = Cast<UBillBoardComponent>(PrimitiveComponent);
-			break;
-		case EPrimitiveType::StaticMesh:
-			//RenderStaticMesh(*Pipeline, Cast<UStaticMeshComponent>(PrimitiveComponent), LoadedRasterizerState, ConstantBufferModels, ConstantBufferMaterial);
-			RenderStaticMesh(*Pipeline, Cast<UStaticMeshComponent>(PrimitiveComponent), LoadedRasterizerState, ConstantBufferModels, ConstantBufferMaterial);
-			break;
-		default:
-			//RenderPrimitiveDefault(*Pipeline, PrimitiveComponent, LoadedRasterizerState, ConstantBufferModels, ConstantBufferColor);
-			RenderPrimitiveDefault(*Pipeline, PrimitiveComponent, LoadedRasterizerState, ConstantBufferModels, ConstantBufferColor);
+			BillBoard = Cast<UBillBoardComponent>(InPrimitiveComponents[i]);
 			break;
 		}
 	}
-
-	//UE_LOG("Primitive Count: %d", PrimitiveComponents.size());
-	//UE_LOG("Culled Count:	 %d", CullCount);
-
-#endif
 	if (BillBoard)
 	{
 		RenderBillboard(BillBoard, InCurrentCamera);
 	}
-	
 }
 
 /**

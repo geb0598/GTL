@@ -81,14 +81,14 @@ public:
 	void RenderPrimitiveDefault(UPipeline& InPipeline, UPrimitiveComponent* InPrimitiveComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferColor);
 	void RenderPrimitive(UPipeline& InPipeline, const FEditorPrimitive& InPrimitive, const FRenderState& InRenderState);
 	void RenderPrimitiveIndexed(UPipeline& InPipeline, const FEditorPrimitive& InPrimitive, const FRenderState& InRenderState,
-	                            bool bInUseBaseConstantBuffer, uint32 InStride, uint32 InIndexBufferStride);
+		bool bInUseBaseConstantBuffer, uint32 InStride, uint32 InIndexBufferStride);
 
 	void OnResize(uint32 Inwidth = 0, uint32 InHeight = 0) const;
 
 	// Create function
 	void CreateVertexShaderAndInputLayout(const wstring& InFilePath,
-									  const TArray<D3D11_INPUT_ELEMENT_DESC>& InInputLayoutDescriptions,
-									  ID3D11VertexShader** OutVertexShader, ID3D11InputLayout** OutInputLayout);
+		const TArray<D3D11_INPUT_ELEMENT_DESC>& InInputLayoutDescriptions,
+		ID3D11VertexShader** OutVertexShader, ID3D11InputLayout** OutInputLayout);
 	ID3D11Buffer* CreateVertexBuffer(FNormalVertex* InVertices, uint32 InByteWidth) const;
 	ID3D11Buffer* CreateVertexBuffer(FVector* InVertices, uint32 InByteWidth, bool bCpuAccess) const;
 	ID3D11Buffer* CreateIndexBuffer(const void* InIndices, uint32 InByteWidth) const;
@@ -121,6 +121,10 @@ public:
 	void SetIsResizing(bool isResizing) { bIsResizing = isResizing; }
 
 private:
+	void PerformOcclusionCulling(UCamera* InCurrentCamera, const TArray<TObjectPtr<UPrimitiveComponent>>& InPrimitiveComponents);
+	void RenderPrimitiveComponent(UPipeline& InPipeline, UPrimitiveComponent* InPrimitiveComponent, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferColor, ID3D11Buffer* InConstantBufferMaterial);
+	void RenderLevel_SingleThreaded(UCamera* InCurrentCamera, FViewportClient& InViewportClient, const TArray<TObjectPtr<UPrimitiveComponent>>& InPrimitiveComponents);
+	void RenderLevel_MultiThreaded(UCamera* InCurrentCamera, FViewportClient& InViewportClient, const TArray<TObjectPtr<UPrimitiveComponent>>& InPrimitiveComponents);
 	UPipeline* Pipeline = nullptr;
 	UDeviceResources* DeviceResources = nullptr;
 	UFontRenderer* FontRenderer = nullptr;
@@ -134,7 +138,7 @@ private:
 	ID3D11Buffer* ConstantBufferBatchLine = nullptr;
 	ID3D11Buffer* ConstantBufferMaterial = nullptr;
 
-	FLOAT ClearColor[4] = {0.025f, 0.025f, 0.025f, 1.0f};
+	FLOAT ClearColor[4] = { 0.025f, 0.025f, 0.025f, 1.0f };
 
 	ID3D11VertexShader* DefaultVertexShader = nullptr;
 	ID3D11PixelShader* DefaultPixelShader = nullptr;
@@ -164,9 +168,9 @@ private:
 		size_t operator()(const FRasterKey& InKey) const noexcept
 		{
 			auto Mix = [](size_t& H, size_t V)
-			{
-				H ^= V + 0x9e3779b97f4a7c15ULL + (H << 6) + (H << 2);
-			};
+				{
+					H ^= V + 0x9e3779b97f4a7c15ULL + (H << 6) + (H << 2);
+				};
 
 			size_t H = 0;
 			Mix(H, (size_t)InKey.FillMode);
@@ -184,15 +188,11 @@ private:
 
 	bool bIsFirstPass = true;
 
-#ifdef MULTI_THREADING
 	constexpr static size_t NUM_WORKER_THREADS = 4;
-
-	mutable std::mutex RasterCacheMutex;
 
 	TArray<ID3D11DeviceContext*> DeferredContexts;
 	TArray<ID3D11Buffer*> ThreadConstantBufferModels;
 	TArray<ID3D11Buffer*> ThreadConstantBufferColors;
 	TArray<ID3D11Buffer*> ThreadConstantBufferMaterials;
 	TArray<ID3D11CommandList*> CommandLists;
-#endif
 };
