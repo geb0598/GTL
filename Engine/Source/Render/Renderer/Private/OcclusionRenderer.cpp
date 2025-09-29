@@ -371,13 +371,20 @@ void UOcclusionRenderer::OcclusionTest(ID3D11Device* InDevice, ID3D11DeviceConte
 	if (SUCCEEDED(hResult))
 	{
 		uint32* flags = reinterpret_cast<uint32*>(MappedResource.pData);
+		uint32 CulledObjectCount = 0;
 		for (size_t i = 0; i < BoundingVolumes.size(); ++i)
 		{
 			auto& history = VisibilityHistory[PrimitiveComponentUUIDs[i]];
 			history <<= 1;
 			history |= (flags[i] == 1 ? 1u : 0u);
+			if (flags[i] == 0)
+			{
+				CulledObjectCount++;
+			}
 		}
 		InDeviceContext->Unmap(ReadbackBuffer, 0);
+
+		UE_LOG("Occlusion Culling: %d objects culled this frame.", CulledObjectCount);
 	}
 
 	// ========================================================= //
