@@ -420,7 +420,9 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 		return;
 	}
 
-	const auto& PrimitiveComponents = ULevelManager::GetInstance().GetCurrentLevel()->GetLevelPrimitiveComponents();
+	// const auto& PrimitiveComponents = ULevelManager::GetInstance().GetCurrentLevel()->GetLevelPrimitiveComponents();
+
+	const auto PrimitiveComponents = ULevelManager::GetInstance().GetCurrentLevel()->GetVisiblePrimitiveComponents(InCurrentCamera);
 
 	auto& OcclusionRenderer = UOcclusionRenderer::GetInstance();
 
@@ -549,6 +551,7 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 	int CullCount = 0;
 	for (size_t i = 0; i < PrimitiveComponents.size(); ++i) {
 		auto PrimitiveComponent = PrimitiveComponents[i];
+		//PROFILE_SCOPE("Single Culling", ULevelManager::GetInstance().GetCurrentLevel()->GetVisiblePrimitiveComponents(InCurrentCamera))
 		// TODO(KHJ) Visible 여기서 Control 하고 있긴 한데 맞는지 Actor 단위 렌더링 할 때도 이렇게 써야할지 고민 필요
 
 		// ======================== DEBUG ========================== //

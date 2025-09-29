@@ -1,4 +1,5 @@
 #pragma once
+
 struct FVector;
 struct FVector4;
 
@@ -42,6 +43,8 @@ struct FMatrix
 	*/
 	FMatrix operator*(const FMatrix& InOtherMatrix);
 	void operator*=(const FMatrix& InOtherMatrix);
+	FMatrix operator+(const FMatrix& Other) const;
+	FMatrix& operator+=(const FMatrix& Other);
 
 	/**
 	* @brief Position의 정보를 행렬로 변환하여 제공하는 함수
@@ -88,4 +91,8 @@ struct FMatrix
 	static FVector VectorMultiply(const FVector& v, const FMatrix& m);
 
 	FMatrix Transpose() const;
+
+	float Determinant() const;
+
+	FMatrix Inverse() const;
 };

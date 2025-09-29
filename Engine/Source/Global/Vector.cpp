@@ -59,6 +59,11 @@ FVector FVector::operator*(const float InRatio) const
 	return { X * InRatio, Y * InRatio, Z * InRatio };
 }
 
+FVector FVector::operator/(const float InRatio) const
+{
+	return { X / InRatio, Y / InRatio, Z / InRatio };
+}
+
 /**
  * @brief 자신의 벡터에 다른 벡터를 가산하는 함수
  */
@@ -159,16 +164,26 @@ FVector4 FVector4::operator+(const FVector4& InOtherVector) const
 	);
 }
 
-FVector4 FVector4::operator*(const FMatrix& InMatrix) const
+FVector4 FVector4::operator*(const FMatrix& m) const
 {
-	FVector4 Result;
-	Result.X = X * InMatrix.Data[0][0] + Y * InMatrix.Data[1][0] + Z * InMatrix.Data[2][0] + W * InMatrix.Data[3][0];
-	Result.Y = X * InMatrix.Data[0][1] + Y * InMatrix.Data[1][1] + Z * InMatrix.Data[2][1] + W * InMatrix.Data[3][1];
-	Result.Z = X * InMatrix.Data[0][2] + Y * InMatrix.Data[1][2] + Z * InMatrix.Data[2][2] + W * InMatrix.Data[3][2];
-	Result.W = X * InMatrix.Data[0][3] + Y * InMatrix.Data[1][3] + Z * InMatrix.Data[2][3] + W * InMatrix.Data[3][3];
+	FVector4 out;
+	__m128 v = _mm_setr_ps(X, Y, Z, W);
 
-	return Result;
+	__m128 vx = _mm_shuffle_ps(v, v, _MM_SHUFFLE(0,0,0,0)); // X
+	__m128 vy = _mm_shuffle_ps(v, v, _MM_SHUFFLE(1,1,1,1)); // Y
+	__m128 vz = _mm_shuffle_ps(v, v, _MM_SHUFFLE(2,2,2,2)); // Z
+	__m128 vw = _mm_shuffle_ps(v, v, _MM_SHUFFLE(3,3,3,3)); // W
+
+	__m128 r0 = _mm_mul_ps(vx, _mm_loadu_ps(m.Data[0])); // row0
+	__m128 r1 = _mm_mul_ps(vy, _mm_loadu_ps(m.Data[1])); // row1
+	__m128 r2 = _mm_mul_ps(vz, _mm_loadu_ps(m.Data[2])); // row2
+	__m128 r3 = _mm_mul_ps(vw, _mm_loadu_ps(m.Data[3])); // row3
+
+	__m128 res = _mm_add_ps(_mm_add_ps(r0, r1), _mm_add_ps(r2, r3));
+	_mm_storeu_ps(&out.X, res);
+	return out;
 }
+
 /**
  * @brief 두 벡터를 뺀 새로운 벡터를 반환하는 함수
  */

@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Public/ScopeCycleCounter.h"
+
 #ifdef MULTI_THREADING
 #include "cpp-thread-pool/thread_pool.h"
 #endif
@@ -14,6 +16,9 @@
 #include "Level/Public/Level.h"
 #include "Manager/Input/Public/InputManager.h"
 #include "Physics/Public/AABB.h"
+#include "Component/Mesh/Public/StaticMeshComponent.h"
+#include "Component/Mesh/Public/StaticMesh.h"
+#include "Physics/Public/RayIntersection.h"
 #include "Manager/BVH/public/BVHManager.h"
 
 FRay UObjectPicker::GetModelRay(const FRay& Ray, UPrimitiveComponent* Primitive) const
@@ -27,8 +32,9 @@ FRay UObjectPicker::GetModelRay(const FRay& Ray, UPrimitiveComponent* Primitive)
 	return ModelRay;
 }
 
-UPrimitiveComponent* UObjectPicker::PickPrimitive(const FRay& WorldRay, TArray<TObjectPtr<UPrimitiveComponent>> Candidate, float* OutDistance)
+UPrimitiveComponent* UObjectPicker::PickPrimitive(const FRay& WorldRay, const TArray<TObjectPtr<UPrimitiveComponent>>& Candidates, float* OutDistance)
 {
+	(void)Candidates;
 	UPrimitiveComponent* ShortestPrimitive = nullptr;
 	float PrimitiveDistance = D3D11_FLOAT32_MAX;
 
@@ -91,11 +97,13 @@ void UObjectPicker::PickGizmo(UCamera* InActiveCamera, const FRay& WorldRay, UGi
 		for (int a = 0; a < 3; a++)
 		{
 			FVector GizmoAxis = GizmoAxises[a];
-			A = 1 - static_cast<float>(pow(WorldRay.Direction.Dot3(GizmoAxis), 2));
+			float dDotA = WorldRay.Direction.Dot3(GizmoAxis);
+			A = 1 - (dDotA * dDotA);
 			B = WorldRay.Direction.Dot3(GizmoDistanceVector) - WorldRay.Direction.Dot3(GizmoAxis) * GizmoDistanceVector.
 				Dot(GizmoAxis); //B가 2의 배수이므로 미리 약분
-			C = static_cast<float>(GizmoDistanceVector.Dot(GizmoDistanceVector) -
-				pow(GizmoDistanceVector.Dot(GizmoAxis), 2)) - GizmoRadius * GizmoRadius;
+			float distDotA = GizmoDistanceVector.Dot(GizmoAxis);
+			C = (GizmoDistanceVector.Dot(GizmoDistanceVector) -
+				distDotA * distDotA) - GizmoRadius * GizmoRadius;
 
 			Det = B * B - A * C;
 			if (Det >= 0) //판별식 0이상 => 근 존재. 높이테스트만 통과하면 충돌
@@ -178,45 +186,104 @@ bool UObjectPicker::DoesRayIntersectPrimitive(
 bool UObjectPicker::DoesRayIntersectPrimitive_MollerTrumbore(const FRay& InWorldRay,
 	UPrimitiveComponent* InPrimitive, float* OutShortestDistance) const
 {
-	const uint32 NumVertices = InPrimitive->GetNumVertices();
-	const uint32 NumIndices = InPrimitive->GetNumIndices();
+	if (!InPrimitive || !OutShortestDistance)
+	{
+		return false;
+	}
 
 	const TArray<FNormalVertex>* Vertices = InPrimitive->GetVerticesData();
 	const TArray<uint32>* Indices = InPrimitive->GetIndicesData();
 
-	float Distance = D3D11_FLOAT32_MAX; //Distance 초기화
+	if (!Vertices || Vertices->empty())
+	{
+		return false;
+	}
+
+	FRay ModelRay = GetModelRay(InWorldRay, InPrimitive);
+
+	float LocalShortest = FLT_MAX;
+	if (OutShortestDistance && *OutShortestDistance > 0.0f)
+	{
+		LocalShortest = *OutShortestDistance;
+	}
 	bool bIsHit = false;
 
-	const int32 NumTriangles = (NumIndices > 0) ? (NumIndices / 3) : (NumVertices / 3);
-
-	for (int32 TriIndex = 0; TriIndex < NumTriangles; TriIndex++) //삼각형 단위로 Vertex 위치정보 읽음
+	bool bBVHHit = false;
+	const bool bBVHExecuted = RaycastMeshTrianglesBVH(ModelRay, InPrimitive, LocalShortest, bBVHHit);
+	if (bBVHExecuted && bBVHHit)
 	{
-		FVector TriangleVertices[3];
+		bIsHit = true;
+	}
 
-		// 인덱스 버퍼 사용 여부에 따라 정점 구성
-		if (Indices)
-		{
-			TriangleVertices[0] = (*Vertices)[(*Indices)[TriIndex * 3 + 0]].Position;
-			TriangleVertices[1] = (*Vertices)[(*Indices)[TriIndex * 3 + 1]].Position;
-			TriangleVertices[2] = (*Vertices)[(*Indices)[TriIndex * 3 + 2]].Position;
-		}
-		else
-		{
-			TriangleVertices[0] = (*Vertices)[TriIndex * 3 + 0].Position;
-			TriangleVertices[1] = (*Vertices)[TriIndex * 3 + 1].Position;
-			TriangleVertices[2] = (*Vertices)[TriIndex * 3 + 2].Position;
-		}
+	const bool bNeedsFallback = !bBVHExecuted || !bBVHHit;
+	if (bNeedsFallback)
+	{
+		const bool bHasIndices = Indices && !Indices->empty();
+		const size_t TriangleCount = bHasIndices ? (Indices->size() / 3) : (Vertices->size() / 3);
 
-		if (DoesRayIntersectTriangle(InWorldRay, InPrimitive, TriangleVertices[0],
-			TriangleVertices[1], TriangleVertices[2], &Distance))
-			//Ray와 삼각형이 충돌하면 거리 비교 후 최단거리 갱신
+		for (size_t TriIndex = 0; TriIndex < TriangleCount; ++TriIndex)
 		{
-			bIsHit = true;
-			*OutShortestDistance = std::min(Distance, *OutShortestDistance);
+			FVector V0;
+			FVector V1;
+			FVector V2;
+
+			if (bHasIndices)
+			{
+				const size_t Base = TriIndex * 3;
+				const uint32 I0 = (*Indices)[Base + 0];
+				const uint32 I1 = (*Indices)[Base + 1];
+				const uint32 I2 = (*Indices)[Base + 2];
+				V0 = (*Vertices)[I0].Position;
+				V1 = (*Vertices)[I1].Position;
+				V2 = (*Vertices)[I2].Position;
+			}
+			else
+			{
+				const size_t Base = TriIndex * 3;
+				V0 = (*Vertices)[Base + 0].Position;
+				V1 = (*Vertices)[Base + 1].Position;
+				V2 = (*Vertices)[Base + 2].Position;
+			}
+
+			float Distance = 0.0f;
+			if (RayTriangleIntersectModel(ModelRay, V0, V1, V2, Distance) && Distance < LocalShortest)
+			{
+				LocalShortest = Distance;
+				bIsHit = true;
+			}
 		}
 	}
 
+	if (bIsHit)
+	{
+		*OutShortestDistance = LocalShortest;
+	}
+
 	return bIsHit;
+}
+
+bool UObjectPicker::RaycastMeshTrianglesBVH(const FRay& ModelRay, UPrimitiveComponent* InPrimitive, float& InOutDistance, bool& OutHit) const
+{
+	OutHit = false;
+	if (!InPrimitive || InPrimitive->GetPrimitiveType() != EPrimitiveType::StaticMesh)
+	{
+		return false;
+	}
+
+	auto* StaticMeshComponent = static_cast<UStaticMeshComponent*>(InPrimitive);
+	if (!StaticMeshComponent)
+	{
+		return false;
+	}
+
+	UStaticMesh* StaticMesh = StaticMeshComponent->GetStaticMesh();
+	if (!StaticMesh)
+	{
+		return false;
+	}
+
+	OutHit = StaticMesh->RaycastTriangleBVH(ModelRay, InOutDistance);
+	return true;
 }
 
 bool UObjectPicker::DoesRayIntersectTriangle(const FRay& InRay, UPrimitiveComponent* InPrimitive,
@@ -224,48 +291,17 @@ bool UObjectPicker::DoesRayIntersectTriangle(const FRay& InRay, UPrimitiveCompon
 {
 	FRay ModelRay = GetModelRay(InRay, InPrimitive);
 
-	//삼각형 내의 점은 E1*V + E2*U + Vertex1.Position으로 표현 가능( 0<= U + V <=1,  Y>=0, V>=0 )
-	//Ray.Direction * T + Ray.Origin = E1*V + E2*U + Vertex1.Position을 만족하는 T U V값을 구해야 함.
-	//[E1 E2 RayDirection][V U T] = [RayOrigin-Vertex1.Position]에서 cramer's rule을 이용해서 T U V값을 구하고
-	//U V값이 저 위의 조건을 만족하고 T값이 카메라의 near값 이상이어야 함.
-	FVector RayDirection{ModelRay.Direction.X, ModelRay.Direction.Y, ModelRay.Direction.Z};
-	FVector RayOrigin{ModelRay.Origin.X, ModelRay.Origin.Y, ModelRay.Origin.Z};
-	FVector E1 = Vertex2 - Vertex1;
-	FVector E2 = Vertex3 - Vertex1;
-	FVector Result = (RayOrigin - Vertex1); //[E1 E2 -RayDirection]x = [RayOrigin - Vertex1.Position] 의 result임.
-
-
-	FVector CrossE2Ray = E2.Cross(RayDirection);
-	FVector CrossE1Result = E1.Cross(Result);
-
-	float Determinant = E1.Dot(CrossE2Ray);
-
-	float NoInverse = 0.0001f; //0.0001이하면 determinant가 0이라고 판단=>역행렬 존재 X
-	if (abs(Determinant) <= NoInverse)
+	float Distance = 0.0f;
+	if (!RayTriangleIntersectModel(ModelRay, Vertex1, Vertex2, Vertex3, Distance))
 	{
 		return false;
 	}
 
-	float V = Result.Dot(CrossE2Ray) / Determinant; //cramer's rule로 해를 구했음. 이게 0미만 1초과면 충돌하지 않음.
-
-	if (V < 0 || V > 1)
+	if (OutDistance)
 	{
-		return false;
+		*OutDistance = Distance;
 	}
 
-	float U = RayDirection.Dot(CrossE1Result) / Determinant;
-	if (U < 0 || U + V > 1)
-	{
-		return false;
-	}
-
-	float T = E2.Dot(CrossE1Result) / Determinant;
-	if (T < 0)
-	{
-		return false;
-	}
-
-	*OutDistance = T;
 	return true;
 }
 
@@ -285,3 +321,5 @@ bool UObjectPicker::DoesRayIntersectPlane(const FRay& WorldRay, FVector PlanePoi
 
 	return true;
 }
+
+

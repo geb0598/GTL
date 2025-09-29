@@ -2,6 +2,7 @@
 #include "Core/Public/Object.h"
 class UConfigManager;
 
+struct FViewProperties;
 enum class ECameraType
 {
 	ECT_Orthographic,
@@ -10,6 +11,9 @@ enum class ECameraType
 
 class UCamera : public UObject
 {
+
+	DECLARE_CLASS(UCamera, UObject)
+
 public:
 	// Camera Speed Constants
 	static constexpr float MIN_SPEED = 10.0f;
@@ -100,6 +104,7 @@ private:
 	float FarZ = {};
 	float OrthoWidth = {};
 	ECameraType CameraType = {};
+
 
 	// Dynamic Movement Speed
 	float CurrentMoveSpeed = DEFAULT_SPEED;
