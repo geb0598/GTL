@@ -182,6 +182,8 @@ private:
 
 	bool bIsResizing = false;
 
+	bool bIsFirstPass = true;
+
 #ifdef MULTI_THREADING
 	constexpr static size_t NUM_WORKER_THREADS = 4;
 

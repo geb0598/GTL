@@ -44,12 +44,12 @@ public:
 
 	void DepthPrePass(ID3D11DeviceContext* InDeviceContext, UCamera* InCamera, const TArray<TObjectPtr<UPrimitiveComponent>>& InPrimitiveComponents);
 
-	void GenerateHiZ(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext);
+	void GenerateHiZ(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, ID3D11ShaderResourceView* InDepthShaderResourceView);
 
-	void OcclusionTest(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, UCamera* InCamera, TArray<bool>& OutVisibilityResults);
+	void OcclusionTest(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, TArray<bool>& OutVisibilityResults);
 
 private:
-	static constexpr size_t NUM_WORKER_THREADS = 4;
+	static constexpr size_t NUM_WORKER_THREADS = 8;
 
 	void CreateShader(ID3D11Device* InDevice);
 	void CreateDepthResource(ID3D11Device* InDevice);

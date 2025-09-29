@@ -24,6 +24,15 @@
 #include "cpp-thread-pool/thread_pool.h"
 #endif
 
+#define PROFILE_SCOPE(name, expr) \
+    { \
+        auto __start = std::chrono::high_resolution_clock::now(); \
+        expr; \
+        auto __end = std::chrono::high_resolution_clock::now(); \
+        double __ms = std::chrono::duration<double, std::milli>(__end - __start).count(); \
+        UE_LOG("%s took %.3f ms", name, __ms); \
+    }
+
 IMPLEMENT_SINGLETON_CLASS_BASE(URenderer)
 
 URenderer::URenderer() = default;
@@ -388,8 +397,8 @@ void URenderer::RenderBegin() const
 {
 	auto* RenderTargetView = DeviceResources->GetRenderTargetView();
 	GetDeviceContext()->ClearRenderTargetView(RenderTargetView, ClearColor);
-	auto* DepthStencilView = DeviceResources->GetDepthStencilView();
-	GetDeviceContext()->ClearDepthStencilView(DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	//auto* DepthStencilView = DeviceResources->GetDepthStencilView();
+	//GetDeviceContext()->ClearDepthStencilView(DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 	ID3D11RenderTargetView* rtvs[] = { RenderTargetView }; // 배열 생성
 
@@ -411,12 +420,49 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 	const auto& PrimitiveComponents = ULevelManager::GetInstance().GetCurrentLevel()->GetLevelPrimitiveComponents();
 
 	auto& OcclusionRenderer = UOcclusionRenderer::GetInstance();
-	//OcclusionRenderer.BuildScreenSpaceBoundingVolumes(GetDeviceContext(), InCurrentCamera, PrimitiveComponents);
-	OcclusionRenderer.DepthPrePass(GetDeviceContext(), InCurrentCamera, PrimitiveComponents);
-	OcclusionRenderer.GenerateHiZ(GetDevice(), GetDeviceContext());
-	OcclusionRenderer.BuildScreenSpaceBoundingVolumes(GetDeviceContext(), InCurrentCamera, PrimitiveComponents);
+
+	// Depth Pre-Pass
+	//PROFILE_SCOPE("DepthPrePass",
+	//	OcclusionRenderer.DepthPrePass(GetDeviceContext(), InCurrentCamera, PrimitiveComponents)
+	//);
+
 	TArray<bool> VisibilityResults;
-	OcclusionRenderer.OcclusionTest(GetDevice(), GetDeviceContext(), InCurrentCamera, VisibilityResults);
+	if (bIsFirstPass)
+	{
+		bIsFirstPass = false;
+		VisibilityResults.resize(PrimitiveComponents.size(), true);
+	}
+	else
+	{
+		// Unbind the DepthStencilView so it can be used as an SRV for HiZ generation
+		ID3D11RenderTargetView* NullRTVs[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = { nullptr };
+		ID3D11DepthStencilView* NullDSV = nullptr;
+		GetDeviceContext()->OMSetRenderTargets(0, NullRTVs, NullDSV);
+
+		// HiZ 생성 (uses the depth buffer from the *previous* frame as an SRV)
+		PROFILE_SCOPE("GenerateHiZ",
+			OcclusionRenderer.GenerateHiZ(GetDevice(), GetDeviceContext(), DeviceResources->GetDetphShaderResourceView())
+		);
+
+		// 화면 공간 bounding volume 구축
+		PROFILE_SCOPE("BuildScreenSpaceBoundingVolumes",
+			OcclusionRenderer.BuildScreenSpaceBoundingVolumes(GetDeviceContext(), InCurrentCamera, PrimitiveComponents)
+		);
+
+		// 오클루전 테스트
+		PROFILE_SCOPE("OcclusionTest",
+			OcclusionRenderer.OcclusionTest(GetDevice(), GetDeviceContext(), VisibilityResults)
+		);
+
+		// Rebind the DepthStencilView for the current frame's main rendering pass
+		ID3D11RenderTargetView* RTV = DeviceResources->GetRenderTargetView();
+		GetDeviceContext()->OMSetRenderTargets(1, &RTV, DeviceResources->GetDepthStencilView());
+
+		// Clear the DepthStencilView for the current frame's main rendering pass
+		auto* DepthStencilView = DeviceResources->GetDepthStencilView();
+		GetDeviceContext()->ClearDepthStencilView(DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	}
+
 
 	UE_LOG("Total Primitives: %d", PrimitiveComponents.size());
 	int CulledCnt = 0;
@@ -445,7 +491,7 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 
 		if (StartIndex >= EndIndex) continue;
 
-		Futures.emplace_back(Pool.Enqueue([this, StartIndex, EndIndex, &PrimitiveComponents, InCurrentCamera, i, &InViewportClient]()
+		Futures.emplace_back(Pool.Enqueue([this, StartIndex, EndIndex, &PrimitiveComponents, &VisibilityResults, InCurrentCamera, i, &InViewportClient]()
 		{
 			ID3D11DeviceContext* DeferredContext = DeferredContexts[i];
 			if (!DeferredContext)
@@ -468,7 +514,7 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 			for (size_t j = StartIndex; j < EndIndex; ++j)
 			{
 				UPrimitiveComponent* PrimitiveComponent = PrimitiveComponents[j];
-				if (!PrimitiveComponent || !PrimitiveComponent->IsVisible())
+				if (!PrimitiveComponent || !PrimitiveComponent->IsVisible() || !VisibilityResults[j])
 				{
 					continue;
 				}
