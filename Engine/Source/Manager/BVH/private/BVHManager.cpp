@@ -522,7 +522,8 @@ void UBVHManager::TraverseForCulling(uint32 NodeIndex, FFrustumCull& InFrustum, 
 		for (size_t i = Nodes[NodeIndex].Start; i < Count; i++)
 		{
 			FAABB TargetAABB = Primitives[i].Bounds;
-			if (InFrustum.IsInFrustum(TargetAABB) != EFrustumTestResult::CompletelyOutside)
+			if (InFrustum.IsInFrustum(TargetAABB) != EFrustumTestResult::CompletelyOutside &&
+				Primitives[i].Primitive->IsVisible())
 			{
 				OutVisibleComponents.push_back(Primitives[i].Primitive);
 			}
@@ -549,7 +550,10 @@ void UBVHManager::AddAllPrimitives(uint32 NodeIndex, TArray<TObjectPtr<UPrimitiv
 		size_t Count = CurrentNode.Start + CurrentNode.Count;
 		for (size_t i = CurrentNode.Start; i < Count; i++)
 		{
-			OutVisibleComponents.push_back(Primitives[i].Primitive);
+			if (Primitives[i].Primitive->IsVisible())
+			{
+				OutVisibleComponents.push_back(Primitives[i].Primitive);
+			}
 		}
 		return;
 	}
