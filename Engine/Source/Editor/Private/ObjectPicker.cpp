@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Public/ScopeCycleCounter.h"
+
 #ifdef MULTI_THREADING
 #include "cpp-thread-pool/thread_pool.h"
 #endif
@@ -14,6 +16,9 @@
 #include "Level/Public/Level.h"
 #include "Manager/Input/Public/InputManager.h"
 #include "Physics/Public/AABB.h"
+#include "Component/Mesh/Public/StaticMeshComponent.h"
+#include "Component/Mesh/Public/StaticMesh.h"
+#include "Physics/Public/RayIntersection.h"
 #include "Manager/BVH/public/BVHManager.h"
 
 FRay UObjectPicker::GetModelRay(const FRay& Ray, UPrimitiveComponent* Primitive) const
@@ -27,8 +32,9 @@ FRay UObjectPicker::GetModelRay(const FRay& Ray, UPrimitiveComponent* Primitive)
 	return ModelRay;
 }
 
-UPrimitiveComponent* UObjectPicker::PickPrimitive(const FRay& WorldRay, TArray<TObjectPtr<UPrimitiveComponent>> Candidate, float* OutDistance)
+UPrimitiveComponent* UObjectPicker::PickPrimitive(const FRay& WorldRay, const TArray<TObjectPtr<UPrimitiveComponent>>& Candidates, float* OutDistance)
 {
+	(void)Candidates;
 	UPrimitiveComponent* ShortestPrimitive = nullptr;
 	float PrimitiveDistance = D3D11_FLOAT32_MAX;
 
@@ -180,45 +186,104 @@ bool UObjectPicker::DoesRayIntersectPrimitive(
 bool UObjectPicker::DoesRayIntersectPrimitive_MollerTrumbore(const FRay& InWorldRay,
 	UPrimitiveComponent* InPrimitive, float* OutShortestDistance) const
 {
-	const uint32 NumVertices = InPrimitive->GetNumVertices();
-	const uint32 NumIndices = InPrimitive->GetNumIndices();
+	if (!InPrimitive || !OutShortestDistance)
+	{
+		return false;
+	}
 
 	const TArray<FNormalVertex>* Vertices = InPrimitive->GetVerticesData();
 	const TArray<uint32>* Indices = InPrimitive->GetIndicesData();
 
-	float Distance = D3D11_FLOAT32_MAX; //Distance 초기화
+	if (!Vertices || Vertices->empty())
+	{
+		return false;
+	}
+
+	FRay ModelRay = GetModelRay(InWorldRay, InPrimitive);
+
+	float LocalShortest = FLT_MAX;
+	if (OutShortestDistance && *OutShortestDistance > 0.0f)
+	{
+		LocalShortest = *OutShortestDistance;
+	}
 	bool bIsHit = false;
 
-	const int32 NumTriangles = (NumIndices > 0) ? (NumIndices / 3) : (NumVertices / 3);
-
-	for (int32 TriIndex = 0; TriIndex < NumTriangles; TriIndex++) //삼각형 단위로 Vertex 위치정보 읽음
+	bool bBVHHit = false;
+	const bool bBVHExecuted = RaycastMeshTrianglesBVH(ModelRay, InPrimitive, LocalShortest, bBVHHit);
+	if (bBVHExecuted && bBVHHit)
 	{
-		FVector TriangleVertices[3];
+		bIsHit = true;
+	}
 
-		// 인덱스 버퍼 사용 여부에 따라 정점 구성
-		if (Indices)
-		{
-			TriangleVertices[0] = (*Vertices)[(*Indices)[TriIndex * 3 + 0]].Position;
-			TriangleVertices[1] = (*Vertices)[(*Indices)[TriIndex * 3 + 1]].Position;
-			TriangleVertices[2] = (*Vertices)[(*Indices)[TriIndex * 3 + 2]].Position;
-		}
-		else
-		{
-			TriangleVertices[0] = (*Vertices)[TriIndex * 3 + 0].Position;
-			TriangleVertices[1] = (*Vertices)[TriIndex * 3 + 1].Position;
-			TriangleVertices[2] = (*Vertices)[TriIndex * 3 + 2].Position;
-		}
+	const bool bNeedsFallback = !bBVHExecuted || !bBVHHit;
+	if (bNeedsFallback)
+	{
+		const bool bHasIndices = Indices && !Indices->empty();
+		const size_t TriangleCount = bHasIndices ? (Indices->size() / 3) : (Vertices->size() / 3);
 
-		if (DoesRayIntersectTriangle(InWorldRay, InPrimitive, TriangleVertices[0],
-			TriangleVertices[1], TriangleVertices[2], &Distance))
-			//Ray와 삼각형이 충돌하면 거리 비교 후 최단거리 갱신
+		for (size_t TriIndex = 0; TriIndex < TriangleCount; ++TriIndex)
 		{
-			bIsHit = true;
-			*OutShortestDistance = std::min(Distance, *OutShortestDistance);
+			FVector V0;
+			FVector V1;
+			FVector V2;
+
+			if (bHasIndices)
+			{
+				const size_t Base = TriIndex * 3;
+				const uint32 I0 = (*Indices)[Base + 0];
+				const uint32 I1 = (*Indices)[Base + 1];
+				const uint32 I2 = (*Indices)[Base + 2];
+				V0 = (*Vertices)[I0].Position;
+				V1 = (*Vertices)[I1].Position;
+				V2 = (*Vertices)[I2].Position;
+			}
+			else
+			{
+				const size_t Base = TriIndex * 3;
+				V0 = (*Vertices)[Base + 0].Position;
+				V1 = (*Vertices)[Base + 1].Position;
+				V2 = (*Vertices)[Base + 2].Position;
+			}
+
+			float Distance = 0.0f;
+			if (RayTriangleIntersectModel(ModelRay, V0, V1, V2, Distance) && Distance < LocalShortest)
+			{
+				LocalShortest = Distance;
+				bIsHit = true;
+			}
 		}
 	}
 
+	if (bIsHit)
+	{
+		*OutShortestDistance = LocalShortest;
+	}
+
 	return bIsHit;
+}
+
+bool UObjectPicker::RaycastMeshTrianglesBVH(const FRay& ModelRay, UPrimitiveComponent* InPrimitive, float& InOutDistance, bool& OutHit) const
+{
+	OutHit = false;
+	if (!InPrimitive || InPrimitive->GetPrimitiveType() != EPrimitiveType::StaticMesh)
+	{
+		return false;
+	}
+
+	auto* StaticMeshComponent = static_cast<UStaticMeshComponent*>(InPrimitive);
+	if (!StaticMeshComponent)
+	{
+		return false;
+	}
+
+	UStaticMesh* StaticMesh = StaticMeshComponent->GetStaticMesh();
+	if (!StaticMesh)
+	{
+		return false;
+	}
+
+	OutHit = StaticMesh->RaycastTriangleBVH(ModelRay, InOutDistance);
+	return true;
 }
 
 bool UObjectPicker::DoesRayIntersectTriangle(const FRay& InRay, UPrimitiveComponent* InPrimitive,
@@ -226,71 +291,18 @@ bool UObjectPicker::DoesRayIntersectTriangle(const FRay& InRay, UPrimitiveCompon
 {
 	FRay ModelRay = GetModelRay(InRay, InPrimitive);
 
-    // Pack ray origin and dir
-    __m128 rayO = _mm_setr_ps(ModelRay.Origin.X, ModelRay.Origin.Y, ModelRay.Origin.Z, 0.0f);
-    __m128 rayD = _mm_setr_ps(ModelRay.Direction.X, ModelRay.Direction.Y, ModelRay.Direction.Z, 0.0f);
+	float Distance = 0.0f;
+	if (!RayTriangleIntersectModel(ModelRay, Vertex1, Vertex2, Vertex3, Distance))
+	{
+		return false;
+	}
 
-    // Pack vertices
-    __m128 v0 = _mm_setr_ps(Vertex1.X, Vertex1.Y, Vertex1.Z, 0.0f);
-    __m128 v1 = _mm_setr_ps(Vertex2.X, Vertex2.Y, Vertex2.Z, 0.0f);
-    __m128 v2 = _mm_setr_ps(Vertex3.X, Vertex3.Y, Vertex3.Z, 0.0f);
+	if (OutDistance)
+	{
+		*OutDistance = Distance;
+	}
 
-    // E1 = v1 - v0
-    __m128 e1 = _mm_sub_ps(v1, v0);
-    // E2 = v2 - v0
-    __m128 e2 = _mm_sub_ps(v2, v0);
-    // Result = rayO - v0
-    __m128 res = _mm_sub_ps(rayO, v0);
-
-    // CrossE2Ray = E2 × RayDir
-    __m128 e2_yzx = _mm_shuffle_ps(e2, e2, _MM_SHUFFLE(3,0,2,1));
-    __m128 d_yzx  = _mm_shuffle_ps(rayD, rayD, _MM_SHUFFLE(3,0,2,1));
-    __m128 crossE2Ray = _mm_sub_ps(_mm_mul_ps(e2, d_yzx), _mm_mul_ps(e2_yzx, rayD));
-    crossE2Ray = _mm_shuffle_ps(crossE2Ray, crossE2Ray, _MM_SHUFFLE(3,0,2,1));
-
-    // CrossE1Result = E1 × Result
-    __m128 e1_yzx = _mm_shuffle_ps(e1, e1, _MM_SHUFFLE(3,0,2,1));
-    __m128 res_yzx = _mm_shuffle_ps(res, res, _MM_SHUFFLE(3,0,2,1));
-    __m128 crossE1Res = _mm_sub_ps(_mm_mul_ps(e1, res_yzx), _mm_mul_ps(e1_yzx, res));
-    crossE1Res = _mm_shuffle_ps(crossE1Res, crossE1Res, _MM_SHUFFLE(3,0,2,1));
-
-    // Determinant = dot(E1, CrossE2Ray)
-    __m128 det4 = _mm_mul_ps(e1, crossE2Ray);
-    __m128 det2 = _mm_hadd_ps(det4, det4);
-    __m128 det1 = _mm_hadd_ps(det2, det2);
-    float det = _mm_cvtss_f32(det1);
-
-    if (fabsf(det) <= 1e-4f)
-        return false;
-
-    float invDet = 1.0f / det;
-
-    // V = dot(Result, CrossE2Ray) / det
-    __m128 v4 = _mm_mul_ps(res, crossE2Ray);
-    __m128 v2_ = _mm_hadd_ps(v4, v4);
-    __m128 v1_ = _mm_hadd_ps(v2_, v2_);
-    float V = _mm_cvtss_f32(v1_) * invDet;
-    if (V < 0.0f || V > 1.0f)
-        return false;
-
-    // U = dot(RayDir, CrossE1Result) / det
-    __m128 u4 = _mm_mul_ps(rayD, crossE1Res);
-    __m128 u2 = _mm_hadd_ps(u4, u4);
-    __m128 u1 = _mm_hadd_ps(u2, u2);
-    float U = _mm_cvtss_f32(u1) * invDet;
-    if (U < 0.0f || U + V > 1.0f)
-        return false;
-
-    // T = dot(E2, CrossE1Result) / det
-    __m128 t4 = _mm_mul_ps(e2, crossE1Res);
-    __m128 t2 = _mm_hadd_ps(t4, t4);
-    __m128 t1 = _mm_hadd_ps(t2, t2);
-    float T = _mm_cvtss_f32(t1) * invDet;
-    if (T < 0.0f)
-        return false;
-
-    *OutDistance = T;
-    return true;
+	return true;
 }
 
 bool UObjectPicker::DoesRayIntersectPlane(const FRay& WorldRay, FVector PlanePoint, FVector Normal, FVector& PointOnPlane)
@@ -309,3 +321,5 @@ bool UObjectPicker::DoesRayIntersectPlane(const FRay& WorldRay, FVector PlanePoi
 
 	return true;
 }
+
+

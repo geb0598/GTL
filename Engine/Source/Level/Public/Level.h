@@ -60,6 +60,7 @@ public:
 	TArray<TObjectPtr<UPrimitiveComponent>> GetVisiblePrimitiveComponents(UCamera* InCamera);
 
 	void AddLevelPrimitiveComponent(AActor* Actor);
+	void InitializeActorsInLevel();
 
 	AActor* SpawnActorToLevel(UClass* InActorClass, const FName& InName = FName::GetNone());
 
