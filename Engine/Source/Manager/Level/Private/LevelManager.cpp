@@ -186,7 +186,5 @@ void ULevelManager::SwitchToLevel(ULevel* InNewLevel)
 	}
 
 	CurrentLevel->Update();
-	TArray<FBVHPrimitive> BVHPrimitives;
-	UBVHManager::GetInstance().ConvertComponentsToPrimitives(CurrentLevel->GetLevelPrimitiveComponents(), BVHPrimitives);
-	UBVHManager::GetInstance().Build(BVHPrimitives);
+	CurrentLevel->InitializeActorsInLevel();
 }

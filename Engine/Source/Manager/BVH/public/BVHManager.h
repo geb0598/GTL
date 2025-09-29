@@ -50,7 +50,7 @@ public:
 	bool Raycast(const FRay& InRay, UPrimitiveComponent*& HitComponent, float& HitT) const;
 	void Refit();
 	bool IsDebugDrawEnabled() const { return bDebugDrawEnabled; }
-	void ConvertComponentsToPrimitives(const TArray<TObjectPtr<UPrimitiveComponent>>& InComponents, TArray<FBVHPrimitive>& OutPrimitives);
+	void ConvertComponentsToBVHPrimitives(const TArray<TObjectPtr<UPrimitiveComponent>>& InComponents, TArray<FBVHPrimitive>& OutPrimitives);
 	[[nodiscard]] const TArray<FBVHNode>& GetNodes() const { return Nodes; }
 
 	TArray<FAABB>& GetBoxes() { return Boxes; }

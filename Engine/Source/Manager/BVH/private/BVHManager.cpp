@@ -371,7 +371,7 @@ void UBVHManager::RaycastIterative(const FRay& InRay, float& OutClosestHit, int&
         }
     }
 }
-void UBVHManager::ConvertComponentsToPrimitives(
+void UBVHManager::ConvertComponentsToBVHPrimitives(
 	const TArray<TObjectPtr<UPrimitiveComponent>>& InComponents, TArray<FBVHPrimitive>& OutPrimitives)
 {
 	OutPrimitives.clear();

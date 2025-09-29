@@ -56,9 +56,10 @@ public:
 		return LevelPrimitiveComponents;
 	}
 
-	void AddLevelPrimitiveComponent(AActor* Actor);
+	void InitializeActorsInLevel();
 
 	AActor* SpawnActorToLevel(UClass* InActorClass, const FName& InName = FName::GetNone());
+	void AddLevelPrimitiveComponent(AActor* Actor);
 
 	bool DestroyActor(AActor* InActor);
 	void MarkActorForDeletion(AActor* InActor);
