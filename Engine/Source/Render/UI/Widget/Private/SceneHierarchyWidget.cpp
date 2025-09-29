@@ -21,6 +21,8 @@ USceneHierarchyWidget::~USceneHierarchyWidget() = default;
 void USceneHierarchyWidget::Initialize()
 {
 	UE_LOG("SceneHierarchyWidget: Initialized");
+	// 캐시 무효화 (다음에 필요할 때 업데이트됨)
+	InvalidateCache();
 }
 
 void USceneHierarchyWidget::Update()
@@ -34,6 +36,7 @@ void USceneHierarchyWidget::Update()
 
 void USceneHierarchyWidget::RenderWidget()
 {
+
 	ULevel* CurrentLevel = ULevelManager::GetInstance().GetCurrentLevel();
 
 	if (!CurrentLevel)
@@ -48,13 +51,18 @@ void USceneHierarchyWidget::RenderWidget()
 
 	// 검색창 렌더링
 	RenderSearchBar();
-
 	const TArray<TObjectPtr<AActor>>& LevelActors = CurrentLevel->GetLevelActors();
 
 	if (LevelActors.empty())
 	{
 		ImGui::TextUnformatted("No Actors in Level");
 		return;
+	}
+
+	// 변경 감지 후 필요시에만 캐시 업데이트
+	if (LastCachedLevel != CurrentLevel || HasActorListChanged(LevelActors))
+	{
+		UpdateCacheIfNeeded(LevelActors);
 	}
 
 	// 필터링 업데이트
@@ -76,34 +84,26 @@ void USceneHierarchyWidget::RenderWidget()
 	}
 	ImGui::Spacing();
 
-	// Actor 리스트를 스크롤 가능한 영역으로 표시
+
+
+	// 가상화된 Actor 리스트 렌더링
 	if (ImGui::BeginChild("ActorList", ImVec2(0, 0), true))
 	{
 		if (SearchFilter.empty())
 		{
-			// 검색어가 없으면 모든 Actor 표시
-			for (int32 i = 0; i < static_cast<int32>(LevelActors.size()); ++i)
-			{
-				if (LevelActors[i])
-				{
-					RenderActorInfo(LevelActors[i], i);
-				}
-			}
+			// 캐시된 AllIndices 사용 (매 프레임 생성 제거)
+			RenderVirtualizedActorList(LevelActors, CachedAllIndices);
 		}
 		else
 		{
-			// 필터링된 Actor들만 표시
-			for (int32 FilteredIndex : FilteredIndices)
+			if (!FilteredIndices.empty())
 			{
-				if (FilteredIndex < LevelActors.size() && LevelActors[FilteredIndex])
-				{
-					RenderActorInfo(LevelActors[FilteredIndex], FilteredIndex);
-				}
+				// 필터링된 Actor들 가상화 렌더링
+				RenderVirtualizedActorList(LevelActors, FilteredIndices);
 			}
-
-			// 검색 결과가 없으면 메시지 표시
-			if (FilteredIndices.empty())
+			else
 			{
+				// 검색 결과가 없으면 메시지 표시
 				ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "검색 결과가 없습니다.");
 			}
 		}
@@ -140,26 +140,27 @@ void USceneHierarchyWidget::RenderActorInfo(TObjectPtr<AActor> InActor, int32 In
 	FName ActorName = InActor->GetName();
 	FString ActorDisplayName = ActorName.ToString();
 
-	// Actor의 PrimitiveComponent들의 Visibility 체크
+	// 캐시된 PrimitiveComponent 정보 사용 (Cast 연산 없음)
 	bool bHasPrimitive = false;
 	bool bAllVisible = true;
-	TObjectPtr<UPrimitiveComponent> FirstPrimitive = nullptr;
 
-	// Actor의 모든 Component 중에서 PrimitiveComponent 찾기
-	for (auto& Component : InActor->GetOwnedComponents())
+	// 캐시에서 데이터 가져오기
+	auto it = ActorPrimitiveCache.find(InActor);
+	if (it != ActorPrimitiveCache.end())
 	{
-		if (TObjectPtr<UPrimitiveComponent> PrimitiveComponent = Cast<UPrimitiveComponent>(Component))
+		const FActorPrimitiveCache& Cache = it->second;
+		bHasPrimitive = Cache.bHasPrimitive;
+
+		if (bHasPrimitive && !Cache.PrimitiveComponents.empty())
 		{
-			bHasPrimitive = true;
-
-			if (!FirstPrimitive)
+			// Visibility 체크
+			for (const auto& PrimitiveComponent : Cache.PrimitiveComponents)
 			{
-				FirstPrimitive = PrimitiveComponent;
-			}
-
-			if (!PrimitiveComponent->IsVisible())
-			{
-				bAllVisible = false;
+				if (PrimitiveComponent && !PrimitiveComponent->IsVisible())
+				{
+					bAllVisible = false;
+					break;
+				}
 			}
 		}
 	}
@@ -169,11 +170,12 @@ void USceneHierarchyWidget::RenderActorInfo(TObjectPtr<AActor> InActor, int32 In
 	{
 		if (ImGui::SmallButton(bAllVisible ? "[O]" : "[X]"))
 		{
-			// 모든 PrimitiveComponent의 Visibility 토글
+			// 캐시된 PrimitiveComponent들의 Visibility 토글
 			bool bNewVisibility = !bAllVisible;
-			for (auto& Component : InActor->GetOwnedComponents())
+			const FActorPrimitiveCache& Cache = it->second;
+			for (const auto& PrimComp : Cache.PrimitiveComponents)
 			{
-				if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(Component))
+				if (PrimComp)
 				{
 					PrimComp->SetVisibility(bNewVisibility);
 				}
@@ -570,3 +572,160 @@ void USceneHierarchyWidget::FinishRenaming(bool bInConfirm)
 	RenamingActor = nullptr;
 	RenameBuffer[0] = '\0';
 }
+
+/**
+ * @brief Actor 리스트가 변경되었는지 확인하는 함수
+ * @param InLevelActors 현재 레벨의 Actor 배열
+ * @return 변경되었으면 true
+ */
+bool USceneHierarchyWidget::HasActorListChanged(const TArray<TObjectPtr<AActor>>& InLevelActors) const
+{
+	// 개수가 다르면 변경됨
+	if (InLevelActors.size() != LastActorCount)
+	{
+		return true;
+	}
+
+	// 개수가 같으면 포인터 비교 (빠른 체크)
+	if (InLevelActors.size() != LastActorList.size())
+	{
+		return true;
+	}
+
+	// 포인터 값들이 같은지 체크
+	for (size_t i = 0; i < InLevelActors.size(); ++i)
+	{
+		if (InLevelActors[i] != LastActorList[i])
+		{
+			return true;
+		}
+	}
+
+	return false; // 변경 없음
+}
+
+/**
+ * @brief 변경이 감지되었을 때만 캐시를 업데이트하는 함수
+ * @param InLevelActors 현재 레벨의 Actor 배열
+ */
+void USceneHierarchyWidget::UpdateCacheIfNeeded(const TArray<TObjectPtr<AActor>>& InLevelActors) const
+{
+	ULevel* CurrentLevel = ULevelManager::GetInstance().GetCurrentLevel();
+
+	UE_LOG("SceneHierarchy: Cast 캐시 업데이트 시작...");
+
+	// 캐시 초기화
+	ActorPrimitiveCache.clear();
+
+	// 모든 Actor에 대해 PrimitiveComponent 검색 및 캐싱 (Cast는 여기서만 발생)
+	for (TObjectPtr<AActor> Actor : InLevelActors)
+	{
+		if (!Actor) continue;
+
+		FActorPrimitiveCache Cache;
+
+		// Actor의 모든 Component를 순회하며 PrimitiveComponent 찾기
+		for (auto& Component : Actor->GetOwnedComponents())
+		{
+			if (TObjectPtr<UPrimitiveComponent> PrimitiveComponent = Cast<UPrimitiveComponent>(Component))
+			{
+				Cache.PrimitiveComponents.push_back(PrimitiveComponent);
+				Cache.bHasPrimitive = true;
+			}
+		}
+
+		// 캐시에 저장
+		ActorPrimitiveCache[Actor] = std::move(Cache);
+	}
+
+	// AllIndices 배열도 함께 캐시 (한 번만 생성)
+	CachedAllIndices.clear();
+	CachedAllIndices.reserve(InLevelActors.size());
+	for (int32 i = 0; i < InLevelActors.size(); ++i)
+	{
+		CachedAllIndices.push_back(i);
+	}
+
+	// 변경 감지를 위한 데이터 업데이트
+	LastCachedLevel = CurrentLevel;
+	LastActorCount = InLevelActors.size();
+	LastActorList = InLevelActors; // 포인터 리스트 복사
+
+	UE_LOG_SUCCESS("SceneHierarchy: Cast 캐시 업데이트 완료 (%zu actors)", InLevelActors.size());
+}
+
+/**
+ * @brief 보이는 범위를 계산하는 함수
+ * @param TotalItems 전체 항목 개수
+ * @param ChildHeight 스크롤 영역 높이
+ * @param OutStartIndex 시작 인덱스
+ * @param OutEndIndex 끝 인덱스
+ */
+void USceneHierarchyWidget::CalculateVisibleRange(int32 TotalItems, float ChildHeight, int32& OutStartIndex, int32& OutEndIndex) const
+{
+	if (TotalItems == 0)
+	{
+		OutStartIndex = 0;
+		OutEndIndex = 0;
+		return;
+	}
+
+	// 현재 스크롤 위치 가져오기
+	float ScrollY = ImGui::GetScrollY();
+
+	// 보이는 영역에 해당하는 항목 범위 계산
+	int32 FirstVisibleItem = static_cast<int32>(ScrollY / ITEM_HEIGHT);
+	int32 LastVisibleItem = static_cast<int32>((ScrollY + ChildHeight) / ITEM_HEIGHT) + 1;
+
+	// 버퍼 추가 (부드러운 스크롤링을 위해)
+	OutStartIndex = std::max(0, FirstVisibleItem - BUFFER_ITEMS);
+	OutEndIndex = std::min(TotalItems, LastVisibleItem + BUFFER_ITEMS);
+}
+
+/**
+ * @brief 가상화된 Actor 리스트 렌더링 함수
+ * @param InActors Actor 배열
+ * @param InIndices 렌더링할 인덱스 배열
+ */
+void USceneHierarchyWidget::RenderVirtualizedActorList(const TArray<TObjectPtr<AActor>>& InActors, const TArray<int32>& InIndices)
+{
+	if (InIndices.empty()) return;
+
+	// 전체 리스트 높이 계산
+	float TotalHeight = static_cast<float>(InIndices.size()) * ITEM_HEIGHT;
+
+	// 현재 Child 영역 높이
+	float ChildHeight = ImGui::GetContentRegionAvail().y;
+
+	// 보이는 범위 계산
+	int32 StartIndex, EndIndex;
+	CalculateVisibleRange(static_cast<int32>(InIndices.size()), ChildHeight, StartIndex, EndIndex);
+
+	// 위쪽 여백 (보이지 않는 위쪽 항목들을 위한 공간)
+	float TopSpacing = static_cast<float>(StartIndex) * ITEM_HEIGHT;
+	if (TopSpacing > 0.0f)
+	{
+		ImGui::Dummy(ImVec2(0.0f, TopSpacing));
+	}
+
+	// 실제로 보이는 항목들만 렌더링
+	for (int32 i = StartIndex; i < EndIndex; ++i)
+	{
+		if (i >= 0 && i < InIndices.size())
+		{
+			int32 ActorIndex = InIndices[i];
+			if (ActorIndex >= 0 && ActorIndex < InActors.size() && InActors[ActorIndex])
+			{
+				RenderActorInfo(InActors[ActorIndex], ActorIndex);
+			}
+		}
+	}
+
+	// 아래쪽 여백 (보이지 않는 아래쪽 항목들을 위한 공간)
+	float BottomSpacing = (static_cast<float>(InIndices.size()) - static_cast<float>(EndIndex)) * ITEM_HEIGHT;
+	if (BottomSpacing > 0.0f)
+	{
+		ImGui::Dummy(ImVec2(0.0f, BottomSpacing));
+	}
+}
+
