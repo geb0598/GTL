@@ -181,16 +181,34 @@ FMatrix FMatrix::ScaleMatrixInverse(const FVector& InOtherVector)
 */
 FMatrix FMatrix::RotationMatrix(const FVector& InOtherVector)
 {
-	// Dx11 yaw(y), pitch(x), roll(z)
-	// UE yaw(z), pitch(y), roll(x)
-	// 회전 축이 바뀌어서 각 회전행렬 함수에 바뀐 값을 적용
+	// 1. 라디안 회전값으로부터 sinf, cosf 값 계산
+	const float sp = sinf(InOtherVector.X); // Pitch
+	const float cp = cosf(InOtherVector.X);
+	const float sy = sinf(InOtherVector.Y); // Yaw
+	const float cy = cosf(InOtherVector.Y);
+	const float sr = sinf(InOtherVector.Z); // Roll
+	const float cr = cosf(InOtherVector.Z);
 
-	const float yaw = InOtherVector.Y;
-	const float pitch = InOtherVector.X;
-	const float roll = InOtherVector.Z;
-	//return RotationZ(yaw) * RotationY(pitch) * RotationX(roll);
-	//return RotationX(yaw) * RotationY(roll) * RotationZ(pitch);
-	return RotationX(pitch) * RotationY(yaw) * RotationZ(roll);
+	// 2. 단위 행렬로 초기화
+	FMatrix Result = FMatrix::Identity();
+
+	// 2. 회전 행렬 계산 (Rx * Ry * Rz, 오른손 좌표계 기준)
+	// 첫 번째 행
+	Result.Data[0][0] = cy * cr;
+	Result.Data[0][1] = cy * sr;
+	Result.Data[0][2] = -sy;
+
+	// 두 번째 행
+	Result.Data[1][0] = sp * sy * cr - cp * sr;
+	Result.Data[1][1] = sp * sy * sr + cp * cr;
+	Result.Data[1][2] = sp * cy;
+
+	// 세 번째 행
+	Result.Data[2][0] = cp * sy * cr + sp * sr;
+	Result.Data[2][1] = cp * sy * sr - sp * cr;
+	Result.Data[2][2] = cp * cy;
+
+	return Result;
 }
 
 FMatrix FMatrix::CreateFromYawPitchRoll(const float yaw, const float pitch, const float roll)
@@ -243,7 +261,7 @@ FMatrix FMatrix::RotationY(float Radian)
 }
 
 /**
-* @brief Y의 회전 정보를 행렬로 변환
+* @brief Z의 회전 정보를 행렬로 변환
 */
 FMatrix FMatrix::RotationZ(float Radian)
 {
@@ -262,13 +280,54 @@ FMatrix FMatrix::RotationZ(float Radian)
 //
 FMatrix FMatrix::GetModelMatrix(const FVector& Location, const FVector& Rotation, const FVector& Scale)
 {
-	FMatrix T = TranslationMatrix(Location);
-	FMatrix R = RotationMatrix(Rotation);
-	FMatrix S = ScaleMatrix(Scale);
-	FMatrix modelMatrix = S * R * T;
+	// FMatrix T = TranslationMatrix(Location);
+	// FMatrix R = RotationMatrix(Rotation);
+	// FMatrix S = ScaleMatrix(Scale);
+	// FMatrix modelMatrix = S * R * T;
+	//
+	// // Dx11 y-up 왼손좌표계에서 정의된 물체의 정점을 UE z-up 왼손좌표계로 변환
+	// return  FMatrix::UEToDx * modelMatrix;
 
-	// Dx11 y-up 왼손좌표계에서 정의된 물체의 정점을 UE z-up 왼손좌표계로 변환
-	return  FMatrix::UEToDx * modelMatrix;
+	// 1. 회전값(Rotation)으로부터 sin, cos 값 미리 계산 (회전 순서: X -> Y -> Z)
+	const float pitch = Rotation.X;
+	const float yaw   = Rotation.Y;
+	const float roll  = Rotation.Z;
+
+	const float sp = sinf(pitch);
+	const float cp = cosf(pitch);
+	const float sy = sinf(yaw);
+	const float cy = cosf(yaw);
+	const float sr = sinf(roll);
+	const float cr = cosf(roll);
+
+	FMatrix Result;
+
+	// UEToDx * Result 해줘야 하기 때문에 순서만 바꿈
+	// FinalResult의 첫 번째 행 (원래 S*R*T의 두 번째 행)
+	Result.Data[0][0] = Scale.Y * (sp * sy * cr - cp * sr);
+	Result.Data[0][1] = Scale.Y * (sp * sy * sr + cp * cr);
+	Result.Data[0][2] = Scale.Y * (sp * cy);
+	Result.Data[0][3] = 0.0f;
+
+	// FinalResult의 두 번째 행 (원래 S*R*T의 세 번째 행)
+	Result.Data[1][0] = Scale.Z * (cp * sy * cr + sp * sr);
+	Result.Data[1][1] = Scale.Z * (cp * sy * sr - sp * cr);
+	Result.Data[1][2] = Scale.Z * (cp * cy);
+	Result.Data[1][3] = 0.0f;
+
+	// FinalResult의 세 번째 행 (원래 S*R*T의 첫 번째 행)
+	Result.Data[2][0] = Scale.X * (cy * cr);
+	Result.Data[2][1] = Scale.X * (cy * sr);
+	Result.Data[2][2] = Scale.X * -sy;
+	Result.Data[2][3] = 0.0f;
+
+	// FinalResult의 네 번째 행 (원래 S*R*T의 네 번째 행)
+	Result.Data[3][0] = Location.X;
+	Result.Data[3][1] = Location.Y;
+	Result.Data[3][2] = Location.Z;
+	Result.Data[3][3] = 1.0f;
+
+	return Result;
 }
 
 FMatrix FMatrix::GetModelMatrixInverse(const FVector& Location, const FVector& Rotation, const FVector& Scale)

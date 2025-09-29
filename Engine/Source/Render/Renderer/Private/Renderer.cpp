@@ -529,14 +529,14 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 
 /**
  * @brief Editor용 Primitive를 렌더링하는 함수 (Gizmo, Axis 등)
- * @param InPrimitive 렌더링할 에디터 프리미티브
+ * @param InEditorPrimitive 렌더링할 에디터 프리미티브
  * @param InRenderState 렌더링 상태
  */
-void URenderer::RenderPrimitive(UPipeline& InPipeline, const FEditorPrimitive& InPrimitive, const FRenderState& InRenderState)
+void URenderer::RenderEditorPrimitive(UPipeline& InPipeline, const FEditorPrimitive& InEditorPrimitive, const FRenderState& InRenderState)
 {
     // Always visible 옵션에 따라 Depth 테스트 여부 결정
     ID3D11DepthStencilState* DepthStencilState =
-        InPrimitive.bShouldAlwaysVisible ? DisabledDepthStencilState : DefaultDepthStencilState;
+        InEditorPrimitive.bShouldAlwaysVisible ? DisabledDepthStencilState : DefaultDepthStencilState;
 
     ID3D11RasterizerState* RasterizerState = GetRasterizerState(InRenderState);
 
@@ -548,43 +548,43 @@ void URenderer::RenderPrimitive(UPipeline& InPipeline, const FEditorPrimitive& I
         DepthStencilState,
         DefaultPixelShader,
         nullptr,
-        InPrimitive.Topology
+        InEditorPrimitive.Topology
     };
 
     InPipeline.UpdatePipeline(PipelineInfo);
 
     // Update constant buffers
     InPipeline.SetConstantBuffer(0, true, ConstantBufferModels);
-    UpdateConstant(InPipeline.GetDeviceContext(), ConstantBufferModels, InPrimitive.Location, InPrimitive.Rotation, InPrimitive.Scale);
+    UpdateConstant(InPipeline.GetDeviceContext(), ConstantBufferModels, InEditorPrimitive.Location, InEditorPrimitive.Rotation, InEditorPrimitive.Scale);
 
     InPipeline.SetConstantBuffer(2, false, ConstantBufferColor);
-    UpdateConstant(InPipeline.GetDeviceContext(), ConstantBufferColor, InPrimitive.Color);
+    UpdateConstant(InPipeline.GetDeviceContext(), ConstantBufferColor, InEditorPrimitive.Color);
 
     // Set vertex buffer and draw
-    InPipeline.SetVertexBuffer(InPrimitive.Vertexbuffer, Stride);
-    InPipeline.Draw(InPrimitive.NumVertices, 0);
+    InPipeline.SetVertexBuffer(InEditorPrimitive.Vertexbuffer, Stride);
+    InPipeline.Draw(InEditorPrimitive.NumVertices, 0);
 }
 /**
  * @brief Index Buffer를 사용하는 Editor Primitive 렌더링 함수
- * @param InPrimitive 렌더링할 에디터 프리미티브
+ * @param InEditorPrimitive 렌더링할 에디터 프리미티브
  * @param InRenderState 렌더링 상태
  * @param bInUseBaseConstantBuffer 기본 상수 버퍼 사용 여부
  * @param InStride 정점 스트라이드
  * @param InIndexBufferStride 인덱스 버퍼 스트라이드
  */
-void URenderer::RenderPrimitiveIndexed(UPipeline& InPipeline, const FEditorPrimitive& InPrimitive, const FRenderState& InRenderState,
+void URenderer::RenderEditorPrimitiveIndexed(UPipeline& InPipeline, const FEditorPrimitive& InEditorPrimitive, const FRenderState& InRenderState,
     bool bInUseBaseConstantBuffer, uint32 InStride, uint32 InIndexBufferStride)
 {
     // Always visible 옵션에 따라 Depth 테스트 여부 결정
     ID3D11DepthStencilState* DepthStencilState =
-        InPrimitive.bShouldAlwaysVisible ? DisabledDepthStencilState : DefaultDepthStencilState;
+        InEditorPrimitive.bShouldAlwaysVisible ? DisabledDepthStencilState : DefaultDepthStencilState;
 
     ID3D11RasterizerState* RasterizerState = GetRasterizerState(InRenderState);
 
     // 커스텀 셰이더가 있으면 사용, 없으면 기본 셰이더 사용
-    ID3D11InputLayout* InputLayout = InPrimitive.InputLayout ? InPrimitive.InputLayout : DefaultInputLayout;
-    ID3D11VertexShader* VertexShader = InPrimitive.VertexShader ? InPrimitive.VertexShader : DefaultVertexShader;
-    ID3D11PixelShader* PixelShader = InPrimitive.PixelShader ? InPrimitive.PixelShader : DefaultPixelShader;
+    ID3D11InputLayout* InputLayout = InEditorPrimitive.InputLayout ? InEditorPrimitive.InputLayout : DefaultInputLayout;
+    ID3D11VertexShader* VertexShader = InEditorPrimitive.VertexShader ? InEditorPrimitive.VertexShader : DefaultVertexShader;
+    ID3D11PixelShader* PixelShader = InEditorPrimitive.PixelShader ? InEditorPrimitive.PixelShader : DefaultPixelShader;
 
     // Pipeline 정보 구성
     FPipelineInfo PipelineInfo = {
@@ -594,7 +594,7 @@ void URenderer::RenderPrimitiveIndexed(UPipeline& InPipeline, const FEditorPrimi
         DepthStencilState,
         PixelShader,
         nullptr,
-        InPrimitive.Topology
+        InEditorPrimitive.Topology
     };
 
     InPipeline.UpdatePipeline(PipelineInfo);
@@ -603,16 +603,16 @@ void URenderer::RenderPrimitiveIndexed(UPipeline& InPipeline, const FEditorPrimi
     if (bInUseBaseConstantBuffer)
     {
         InPipeline.SetConstantBuffer(0, true, ConstantBufferModels);
-        UpdateConstant(InPipeline.GetDeviceContext(), ConstantBufferModels, InPrimitive.Location, InPrimitive.Rotation, InPrimitive.Scale);
+    	UpdateConstant(InPipeline.GetDeviceContext(), ConstantBufferModels, InEditorPrimitive.Location, InEditorPrimitive.Rotation, InEditorPrimitive.Scale);
 
         InPipeline.SetConstantBuffer(2, true, ConstantBufferColor);
-        UpdateConstant(InPipeline.GetDeviceContext(), ConstantBufferColor, InPrimitive.Color);
+        UpdateConstant(InPipeline.GetDeviceContext(), ConstantBufferColor, InEditorPrimitive.Color);
     }
 
     // Set buffers and draw indexed
-    InPipeline.SetIndexBuffer(InPrimitive.IndexBuffer, InIndexBufferStride);
-    InPipeline.SetVertexBuffer(InPrimitive.Vertexbuffer, InStride);
-    InPipeline.DrawIndexed(InPrimitive.NumIndices, 0, 0);
+    InPipeline.SetIndexBuffer(InEditorPrimitive.IndexBuffer, InIndexBufferStride);
+    InPipeline.SetVertexBuffer(InEditorPrimitive.Vertexbuffer, InStride);
+    InPipeline.DrawIndexed(InEditorPrimitive.NumIndices, 0, 0);
 }
 /**
  * @brief 스왑 체인의 백 버퍼와 프론트 버퍼를 교체하여 화면에 출력
@@ -645,9 +645,10 @@ void URenderer::RenderStaticMesh(UPipeline& InPipeline, UStaticMeshComponent* In
     UpdateConstant(
         InPipeline.GetDeviceContext(),
         InConstantBufferModels,
-        InMeshComp->GetRelativeLocation(),
-        InMeshComp->GetRelativeRotation(),
-        InMeshComp->GetRelativeScale3D()
+        InMeshComp
+        // InMeshComp->GetRelativeLocation(),
+        // InMeshComp->GetRelativeRotation(),
+        // InMeshComp->GetRelativeScale3D()
     );
 
     InPipeline.SetVertexBuffer(InMeshComp->GetVertexBuffer(), sizeof(FNormalVertex));
@@ -747,9 +748,10 @@ void URenderer::RenderPrimitiveDefault(UPipeline& InPipeline, UPrimitiveComponen
     UpdateConstant(
         InPipeline.GetDeviceContext(),
         InConstantBufferModels,
-        InPrimitiveComp->GetRelativeLocation(),
-        InPrimitiveComp->GetRelativeRotation(),
-        InPrimitiveComp->GetRelativeScale3D()
+        InPrimitiveComp
+        // InPrimitiveComp->GetRelativeLocation(),
+        // InPrimitiveComp->GetRelativeRotation(),
+        // InPrimitiveComp->GetRelativeScale3D()
     );
     InPipeline.SetConstantBuffer(2, true, InConstantBufferColor);
     UpdateConstant(InPipeline.GetDeviceContext(), InConstantBufferColor, InPrimitiveComp->GetColor());
@@ -1072,13 +1074,15 @@ void URenderer::UpdateConstant(ID3D11DeviceContext* InDeviceContext, ID3D11Buffe
         // update constant buffer every frame
         FMatrix* Constants = static_cast<FMatrix*>(constantbufferMSR.pData);
         {
-            *Constants = FMatrix::GetModelMatrix(InPrimitive->GetRelativeLocation(),
-                FVector::GetDegreeToRadian(InPrimitive->GetRelativeRotation()),
-                InPrimitive->GetRelativeScale3D());
+            // *Constants = FMatrix::GetModelMatrix(InPrimitive->GetRelativeLocation(),
+            //     FVector::GetDegreeToRadian(InPrimitive->GetRelativeRotation()),
+            //     InPrimitive->GetRelativeScale3D());
+        	*Constants = InPrimitive->GetWorldTransformMatrix();
         }
         InDeviceContext->Unmap(InConstantBuffer, 0);
     }
 }
+
 /**
  * @brief 상수 버퍼 업데이트 함수
  * @param InPosition
