@@ -422,7 +422,7 @@ void UEditor::ProcessMouseInput(ULevel* InLevel)
 			Gizmo.SetGizmoDirection(EGizmoDirection::None);
 		}
 
-		TArray<TObjectPtr<UPrimitiveComponent>> Candidate =
+		const TArray<TObjectPtr<UPrimitiveComponent>>& Candidates =
 			ULevelManager::GetInstance().GetCurrentLevel()->GetLevelPrimitiveComponents();
 
 		if (!ImGui::GetIO().WantCaptureMouse && InputManager.IsKeyPressed(EKeyInput::MouseLeft))
@@ -432,7 +432,7 @@ void UEditor::ProcessMouseInput(ULevel* InLevel)
 				UStatOverlay::GetInstance().NumPickingAttempts++;
 				FScopeCycleCounter PickCounter;
 
-				PrimitiveCollided = ObjectPicker.PickPrimitive(WorldRay, Candidate, &ActorDistance);
+				PrimitiveCollided = ObjectPicker.PickPrimitive(WorldRay, Candidates, &ActorDistance);
 				ActorPicked = PrimitiveCollided ? PrimitiveCollided->GetOwner() : nullptr;
 
 				double Time = PickCounter.Finish();

@@ -61,6 +61,8 @@ struct FVector
 	 */
 	FVector operator*(float InRatio) const;
 
+	FVector operator/(float InRatio) const;
+
 	/**
 	 * @brief 자신의 벡터에 다른 벡터를 가산하는 함수
 	 */

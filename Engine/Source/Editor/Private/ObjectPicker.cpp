@@ -32,8 +32,9 @@ FRay UObjectPicker::GetModelRay(const FRay& Ray, UPrimitiveComponent* Primitive)
 	return ModelRay;
 }
 
-UPrimitiveComponent* UObjectPicker::PickPrimitive(const FRay& WorldRay, TArray<TObjectPtr<UPrimitiveComponent>> Candidate, float* OutDistance)
+UPrimitiveComponent* UObjectPicker::PickPrimitive(const FRay& WorldRay, const TArray<TObjectPtr<UPrimitiveComponent>>& Candidates, float* OutDistance)
 {
+	(void)Candidates;
 	UPrimitiveComponent* ShortestPrimitive = nullptr;
 	float PrimitiveDistance = D3D11_FLOAT32_MAX;
 
@@ -201,6 +202,10 @@ bool UObjectPicker::DoesRayIntersectPrimitive_MollerTrumbore(const FRay& InWorld
 	FRay ModelRay = GetModelRay(InWorldRay, InPrimitive);
 
 	float LocalShortest = FLT_MAX;
+	if (OutShortestDistance && *OutShortestDistance > 0.0f)
+	{
+		LocalShortest = *OutShortestDistance;
+	}
 	bool bIsHit = false;
 
 	bool bBVHHit = false;
@@ -316,4 +321,5 @@ bool UObjectPicker::DoesRayIntersectPlane(const FRay& WorldRay, FVector PlanePoi
 
 	return true;
 }
+
 
