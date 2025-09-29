@@ -3,6 +3,8 @@
 
 #include "Core/Public/ScopeCycleCounter.h"
 #include "Editor/Public/ObjectPicker.h"
+#include "Component/Mesh/Public/StaticMeshComponent.h"
+#include "Component/Mesh/Public/StaticMesh.h"
 
 IMPLEMENT_SINGLETON_CLASS_BASE(UBVHManager)
 
@@ -125,6 +127,17 @@ void UBVHManager::Refit()
 		Prim.Primitive->GetWorldAABB(WorldMin, WorldMax);
 		Prim.Bounds = FAABB(WorldMin, WorldMax);
 		Prim.Center = (WorldMin + WorldMax) * 0.5f;
+		Prim.WorldToModel = Prim.Primitive->GetWorldTransformMatrixInverse();
+		Prim.PrimitiveType = Prim.Primitive->GetPrimitiveType();
+		Prim.StaticMesh = nullptr;
+
+		if (Prim.PrimitiveType == EPrimitiveType::StaticMesh)
+		{
+			if (auto* StaticMeshComponent = static_cast<UStaticMeshComponent*>(Prim.Primitive))
+			{
+				Prim.StaticMesh = StaticMeshComponent->GetStaticMesh();
+			}
+		}
 	}
 
 	// Step 2: Recompute node bounds bottom-up
@@ -203,25 +216,36 @@ void UBVHManager::RaycastRecursive(int NodeIndex, const FRay& InRay, float& OutC
             {
                 continue;
             }
+
             float boxT = 0.0f;
             if (!Prim.Bounds.RaycastHit(InRay, &boxT) || boxT > OutClosestHit)
             {
                 continue;
             }
 
-            float t = OutClosestHit;
-            if (!ObjectPicker.DoesRayIntersectPrimitive_MollerTrumbore(InRay, Prim.Primitive, &t))
+            float candidateDistance = OutClosestHit;
+            bool bHitPrimitive = false;
+
+            if (Prim.PrimitiveType == EPrimitiveType::StaticMesh && Prim.StaticMesh)
             {
-                continue;
+                FRay ModelRay;
+                ModelRay.Origin = InRay.Origin * Prim.WorldToModel;
+                ModelRay.Direction = InRay.Direction * Prim.WorldToModel;
+                ModelRay.Direction.Normalize();
+
+                bHitPrimitive = Prim.StaticMesh->RaycastTriangleBVH(ModelRay, candidateDistance);
+            }
+            else
+            {
+                bHitPrimitive = ObjectPicker.DoesRayIntersectPrimitive_MollerTrumbore(InRay, Prim.Primitive, &candidateDistance);
             }
 
-            if (t < OutClosestHit)
+            if (bHitPrimitive && candidateDistance < OutClosestHit)
             {
-                OutClosestHit = t;
+                OutClosestHit = candidateDistance;
                 OutHitObject = Node.Start + i;
+                break;
             }
-
-            break;
         }
     }
     else
@@ -287,10 +311,26 @@ void UBVHManager::RaycastIterative(const FRay& InRay, float& OutClosestHit, int&
                     continue;
                 }
 
-                float t = OutClosestHit;
-                if (ObjectPicker.DoesRayIntersectPrimitive_MollerTrumbore(InRay, Prim.Primitive, &t) && t < OutClosestHit)
+                float candidateDistance = OutClosestHit;
+                bool bHitPrimitive = false;
+
+                if (Prim.PrimitiveType == EPrimitiveType::StaticMesh && Prim.StaticMesh)
                 {
-                    OutClosestHit = t;
+                    FRay ModelRay;
+                    ModelRay.Origin = InRay.Origin * Prim.WorldToModel;
+                    ModelRay.Direction = InRay.Direction * Prim.WorldToModel;
+                    ModelRay.Direction.Normalize();
+
+                    bHitPrimitive = Prim.StaticMesh->RaycastTriangleBVH(ModelRay, candidateDistance);
+                }
+                else
+                {
+                    bHitPrimitive = ObjectPicker.DoesRayIntersectPrimitive_MollerTrumbore(InRay, Prim.Primitive, &candidateDistance);
+                }
+
+                if (bHitPrimitive && candidateDistance < OutClosestHit)
+                {
+                    OutClosestHit = candidateDistance;
                     OutHitObject = Node.Start + i;
                     break;
                 }
@@ -350,6 +390,17 @@ void UBVHManager::ConvertComponentsToPrimitives(
 		Primitive.Bounds = FAABB(WorldMin, WorldMax);
 		Primitive.Center = (WorldMin + WorldMax) * 0.5f;
 		Primitive.Primitive = Component;
+		Primitive.WorldToModel = Component->GetWorldTransformMatrixInverse();
+		Primitive.PrimitiveType = Component->GetPrimitiveType();
+		Primitive.StaticMesh = nullptr;
+
+		if (Primitive.PrimitiveType == EPrimitiveType::StaticMesh)
+		{
+			if (auto* StaticMeshComponent = static_cast<UStaticMeshComponent*>(Component))
+			{
+				Primitive.StaticMesh = StaticMeshComponent->GetStaticMesh();
+			}
+		}
 
 		OutPrimitives.push_back(Primitive);
 	}

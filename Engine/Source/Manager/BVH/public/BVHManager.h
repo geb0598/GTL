@@ -1,11 +1,13 @@
 #pragma once
 #include "Core/Public/Object.h"
 #include "Global/Types.h"
+#include "Global/Matrix.h"
 #include "Component/Public/PrimitiveComponent.h"
 #include "Editor/Public/BatchLines.h"
 #include "Editor/Public/ObjectPicker.h"
 #include "Physics/Public/AABB.h"
 
+class UStaticMesh;
 struct FBVHNode
 {
 	FAABB Bounds;
@@ -29,7 +31,10 @@ struct FBVHPrimitive
 {
 	FVector Center;
 	FAABB Bounds;
+	FMatrix WorldToModel;
 	UPrimitiveComponent* Primitive;
+	EPrimitiveType PrimitiveType = EPrimitiveType::Cube;
+	UStaticMesh* StaticMesh = nullptr;
 };
 
 class UBVHManager : UObject
@@ -67,3 +72,4 @@ private:
 
 	TArray<FAABB> Boxes;
 };
+
