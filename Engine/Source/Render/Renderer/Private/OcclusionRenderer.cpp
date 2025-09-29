@@ -384,7 +384,7 @@ void UOcclusionRenderer::OcclusionTest(ID3D11Device* InDevice, ID3D11DeviceConte
 		}
 		InDeviceContext->Unmap(ReadbackBuffer, 0);
 
-		UE_LOG("Occlusion Culling: %d objects culled this frame.", CulledObjectCount);
+		//UE_LOG("Occlusion Culling: %d objects culled this frame.", CulledObjectCount);
 	}
 
 	// ========================================================= //

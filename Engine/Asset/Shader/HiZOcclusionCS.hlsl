@@ -49,7 +49,7 @@ void main(uint3 DispatchThreadID : SV_DispatchThreadID)
 	float2 clipSize = maxClip - minClip;
 	float2 screenPixelSize = clipSize * ScreenSize;
 	float maxDim = max(screenPixelSize.x, screenPixelSize.y);
-	float baseMip = log2(max(maxDim, 1.0f)) + 1.0f;
+	float baseMip = log2(max(maxDim, 1.0f));
 	baseMip = clamp(baseMip, 0, MipLevels - 1);
 
     // 테스트할 Mip 레벨 범위
