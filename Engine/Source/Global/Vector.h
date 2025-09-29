@@ -345,6 +345,11 @@ struct FVector4
 		W /= Magnitude;
 	}
 
+	float Dot(const FVector4& Other) const
+	{
+		return X * Other.X + Y * Other.Y + Z * Other.Z + W * Other.W;
+	}
+
 
 	/**
 	 * @brief W 성분 무시하고 dot product 진행하는 함수
@@ -358,6 +363,9 @@ struct FVector4
 	{
 		return X * InOtherVector.X + Y * InOtherVector.Y + Z * InOtherVector.Z;
 	}
+
+
+
 
 	float& operator[](int Index)
 	{
@@ -380,6 +388,7 @@ struct FVector4
 		case 3: return W;
 		}
 	}
+
 
 	// Constant Vector (definition from UE5)
 	static FVector4 ZeroVector() { return { 0.0f, 0.0f, 0.0f, 1.0f }; }

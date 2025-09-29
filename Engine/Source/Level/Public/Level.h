@@ -70,6 +70,19 @@ public:
 	uint64 GetShowFlags() const { return ShowFlags; }
 	void SetShowFlags(uint64 InShowFlags) { ShowFlags = InShowFlags; }
 
+	// LOD Update System
+	void UpdateLODForAllMeshes();
+	void TickLODUpdate();
+
+	// Graphics Quality Control
+	void SetGraphicsQuality(int32 QualityLevel);
+
+	// LOD Control Functions
+	void SetGlobalLODEnabled(bool bEnabled);
+	void SetMinLODLevel(int32 MinLevel);
+	void SetLODDistance1(float Distance);
+	void SetLODDistance2(float Distance);
+
 private:
 	TArray<TObjectPtr<AActor>> LevelActors;
 	TArray<TObjectPtr<UPrimitiveComponent>> LevelPrimitiveComponents;	// 액터의 하위 컴포넌트는 액터에서 관리&해제됨
@@ -82,6 +95,10 @@ private:
 	uint64 ShowFlags = static_cast<uint64>(EEngineShowFlags::SF_Primitives) |
 		static_cast<uint64>(EEngineShowFlags::SF_BillboardText) |
 		static_cast<uint64>(EEngineShowFlags::SF_Bounds);
+
+	// LOD Update System
+	int32 LODUpdateFrameCounter = 0;
+	static constexpr int32 LOD_UPDATE_INTERVAL = 10;  // 10프레임마다 업데이트
 
 	/**
 	 * @brief Level에서 Actor를 실질적으로 제거하는 함수
