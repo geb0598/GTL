@@ -38,14 +38,12 @@ void UOcclusionRenderer::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext*
 	Height = InHeight;
 
 	CreateShader(Device);
-	CreateDepthResource(Device);
 	CreateHiZResource(Device);
 }
 
 void UOcclusionRenderer::Release()
 {
 	ReleaseShader();
-	ReleaseDepthResource();
 	ReleaseHiZResource();
 
 	Device = nullptr;
@@ -229,106 +227,6 @@ void UOcclusionRenderer::BuildScreenSpaceBoundingVolumes(
 }
 
 
-void UOcclusionRenderer::DepthPrePass(
-	ID3D11DeviceContext* InDeviceContext,
-	UCamera* InCamera,
-	const TArray<TObjectPtr<UPrimitiveComponent>>& InPrimitiveComponents)
-{
-	// ========================================================= //
-	// 1. 기존 상태 저장
-	// ========================================================= //
-	ID3D11RenderTargetView* pOldRTV = nullptr;
-	ID3D11DepthStencilView* pOldDSV = nullptr;
-	InDeviceContext->OMGetRenderTargets(1, &pOldRTV, &pOldDSV);
-
-	ID3D11ShaderResourceView* pOldPSShaderResource = nullptr;
-	InDeviceContext->PSGetShaderResources(0, 1, &pOldPSShaderResource);
-
-	ID3D11PixelShader* pOldPS = nullptr;
-	ID3D11ClassInstance* pOldPSInstances[256] = { nullptr };
-	UINT pOldPSNumInstances = 0;
-	InDeviceContext->PSGetShader(&pOldPS, pOldPSInstances, &pOldPSNumInstances);
-
-	ID3D11VertexShader* pOldVS = nullptr;
-	ID3D11ClassInstance* pOldVSInstances[256] = { nullptr };
-	UINT pOldVSNumInstances = 0;
-	InDeviceContext->VSGetShader(&pOldVS, pOldVSInstances, &pOldVSNumInstances);
-
-	ID3D11InputLayout* pOldInputLayout = nullptr;
-	InDeviceContext->IAGetInputLayout(&pOldInputLayout);
-
-	D3D11_PRIMITIVE_TOPOLOGY OldPrimitiveTopology;
-	InDeviceContext->IAGetPrimitiveTopology(&OldPrimitiveTopology);
-
-	// ========================================================= //
-	// 2. Depth Pre-Pass 셋업
-	// ========================================================= //
-	InDeviceContext->OMSetRenderTargets(0, nullptr, DepthStencilView);
-	InDeviceContext->ClearDepthStencilView(DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
-
-	InDeviceContext->VSSetShader(DepthVertexShader, nullptr, 0);
-	InDeviceContext->PSSetShader(DepthPixelShader, nullptr, 0);
-	InDeviceContext->IASetInputLayout(DepthInputLayout);
-
-	// ========================================================= //
-	// 3. 프리미티브 드로우
-	// ========================================================= //
-	for (const auto& Primitive : InPrimitiveComponents)
-	{
-		if (!Primitive || !Primitive->IsVisible()) continue;
-
-		// --- (1) 상수 버퍼 업데이트 ---
-		FMatrix WorldMatrix = Primitive->GetWorldTransformMatrix();
-		FViewProjConstants ViewProj = InCamera->GetFViewProjConstants();
-		FMatrix WorldViewProj = WorldMatrix * ViewProj.View * ViewProj.Projection;
-
-		D3D11_MAPPED_SUBRESOURCE MappedResource;
-		if (SUCCEEDED(InDeviceContext->Map(DepthPassConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource)))
-		{
-			memcpy(MappedResource.pData, &WorldViewProj, sizeof(FMatrix));
-			InDeviceContext->Unmap(DepthPassConstantBuffer, 0);
-		}
-		InDeviceContext->VSSetConstantBuffers(0, 1, &DepthPassConstantBuffer);
-
-		// --- (2) 버퍼 바인딩 ---
-		UINT Stride	= sizeof(FNormalVertex);
-		UINT Offset = 0;
-		ID3D11Buffer* VertexBuffer = Primitive->GetVertexBuffer();
-		ID3D11Buffer* IndexBuffer = Primitive->GetIndexBuffer();
-
-		InDeviceContext->IASetVertexBuffers(0, 1, &VertexBuffer, &Stride, &Offset);
-		InDeviceContext->IASetIndexBuffer(IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
-		InDeviceContext->IASetPrimitiveTopology(Primitive->GetTopology());
-
-		// --- (3) 드로우 ---
-		InDeviceContext->DrawIndexed(Primitive->GetNumIndices(), 0, 0);
-	}
-
-	// ========================================================= //
-	// 4. 이전 상태 복원
-	// ========================================================= //
-	InDeviceContext->OMSetRenderTargets(1, &pOldRTV, pOldDSV);
-	if (pOldRTV) pOldRTV->Release();
-	if (pOldDSV) pOldDSV->Release();
-
-	InDeviceContext->PSSetShaderResources(0, 1, &pOldPSShaderResource);
-	if (pOldPSShaderResource) pOldPSShaderResource->Release();
-
-	InDeviceContext->PSSetShader(pOldPS, pOldPSInstances, pOldPSNumInstances);
-	if (pOldPS) pOldPS->Release();
-	for (UINT i = 0; i < pOldPSNumInstances; ++i)
-		if (pOldPSInstances[i]) pOldPSInstances[i]->Release();
-
-	InDeviceContext->VSSetShader(pOldVS, pOldVSInstances, pOldVSNumInstances);
-	if (pOldVS) pOldVS->Release();
-	for (UINT i = 0; i < pOldVSNumInstances; ++i)
-		if (pOldVSInstances[i]) pOldVSInstances[i]->Release();
-
-	InDeviceContext->IASetInputLayout(pOldInputLayout);
-	if (pOldInputLayout) pOldInputLayout->Release();
-
-	InDeviceContext->IASetPrimitiveTopology(OldPrimitiveTopology);
-}
 
 void UOcclusionRenderer::GenerateHiZ(
 	ID3D11Device* InDevice,
@@ -654,107 +552,6 @@ void UOcclusionRenderer::CreateShader(ID3D11Device* InDevice)
 	}
 	if (pShaderBlob) pShaderBlob->Release();
 
-	// Compile DepthVS.hlsl
-	pShaderBlob = nullptr;
-	pErrorBlob = nullptr;
-	hResult = D3DCompileFromFile(
-		L"Asset/Shader/DepthVS.hlsl",
-		nullptr,
-		nullptr,
-		"main",
-		"vs_5_0",
-		D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
-		0,
-		&pShaderBlob,
-		&pErrorBlob
-	);
-
-	if (FAILED(hResult))
-	{
-		if (pErrorBlob)
-		{
-			OutputDebugStringA(reinterpret_cast<const char*>(pErrorBlob->GetBufferPointer()));
-			pErrorBlob->Release();
-		}
-		if (pShaderBlob) pShaderBlob->Release();
-		return;
-	}
-
-	hResult = InDevice->CreateVertexShader(pShaderBlob->GetBufferPointer(), pShaderBlob->GetBufferSize(), nullptr, &DepthVertexShader);
-	if (FAILED(hResult))
-	{
-		if (pShaderBlob) pShaderBlob->Release();
-		return;
-	}
-
-	// Create input layout for DepthVS
-	D3D11_INPUT_ELEMENT_DESC layout[] =
-	{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	};
-	UINT numElements = ARRAYSIZE(layout);
-
-	hResult = InDevice->CreateInputLayout(layout, numElements, pShaderBlob->GetBufferPointer(), pShaderBlob->GetBufferSize(), &DepthInputLayout);
-	if (FAILED(hResult))
-	{
-		if (pShaderBlob) pShaderBlob->Release();
-		return;
-	}
-	if (pShaderBlob) pShaderBlob->Release();
-
-	// Compile DepthPS.hlsl
-	pShaderBlob = nullptr;
-	pErrorBlob = nullptr;
-	hResult = D3DCompileFromFile(
-		L"Asset/Shader/DepthPS.hlsl",
-		nullptr,
-		nullptr,
-		"main",
-		"ps_5_0",
-		D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
-		0,
-		&pShaderBlob,
-		&pErrorBlob
-	);
-
-	if (FAILED(hResult))
-	{
-		if (pErrorBlob)
-		{
-			OutputDebugStringA(reinterpret_cast<const char*>(pErrorBlob->GetBufferPointer()));
-			pErrorBlob->Release();
-		}
-		if (pShaderBlob) pShaderBlob->Release();
-		// Log the error but don't return, allow subsequent resource creation to be attempted
-		char buffer[256];
-		sprintf_s(buffer, "Failed to compile DepthPS.hlsl. HRESULT: 0x%08X\n", hResult);
-		OutputDebugStringA(buffer);
-	}
-
-	hResult = InDevice->CreatePixelShader(pShaderBlob->GetBufferPointer(), pShaderBlob->GetBufferSize(), nullptr, &DepthPixelShader);
-	if (FAILED(hResult))
-	{
-		if (pShaderBlob) pShaderBlob->Release();
-		// Log the error but don't return, allow subsequent resource creation to be attempted
-		char buffer[256];
-		sprintf_s(buffer, "Failed to create DepthPixelShader. HRESULT: 0x%08X\n", hResult);
-		OutputDebugStringA(buffer);
-	}
-	if (pShaderBlob) pShaderBlob->Release();
-
-	// Create DepthPassConstantBuffer
-	D3D11_BUFFER_DESC CbDesc = {};
-	CbDesc.ByteWidth = sizeof(FMatrix);
-	CbDesc.Usage = D3D11_USAGE_DYNAMIC;
-	CbDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	CbDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	hResult = InDevice->CreateBuffer(&CbDesc, nullptr, &DepthPassConstantBuffer);
-	if (FAILED(hResult))
-	{
-		OutputDebugStringA("Failed to create DepthPassConstantBuffer.\n");
-		return;
-	}
-
 	// Create HiZSamplerState
 	D3D11_SAMPLER_DESC SamplerDesc = {};
 	SamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
@@ -784,52 +581,7 @@ void UOcclusionRenderer::CreateShader(ID3D11Device* InDevice)
 	}
 }
 
-void UOcclusionRenderer::CreateDepthResource(ID3D11Device* InDevice)
-{
-	D3D11_TEXTURE2D_DESC TextureDesc = {};
-	TextureDesc.Width = Width;
-	TextureDesc.Height = Height;
-	TextureDesc.MipLevels = 1;
-	TextureDesc.ArraySize = 1;
-	TextureDesc.Format = DXGI_FORMAT_R24G8_TYPELESS; // to be viewable as depth and shader resource
-	TextureDesc.SampleDesc.Count = 1;
-	TextureDesc.Usage = D3D11_USAGE_DEFAULT;
-	TextureDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
 
-	HRESULT hResult = InDevice->CreateTexture2D(&TextureDesc, nullptr, &DepthTexture);
-	if (FAILED(hResult))
-	{
-		char buffer[256];
-		sprintf_s(buffer, "Failed to create DepthTexture. HRESULT: 0x%08X\n", hResult);
-		OutputDebugStringA(buffer);
-		return;
-	}
-
-	D3D11_DEPTH_STENCIL_VIEW_DESC DepthStencilViewDesc = {};
-	DepthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	DepthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-	hResult = InDevice->CreateDepthStencilView(DepthTexture, &DepthStencilViewDesc, &DepthStencilView);
-	if (FAILED(hResult))
-	{
-		char buffer[256];
-		sprintf_s(buffer, "Failed to create DepthStencilView. HRESULT: 0x%08X\n", hResult);
-		OutputDebugStringA(buffer);
-		return;
-	}
-
-	D3D11_SHADER_RESOURCE_VIEW_DESC ShaderResourceViewDesc = {};
-	ShaderResourceViewDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-	ShaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	ShaderResourceViewDesc.Texture2D.MipLevels = 1;
-	hResult = InDevice->CreateShaderResourceView(DepthTexture, &ShaderResourceViewDesc, &DepthShaderResourceView);
-	if (FAILED(hResult))
-	{
-		char buffer[256];
-		sprintf_s(buffer, "Failed to create DepthShaderResourceView. HRESULT: 0x%08X\n", hResult);
-		OutputDebugStringA(buffer);
-		return;
-	}
-}
 
 void UOcclusionRenderer::CreateHiZResource(ID3D11Device* InDevice)
 {
@@ -924,27 +676,6 @@ void UOcclusionRenderer::ReleaseShader()
 		HiZCopyDepthShader = nullptr;
 	}
 
-	if (DepthVertexShader)
-	{
-		DepthVertexShader->Release();
-		DepthVertexShader = nullptr;
-	}
-	if (DepthInputLayout)
-	{
-		DepthInputLayout->Release();
-		DepthInputLayout = nullptr;
-	}
-	if (DepthPixelShader)
-	{
-		DepthPixelShader->Release();
-		DepthPixelShader = nullptr;
-	}
-	if (DepthPassConstantBuffer)
-	{
-		DepthPassConstantBuffer->Release();
-		DepthPassConstantBuffer = nullptr;
-	}
-
 	if (HiZSamplerState)
 	{
 		HiZSamplerState->Release();
@@ -957,24 +688,7 @@ void UOcclusionRenderer::ReleaseShader()
 	}
 }
 
-void UOcclusionRenderer::ReleaseDepthResource()
-{
-	if (DepthTexture)
-	{
-		DepthTexture->Release();
-		DepthTexture = nullptr;
-	}
-	if (DepthStencilView)
-	{
-		DepthStencilView->Release();
-		DepthStencilView = nullptr;
-	}
-	if (DepthShaderResourceView)
-	{
-		DepthShaderResourceView->Release();
-		DepthShaderResourceView = nullptr;
-	}
-}
+
 
 void UOcclusionRenderer::ReleaseHiZResource()
 {

@@ -439,9 +439,11 @@ void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewpor
 		ID3D11DepthStencilView* NullDSV = nullptr;
 		GetDeviceContext()->OMSetRenderTargets(0, NullRTVs, NullDSV);
 
+		DeviceResources->CopyDepthSRVToPreviousFrameSRV();
+
 		// HiZ 생성 (uses the depth buffer from the *previous* frame as an SRV)
 		PROFILE_SCOPE("GenerateHiZ",
-			OcclusionRenderer.GenerateHiZ(GetDevice(), GetDeviceContext(), DeviceResources->GetDetphShaderResourceView())
+			OcclusionRenderer.GenerateHiZ(GetDevice(), GetDeviceContext(), DeviceResources->GetPreviousFrameDepthSRV())
 		);
 
 		// 화면 공간 bounding volume 구축

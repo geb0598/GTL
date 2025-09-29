@@ -42,8 +42,6 @@ public:
 
 	void BuildScreenSpaceBoundingVolumes(ID3D11DeviceContext* InDeviceContext, UCamera* InCamera, const TArray<TObjectPtr<UPrimitiveComponent>>& InPrimitiveComponents);
 
-	void DepthPrePass(ID3D11DeviceContext* InDeviceContext, UCamera* InCamera, const TArray<TObjectPtr<UPrimitiveComponent>>& InPrimitiveComponents);
-
 	void GenerateHiZ(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, ID3D11ShaderResourceView* InDepthShaderResourceView);
 
 	void OcclusionTest(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, TArray<bool>& OutVisibilityResults);
@@ -52,21 +50,14 @@ private:
 	static constexpr size_t NUM_WORKER_THREADS = 8;
 
 	void CreateShader(ID3D11Device* InDevice);
-	void CreateDepthResource(ID3D11Device* InDevice);
 	void CreateHiZResource(ID3D11Device* InDevice);
 
 	void ReleaseShader();
-	void ReleaseDepthResource();
 	void ReleaseHiZResource();
 
 	/** @note: UOcclusionRenderer에서는 Device와 DeviceContext의 수명을 관리하지 않음*/
 	ID3D11Device* Device = nullptr;
 	ID3D11DeviceContext* DeviceContext = nullptr;
-
-	/** @brief: Depth resources */
-	ID3D11Texture2D* DepthTexture = nullptr;
-	ID3D11DepthStencilView* DepthStencilView = nullptr;
-	ID3D11ShaderResourceView* DepthShaderResourceView = nullptr;
 
 	/** @brief: HiZ resources */
 	ID3D11Texture2D* HiZTexture = nullptr;
@@ -79,12 +70,6 @@ private:
 	ID3D11ComputeShader* HiZDownSampleShader = nullptr;
 	ID3D11ComputeShader* HiZOcclusionShader = nullptr;
 	ID3D11ComputeShader* HiZCopyDepthShader = nullptr;
-
-	ID3D11VertexShader* DepthVertexShader = nullptr;
-	ID3D11InputLayout* DepthInputLayout = nullptr;
-	ID3D11PixelShader* DepthPixelShader = nullptr;
-
-	ID3D11Buffer* DepthPassConstantBuffer = nullptr;
 
 	UINT MipLevels;
 

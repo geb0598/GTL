@@ -2,6 +2,7 @@
 #include "Render/Renderer/Public/DeviceResources.h"
 
 UDeviceResources::UDeviceResources(HWND InWindowHandle)
+	: PreviousFrameDepthSRV(nullptr)
 {
 	Create(InWindowHandle);
 }
@@ -194,6 +195,11 @@ void UDeviceResources::ReleaseDepthBuffer()
 		DepthShaderResourceView->Release();
 		DepthShaderResourceView = nullptr;
 	}
+	if (PreviousFrameDepthSRV)
+	{
+		PreviousFrameDepthSRV->Release();
+		PreviousFrameDepthSRV = nullptr;
+	}
 }
 
 void UDeviceResources::UpdateViewport(float InMenuBarHeight)
@@ -217,6 +223,44 @@ void UDeviceResources::UpdateViewport(float InMenuBarHeight)
 
 	Width = SwapChainDescription.BufferDesc.Width;
 	Height = SwapChainDescription.BufferDesc.Height;
+}
+
+void UDeviceResources::CopyDepthSRVToPreviousFrameSRV()
+{
+	if (PreviousFrameDepthSRV)
+	{
+		PreviousFrameDepthSRV->Release();
+		PreviousFrameDepthSRV = nullptr;
+	}
+
+	// Create a new texture to copy the current DepthBuffer into
+	D3D11_TEXTURE2D_DESC dsDesc = {};
+	DepthBuffer->GetDesc(&dsDesc);
+
+	ID3D11Texture2D* newPreviousFrameDepthTexture = nullptr;
+	HRESULT hr = Device->CreateTexture2D(&dsDesc, nullptr, &newPreviousFrameDepthTexture);
+	if (FAILED(hr))
+	{
+		// Handle error
+		return;
+	}
+
+	DeviceContext->CopyResource(newPreviousFrameDepthTexture, DepthBuffer);
+
+	// Create SRV for the new texture
+	D3D11_SHADER_RESOURCE_VIEW_DESC ShaderResourceViewDesc = {};
+	ShaderResourceViewDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	ShaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	ShaderResourceViewDesc.Texture2D.MipLevels = 1;
+	hr = Device->CreateShaderResourceView(newPreviousFrameDepthTexture, &ShaderResourceViewDesc, &PreviousFrameDepthSRV);
+	if (FAILED(hr))
+	{
+		// Handle error
+		newPreviousFrameDepthTexture->Release();
+		return;
+	}
+
+	newPreviousFrameDepthTexture->Release(); // Release the texture, the SRV holds a reference
 }
 
 void UDeviceResources::CreateFactories()

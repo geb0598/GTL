@@ -61,7 +61,7 @@ void main(uint3 DispatchThreadID : SV_DispatchThreadID)
             float2 sampleClip = lerp(minClip, maxClip, float2(x / 5.0f, y / 5.0f));
             float2 sampleUV = ClipToTexCoord(sampleClip);
             float occluderZ = HiZTexture.SampleLevel(Sampler_LinearClamp, sampleUV, mip).r;
-            if (minZ < occluderZ + 0.001f) // 객체의 가장 가까운 Z가 Hi-Z 맵의 깊이보다 가까우면 가시적 (epsilon 추가)
+            if (minZ < occluderZ) // 객체의 가장 가까운 Z가 Hi-Z 맵의 깊이보다 가까우면 가시적 (epsilon 추가)
             {
                 isVisible = true;
                 break;
