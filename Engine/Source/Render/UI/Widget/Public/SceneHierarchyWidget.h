@@ -31,6 +31,10 @@ private:
 	TArray<int32> FilteredIndices; // 필터링된 Actor 인덱스 캐시
 	bool bNeedsFilterUpdate = true; // 필터 업데이트 필요 여부
 
+	// 가상화 렌더링
+	static constexpr float ITEM_HEIGHT = 20.0f; // 각 Actor 항목의 높이
+	static constexpr int32 BUFFER_ITEMS = 5; // 위아래 버퍼 항목 개수
+
 	// 이름 변경 기능
 	TObjectPtr<AActor> RenamingActor = nullptr;
 	char RenameBuffer[256] = "";
@@ -65,4 +69,24 @@ private:
 	void StartRenaming(TObjectPtr<AActor> InActor);
 	void FinishRenaming(bool bInConfirm);
 	bool IsRenaming() const { return RenamingActor != nullptr; }
+
+	// Cast 캐싱 - 더티 플래그 방식
+	struct FActorPrimitiveCache
+	{
+		bool bHasPrimitive = false;
+		TArray<TObjectPtr<UPrimitiveComponent>> PrimitiveComponents;
+	};
+
+	mutable TMap<TObjectPtr<AActor>, FActorPrimitiveCache> ActorPrimitiveCache;
+	mutable TObjectPtr<ULevel> LastCachedLevel = nullptr; // 마지막으로 캐시한 레벨
+	mutable size_t LastActorCount = 0; // 마지막으로 캐시한 Actor 개수
+	mutable TArray<TObjectPtr<AActor>> LastActorList; // 마지막으로 캐시한 Actor 리스트 (포인터 비교용)
+
+	void UpdateCacheIfNeeded(const TArray<TObjectPtr<AActor>>& InLevelActors) const;
+	bool HasActorListChanged(const TArray<TObjectPtr<AActor>>& InLevelActors) const;
+	void InvalidateCache() { ActorPrimitiveCache.clear(); LastCachedLevel = nullptr; LastActorCount = 0; LastActorList.clear(); }
+
+	// 가상화 헬퍼 함수들
+	void RenderVirtualizedActorList(const TArray<TObjectPtr<AActor>>& InActors, const TArray<int32>& InIndices);
+	void CalculateVisibleRange(int32 TotalItems, float ChildHeight, int32& OutStartIndex, int32& OutEndIndex) const;
 };
