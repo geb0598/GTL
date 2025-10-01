@@ -65,12 +65,14 @@ public:
 	void CreateDefaultShader();
 	void CreateTextureShader();
 	void CreateConstantBuffer();
+	void CreateBillboardResources();
 
 	// Release
 	void ReleaseConstantBuffer();
 	void ReleaseDefaultShader();
 	void ReleaseDepthStencilState();
 	void ReleaseRasterizerState();
+	void ReleaseBillboardResources();
 
 	// Render
 	void Update();
@@ -151,6 +153,9 @@ private:
 	ID3D11VertexShader* TextureVertexShader = nullptr;
 	ID3D11PixelShader* TexturePixelShader = nullptr;
 	ID3D11InputLayout* TextureInputLayout = nullptr;
+	ID3D11Buffer* BillboardVertexBuffer = nullptr;
+	ID3D11Buffer* BillboardIndexBuffer = nullptr;
+	ID3D11BlendState* BillboardBlendState = nullptr;
 
 	uint32 Stride = 0;
 
