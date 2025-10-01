@@ -50,6 +50,7 @@ enum class EKeyInput : uint8
 	F2,
 	F3,
 	F4,
+	F5,
 	Backspace,
 	Delete,
 

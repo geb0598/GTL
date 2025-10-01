@@ -3,7 +3,7 @@
 
 #include "Level/Public/Level.h"
 #include "Manager/Input/Public/InputManager.h"
-#include "Manager/Level/Public/LevelManager.h"
+#include "Editor/Public/EditorEngine.h"
 
 
 
@@ -23,8 +23,7 @@ void UActorTerminationWidget::Initialize()
 void UActorTerminationWidget::Update()
 {
 	// 매 프레임 Level의 선택된 Actor를 확인해서 정보 반영
-	ULevelManager& LevelManager = ULevelManager::GetInstance();
-	TObjectPtr<ULevel> CurrentLevel = LevelManager.GetCurrentLevel();
+	TObjectPtr<ULevel> CurrentLevel = GEngine->GetCurrentLevel();
 
 	if (CurrentLevel)
 	{
@@ -79,8 +78,7 @@ void UActorTerminationWidget::DeleteSelectedActor()
 		return;
 	}
 
-	ULevelManager& LevelManager = ULevelManager::GetInstance();
-	TObjectPtr<ULevel> CurrentLevel = LevelManager.GetCurrentLevel();
+	TObjectPtr<ULevel> CurrentLevel = GEngine->GetCurrentLevel();
 
 	if (!CurrentLevel)
 	{

@@ -146,13 +146,13 @@ const FVector& AActor::GetActorScale3D() const
 	return RootComponent->GetRelativeScale3D();
 }
 
-void AActor::Tick()
+void AActor::Tick(float DeltaTime)
 {
 	for (auto& Component : OwnedComponents)
 	{
 		if (Component)
 		{
-			Component->TickComponent();
+			Component->TickComponent(DeltaTime);
 		}
 	}
 }

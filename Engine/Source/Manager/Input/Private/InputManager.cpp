@@ -62,6 +62,7 @@ void UInputManager::InitializeKeyMapping()
 	VirtualKeyMap[VK_F2] = EKeyInput::F2;
 	VirtualKeyMap[VK_F3] = EKeyInput::F3;
 	VirtualKeyMap[VK_F4] = EKeyInput::F4;
+	VirtualKeyMap[VK_F5] = EKeyInput::F5;
 	VirtualKeyMap[VK_BACK] = EKeyInput::Backspace;
 	VirtualKeyMap[VK_DELETE] = EKeyInput::Delete;
 
@@ -92,7 +93,12 @@ void UInputManager::InitializeMouseClickStatus()
 	ClickCount[EKeyInput::MouseMiddle] = 0;
 }
 
-void UInputManager::Update(const FAppWindow* InWindow)
+void UInputManager::Initialize(FAppWindow* InWindow)
+{
+	Window = InWindow;
+}
+
+void UInputManager::Tick(float DeltaTime)
 {
 	// 이전 프레임 상태를 현재 프레임 상태로 복사
 	PreviousKeyState = CurrentKeyState;
@@ -119,7 +125,7 @@ void UInputManager::Update(const FAppWindow* InWindow)
 	}
 
 	// 마우스 위치 업데이트
-	UpdateMousePosition(InWindow);
+	UpdateMousePosition();
 
 	// 마우스 휠 델타 리셋
 	MouseWheelDelta = 0.0f;
@@ -146,7 +152,7 @@ void UInputManager::Update(const FAppWindow* InWindow)
 	}
 }
 
-void UInputManager::UpdateMousePosition(const FAppWindow* InWindow)
+void UInputManager::UpdateMousePosition()
 {
 	PreviousMousePosition = CurrentMousePosition;
 
@@ -160,7 +166,7 @@ void UInputManager::UpdateMousePosition(const FAppWindow* InWindow)
 
 	int32 ViewportWidth;
 	int32 ViewportHeight;
-	InWindow->GetClientSize(ViewportWidth, ViewportHeight);
+	Window->GetClientSize(ViewportWidth, ViewportHeight);
 
 	POINT MousePoint;
 	if (GetCursorPos(&MousePoint))

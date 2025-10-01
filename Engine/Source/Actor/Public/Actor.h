@@ -35,7 +35,7 @@ public:
 
 	virtual void BeginPlay();
 	virtual void EndPlay();
-	virtual void Tick();
+	virtual void Tick(float DeltaTime);
 
 	// Getter & Setter
 	USceneComponent* GetRootComponent() const { return RootComponent.Get(); }
@@ -47,7 +47,13 @@ public:
 	const FVector& GetActorRotation() const;
 	const FVector& GetActorScale3D() const;
 
-	template<class T>
+	bool IsActorTickEnabled() const { return bIsActorTickEnabled; }
+	void SetActorTickEnabled(bool bInActorTickEnabled) { bIsActorTickEnabled = bInActorTickEnabled; }
+
+	bool IsTickInEditor() const { return bTickInEditor; }
+	void SetTickInEditor(bool InTickInEditor) { bTickInEditor = InTickInEditor; }
+
+	template <class T>
 	T* CreateDefaultSubobject(const FName& InName)
 	{
 		static_assert(is_base_of_v<UObject, T>, "생성할 클래스는 UObject를 반드시 상속 받아야 합니다");
@@ -73,4 +79,7 @@ private:
 	TObjectPtr<USceneComponent> RootComponent = nullptr;
 	TObjectPtr<UBillBoardComponent> BillBoardComponent = nullptr;
 	TArray<TObjectPtr<UActorComponent>> OwnedComponents;
+
+	bool bIsActorTickEnabled = false;
+	bool bTickInEditor = false;
 };

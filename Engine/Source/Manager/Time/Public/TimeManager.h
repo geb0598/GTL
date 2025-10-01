@@ -11,7 +11,7 @@ class UTimeManager :
 	DECLARE_SINGLETON_CLASS(UTimeManager, UObject)
 
 public:
-	void Update();
+	void UpdateDeltaTime();
 
 	// Getter & Setter
 	float GetFPS() const { return FPS; }

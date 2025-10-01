@@ -50,7 +50,7 @@ void UActorComponent::BeginPlay()
 
 }
 
-void UActorComponent::TickComponent()
+void UActorComponent::TickComponent(float DeltaTime)
 {
 
 }
