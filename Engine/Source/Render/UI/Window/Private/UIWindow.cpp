@@ -2,6 +2,7 @@
 #include "Render/UI/Window/Public/UIWindow.h"
 
 #include "ImGui/imgui_internal.h"
+#include "Render/UI/Widget/Public/StaticMeshComponentWidget.h"
 
 #include "Render/UI/Widget/Public/Widget.h"
 
@@ -282,6 +283,10 @@ void UUIWindow::RenderWidget() const
 {
 	for (auto* Widget : Widgets)
 	{
+		if (Widget->IsA(UStaticMeshComponentWidget::StaticClass()))
+		{
+			continue;
+		}
 		Widget->RenderWidget();
 		Widget->PostProcess();
 	}
