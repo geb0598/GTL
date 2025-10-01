@@ -4,12 +4,12 @@
 #include "Core/Public/ScopeCycleCounter.h"
 #include "Editor/Public/Camera.h"
 #include "Editor/Public/Editor.h"
+#include "Editor/Public/EditorEngine.h"
 #include "Editor/Public/Viewport.h"
 #include "Global/Quaternion.h"
 #include "Level/Public/Level.h"
 #include "Manager/Config/Public/ConfigManager.h"
 #include "Manager/Input/Public/InputManager.h"
-#include "Manager/Level/Public/LevelManager.h"
 #include "Manager/Time/Public/TimeManager.h"
 #include "Manager/UI/Public/UIManager.h"
 #include "Render/Renderer/Public/Renderer.h"
@@ -56,7 +56,7 @@ UEditor::~UEditor()
 	SafeDelete(InteractionViewport);
 }
 
-void UEditor::Update()
+void UEditor::Tick(float DeltaTime)
 {
 	URenderer& Renderer = URenderer::GetInstance();
 	FViewport* Viewport = Renderer.GetViewportClient();
@@ -75,7 +75,7 @@ void UEditor::Update()
 		}
 	}
 
-	if (AActor* SelectedActor = ULevelManager::GetInstance().GetCurrentLevel()->GetSelectedActor())
+	if (AActor* SelectedActor = GEngine->GetCurrentLevel()->GetSelectedActor())
 	{
 		for (const auto& Component : SelectedActor->GetOwnedComponents())
 		{
@@ -84,7 +84,7 @@ void UEditor::Update()
 				FVector WorldMin, WorldMax;
 				PrimitiveComponent->GetWorldAABB(WorldMin, WorldMax);
 
-				uint64 ShowFlags = ULevelManager::GetInstance().GetCurrentLevel()->GetShowFlags();
+				uint64 ShowFlags = GEngine->GetCurrentLevel()->GetShowFlags();
 
 				if ((ShowFlags & EEngineShowFlags::SF_Primitives) && (ShowFlags & EEngineShowFlags::SF_Bounds))
 				{
@@ -104,7 +104,7 @@ void UEditor::Update()
 
 	BatchLines.UpdateVertexBuffer();
 
-	ProcessMouseInput(ULevelManager::GetInstance().GetCurrentLevel());
+	ProcessMouseInput(GEngine->GetCurrentLevel());
 
 	UpdateLayout();
 }
@@ -118,7 +118,7 @@ void UEditor::RenderEditor(UPipeline& InPipeline, UCamera* InCamera)
 	// Gizmo 렌더링 시, 현재 활성화된 카메라의 위치를 전달해야 합니다。
 	if (InCamera)
 	{
-		AActor* SelectedActor = ULevelManager::GetInstance().GetCurrentLevel()->GetSelectedActor();
+		AActor* SelectedActor = GEngine->GetCurrentLevel()->GetSelectedActor();
 		Gizmo.RenderGizmo(InPipeline, SelectedActor, InCamera);
 	}
 }
@@ -423,11 +423,11 @@ void UEditor::ProcessMouseInput(ULevel* InLevel)
 		}
 
 		const TArray<TObjectPtr<UPrimitiveComponent>>& Candidates =
-			ULevelManager::GetInstance().GetCurrentLevel()->GetLevelPrimitiveComponents();
+			GEngine->GetCurrentLevel()->GetLevelPrimitiveComponents();
 
 		if (!ImGui::GetIO().WantCaptureMouse && InputManager.IsKeyPressed(EKeyInput::MouseLeft))
 		{
-			if (ULevelManager::GetInstance().GetCurrentLevel()->GetShowFlags() & EEngineShowFlags::SF_Primitives)
+			if (GEngine->GetCurrentLevel()->GetShowFlags() & EEngineShowFlags::SF_Primitives)
 			{
 				UStatOverlay::GetInstance().NumPickingAttempts++;
 				FScopeCycleCounter PickCounter;

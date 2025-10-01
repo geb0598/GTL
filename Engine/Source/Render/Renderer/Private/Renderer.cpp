@@ -6,11 +6,11 @@
 #include "Component/Public/PrimitiveComponent.h"
 #include "Component/Mesh/Public/StaticMeshComponent.h"
 #include "Editor/Public/Editor.h"
+#include "Editor/Public/EditorEngine.h"
 #include "Editor/Public/Viewport.h"
 #include "Editor/Public/ViewportClient.h"
 #include "Editor/Public/Camera.h"
 #include "Level/Public/Level.h"
-#include "Manager/Level/Public/LevelManager.h"
 #include "Manager/UI/Public/UIManager.h"
 #include "Render/UI/Overlay/Public/StatOverlay.h"
 #include "Texture/Public/Material.h"
@@ -360,9 +360,8 @@ void URenderer::ReleaseDepthStencilState()
 }
 
 // Renderer.cpp
-void URenderer::Update()
+void URenderer::Tick(float DeltaTime)
 {
-
 	RenderBegin();
 	// FViewportClient로부터 모든 뷰포트를 가져옵니다.
 	for (FViewportClient& ViewportClient : ViewportClient->GetViewports())
@@ -385,7 +384,7 @@ void URenderer::Update()
 		RenderLevel(CurrentCamera, ViewportClient);
 
 		// 5. 에디터를 렌더링합니다.
-		ULevelManager::GetInstance().GetEditor()->RenderEditor(*Pipeline, CurrentCamera);
+		GEngine->GetEditor()->RenderEditor(*Pipeline, CurrentCamera);
 	}
 
 	// 최상위 에디터/GUI는 프레임에 1회만
@@ -419,12 +418,12 @@ void URenderer::RenderBegin() const
  */
 void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewportClient)
 {
-	if (!ULevelManager::GetInstance().GetCurrentLevel())
+	if (!GEngine->GetCurrentLevel())
 	{
 		return;
 	}
 
-	const auto PrimitiveComponents = ULevelManager::GetInstance().GetCurrentLevel()->GetVisiblePrimitiveComponents(InCurrentCamera);
+	const auto PrimitiveComponents = GEngine->GetCurrentLevel()->GetVisiblePrimitiveComponents(InCurrentCamera);
 
 	// ImGui 창 옆 키고 끌 수 있는 메뉴 넣기
 	if (bOcclusionCulling)
@@ -498,7 +497,7 @@ void URenderer::RenderLevel_SingleThreaded(UCamera* InCurrentCamera, FViewportCl
 		}
 
 		FRenderState RenderState = PrimitiveComponent->GetRenderState();
-		const EViewModeIndex ViewMode = ULevelManager::GetInstance().GetEditor()->GetViewMode();
+		const EViewModeIndex ViewMode = GEngine->GetEditor()->GetViewMode();
 		if (ViewMode == EViewModeIndex::VMI_Wireframe)
 		{
 			RenderState.CullMode = ECullMode::None;
@@ -569,7 +568,7 @@ void URenderer::RenderLevel_MultiThreaded(UCamera* InCurrentCamera, FViewportCli
 				}
 
 				FRenderState RenderState = PrimitiveComponent->GetRenderState();
-				const EViewModeIndex ViewMode = ULevelManager::GetInstance().GetEditor()->GetViewMode();
+				const EViewModeIndex ViewMode = GEngine->GetEditor()->GetViewMode();
 				if (ViewMode == EViewModeIndex::VMI_Wireframe)
 				{
 					RenderState.CullMode = ECullMode::None;

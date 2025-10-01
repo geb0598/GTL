@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "Render/UI/Widget/Public/SceneIOWidget.h"
 
-#include "Manager/Level/Public/LevelManager.h"
+#include "Editor/Public/EditorEngine.h"
 
 #include <shobjidl.h>
 
@@ -83,7 +83,7 @@ void USceneIOWidget::RenderWidget()
  */
 void USceneIOWidget::SaveLevel(const FString& InFilePath)
 {
-	ULevelManager& LevelManager = ULevelManager::GetInstance();
+	// GEngine is now a global pointer
 
 	try
 	{
@@ -92,11 +92,11 @@ void USceneIOWidget::SaveLevel(const FString& InFilePath)
 		if (InFilePath.empty())
 		{
 			// Quick Save인 경우 기본 경로 사용
-			bSuccess = LevelManager.SaveCurrentLevel("");
+			bSuccess = GEngine->SaveCurrentLevel("");
 		}
 		else
 		{
-			bSuccess = LevelManager.SaveCurrentLevel(InFilePath);
+			bSuccess = GEngine->SaveCurrentLevel(InFilePath);
 		}
 
 		if (bSuccess)
@@ -128,8 +128,8 @@ void USceneIOWidget::LoadLevel(const FString& InFilePath)
 {
 	try
 	{
-		ULevelManager& LevelManager = ULevelManager::GetInstance();
-		bool bSuccess = LevelManager.LoadLevel(InFilePath);
+		// GEngine is now a global pointer
+		bool bSuccess = GEngine->LoadLevel(InFilePath);
 
 		if (bSuccess)
 		{
@@ -168,8 +168,8 @@ void USceneIOWidget::CreateNewLevel()
 			return;
 		}
 
-		ULevelManager& LevelManager = ULevelManager::GetInstance();
-		bool bSuccess = LevelManager.CreateNewLevel(LevelName);
+		// GEngine is now a global pointer
+		bool bSuccess = GEngine->CreateNewLevel(LevelName);
 
 		if (bSuccess)
 		{

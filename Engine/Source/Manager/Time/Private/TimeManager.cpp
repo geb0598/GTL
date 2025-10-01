@@ -28,7 +28,7 @@ void UTimeManager::Initialize()
 	}
 }
 
-void UTimeManager::Update()
+void UTimeManager::UpdateDeltaTime()
 {
 	// 현재 시간 업데이트
 	PrevTime = CurrentTime;

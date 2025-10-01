@@ -11,8 +11,9 @@ class UInputManager :
 	DECLARE_SINGLETON_CLASS(UInputManager, UObject)
 
 public:
-	void Update(const FAppWindow* InWindow);
-	void UpdateMousePosition(const FAppWindow* InWindow);
+	void Initialize(FAppWindow* InWindow);
+	void Tick(float DeltaTime);
+	void UpdateMousePosition();
 	void ProcessKeyMessage(uint32 InMessage, WPARAM WParam, LPARAM LParam);
 
 	bool IsKeyDown(EKeyInput InKey) const;
@@ -46,6 +47,9 @@ public:
 	const FVector& GetMouseDelta() const { return MouseDelta; }
 
 private:
+	// Window
+	FAppWindow* Window;
+
 	// Key Status
 	TMap<EKeyInput, bool> CurrentKeyState;
 	TMap<EKeyInput, bool> PreviousKeyState;

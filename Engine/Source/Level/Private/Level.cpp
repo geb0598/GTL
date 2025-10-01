@@ -3,7 +3,7 @@
 
 #include "Actor/Public/Actor.h"
 #include "Component/Public/PrimitiveComponent.h"
-#include "Manager/Level/Public/LevelManager.h"
+#include "Editor/Public/EditorEngine.h"
 #include "Manager/UI/Public/UIManager.h"
 #include "Utility/Public/JsonSerializer.h"
 #include "Factory/Public/NewObject.h"
@@ -19,6 +19,9 @@
 #include <json.hpp>
 
 #include "Manager/BVH/public/BVHManager.h"
+#include "World/Public/World.h"
+
+IMPLEMENT_CLASS(ULevel, UObject)
 
 ULevel::ULevel() = default;
 
@@ -93,7 +96,7 @@ void ULevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		InOutHandle["PerspectiveCamera"] = UConfigManager::GetInstance().GetCameraSettingsAsJson();
 
 		JSON PrimitivesJson = json::Object();
-		for (const TObjectPtr<AActor>& Actor : LevelActors)
+		for (const TObjectPtr<AActor>& Actor : Actors)
 		{
 			JSON PrimitiveJson;
 			PrimitiveJson["Type"] = FActorTypeMapper::ActorToType(Actor->GetClass());;
@@ -110,7 +113,7 @@ void ULevel::Init()
 	// TEST CODE
 }
 
-void ULevel::Update()
+void ULevel::Tick(float DeltaSeconds)
 {
 	// Process Delayed Task
 	ProcessPendingDeletions();
@@ -118,16 +121,32 @@ void ULevel::Update()
 	uint64 AllocatedByte = GetAllocatedBytes();
 	uint32 AllocatedCount = GetAllocatedCount();
 
-	// 최적화 게임잼을 위해 잠시 주석처리
-	// for (auto& Actor : LevelActors)
-	// {
-	// 	if (Actor)
-	// 	{
-	// 		Actor->Tick();
-	// 	}
-	// }
+	UE_LOG("OwningWorld->GetWorldType() : %s", to_string(OwningWorld->GetWorldType()).data());
 
-	TickLODUpdate();
+	if (OwningWorld->GetWorldType() == EWorldType::Editor)
+	{
+		UE_LOG("In Editor");
+		for (auto& Actor : Actors)
+		{
+			if (Actor && Actor->IsActorTickEnabled() && Actor->IsTickInEditor())
+			{
+				Actor->Tick(DeltaSeconds);
+			}
+		}
+	}
+	else if (OwningWorld->GetWorldType() == EWorldType::PIE)
+	{
+		UE_LOG("In PIE");
+		for (auto& Actor : Actors)
+		{
+			if (Actor && Actor->IsActorTickEnabled())
+			{
+				Actor->Tick(DeltaSeconds);
+			}
+		}
+	}
+
+	TickLODUpdate(DeltaSeconds);
 }
 
 void ULevel::Render()
@@ -142,11 +161,11 @@ void ULevel::Cleanup()
 	ProcessPendingDeletions();
 
 	// 2. LevelActors 배열에 남아있는 모든 액터의 메모리를 해제합니다.
-	for (const auto& Actor : LevelActors)
+	for (const auto& Actor : Actors)
 	{
 		delete Actor;
 	}
-	LevelActors.clear();
+	Actors.clear();
 
 	// 3. 모든 액터 객체가 삭제되었으므로, 포인터를 담고 있던 컨테이너들을 비웁니다.
 	ActorsToDelete.clear();
@@ -165,7 +184,7 @@ void ULevel::Cleanup()
 void ULevel::InitializeActorsInLevel()
 {
 	LevelPrimitiveComponents.clear();
-	for (auto& Actor : LevelActors)
+	for (auto& Actor : Actors)
 	{
 		if (Actor)
 		{
@@ -194,10 +213,10 @@ AActor* ULevel::SpawnActorToLevel(UClass* InActorClass, const FName& InName)
 		NewActor->SetName(InName);
 	}
 
-	LevelActors.push_back(TObjectPtr(NewActor));
+	Actors.push_back(TObjectPtr(NewActor));
 	NewActor->BeginPlay();
 
-	if (this == ULevelManager::GetInstance().GetCurrentLevel())
+	if (this == GEngine->GetCurrentLevel())
 	{
 		AddLevelPrimitiveComponent(NewActor);
 		TArray<FBVHPrimitive> BVHPrimitives;
@@ -253,10 +272,10 @@ void ULevel::AddLevelPrimitiveComponent(AActor* Actor)
 
 		TObjectPtr<UPrimitiveComponent> PrimitiveComponent = Cast<UPrimitiveComponent>(Component);
 
-			if (!PrimitiveComponent)
-			{
-				continue;
-			}
+		if (!PrimitiveComponent)
+		{
+			continue;
+		}
 
 		/* 3가지 경우 존재.
 		1: primitive show flag가 꺼져 있으면, 도형, 빌보드 모두 렌더링 안함.
@@ -272,7 +291,9 @@ void ULevel::AddLevelPrimitiveComponent(AActor* Actor)
 		{
 			LevelPrimitiveComponents.push_back(PrimitiveComponent);
 		}
-		else if (PrimitiveComponent->GetPrimitiveType() == EPrimitiveType::BillBoard && (ShowFlags & EEngineShowFlags::SF_BillboardText) && (ULevelManager::GetInstance().GetCurrentLevel()->GetSelectedActor() == Actor))
+		else if (PrimitiveComponent->GetPrimitiveType() == EPrimitiveType::BillBoard && (ShowFlags &
+			EEngineShowFlags::SF_BillboardText) && (GEngine->GetCurrentLevel()->GetSelectedActor()
+			== Actor))
 		{
 			//TObjectPtr<UBillBoardComponent> BillBoard = Cast<UBillBoardComponent>(PrimitiveComponent);
 			//BillBoard->UpdateRotationMatrix();
@@ -296,7 +317,7 @@ void ULevel::SetSelectedActor(AActor* InActor)
 			TObjectPtr<UPrimitiveComponent> PrimitiveComponent = Cast<UPrimitiveComponent>(Component);
 			if (PrimitiveComponent->IsVisible())
 			{
-				PrimitiveComponent->SetColor({ 0.f, 0.f, 0.f, 0.f });
+				PrimitiveComponent->SetColor({0.f, 0.f, 0.f, 0.f});
 			}
 		}
 	}
@@ -319,7 +340,7 @@ void ULevel::SetSelectedActor(AActor* InActor)
 		TObjectPtr<UPrimitiveComponent> PrimitiveComponent = Cast<UPrimitiveComponent>(Component);
 		if (PrimitiveComponent->IsVisible())
 		{
-			PrimitiveComponent->SetColor({ 1.f, 0.8f, 0.2f, 0.4f });
+			PrimitiveComponent->SetColor({1.f, 0.8f, 0.2f, 0.4f});
 		}
 	}
 }
@@ -333,11 +354,11 @@ bool ULevel::DestroyActor(AActor* InActor)
 	}
 
 	// LevelActors 리스트에서 제거
-	for (auto Iterator = LevelActors.begin(); Iterator != LevelActors.end(); ++Iterator)
+	for (auto Iterator = Actors.begin(); Iterator != Actors.end(); ++Iterator)
 	{
 		if (*Iterator == InActor)
 		{
-			LevelActors.erase(Iterator);
+			Actors.erase(Iterator);
 			break;
 		}
 	}
@@ -409,14 +430,14 @@ void ULevel::ProcessPendingDeletions()
 	UE_LOG("Level: 모든 지연 삭제 프로세스 완료");
 }
 
-void ULevel::TickLODUpdate()
+void ULevel::TickLODUpdate(float DeltaSeconds)
 {
-	LODUpdateFrameCounter++;
+	LODUpdateFrameCounter += DeltaSeconds;
 
-	// 10프레임마다 LOD 업데이트 실행
+	// 0.2초마다 LOD 업데이트 실행
 	if (LODUpdateFrameCounter >= LOD_UPDATE_INTERVAL)
 	{
-		LODUpdateFrameCounter = 0;
+		LODUpdateFrameCounter -= LOD_UPDATE_INTERVAL;
 		UpdateLODForAllMeshes();
 	}
 }
@@ -425,10 +446,12 @@ void ULevel::UpdateLODForAllMeshes()
 {
 	// 카메라 위치 가져오기
 	URenderer* RendererPtr = nullptr;
-	try {
+	try
+	{
 		RendererPtr = &URenderer::GetInstance();
 	}
-	catch (...) {
+	catch (...)
+	{
 		return; // Renderer가 초기화되지 않은 경우
 	}
 
@@ -443,7 +466,7 @@ void ULevel::UpdateLODForAllMeshes()
 	FVector CameraPosition = Camera->GetLocation();
 
 	// 레벨의 모든 StaticMeshComponent에 대해 LOD 업데이트
-	for (const TObjectPtr<AActor>& ActorPtr : LevelActors)
+	for (const TObjectPtr<AActor>& ActorPtr : Actors)
 	{
 		AActor* Actor = ActorPtr.Get();
 		if (Actor)
@@ -484,7 +507,7 @@ void ULevel::SetGraphicsQuality(int32 QualityLevel)
 		}
 	}
 
-	for (const TObjectPtr<AActor>& ActorPtr : LevelActors)
+	for (const TObjectPtr<AActor>& ActorPtr : Actors)
 	{
 		AActor* Actor = ActorPtr.Get();
 		if (Actor)
@@ -547,7 +570,7 @@ void ULevel::SetGraphicsQuality(int32 QualityLevel)
 void ULevel::SetGlobalLODEnabled(bool bEnabled)
 {
 	// 레벨의 모든 StaticMeshComponent에 대해 LOD 활성화/비활성화 설정
-	for (const TObjectPtr<AActor>& ActorPtr : LevelActors)
+	for (const TObjectPtr<AActor>& ActorPtr : Actors)
 	{
 		AActor* Actor = ActorPtr.Get();
 		if (Actor)
@@ -570,7 +593,7 @@ void ULevel::SetGlobalLODEnabled(bool bEnabled)
 void ULevel::SetMinLODLevel(int32 MinLevel)
 {
 	// 레벨의 모든 StaticMeshComponent에 대해 최소 LOD 레벨 설정
-	for (const TObjectPtr<AActor>& ActorPtr : LevelActors)
+	for (const TObjectPtr<AActor>& ActorPtr : Actors)
 	{
 		AActor* Actor = ActorPtr.Get();
 		if (Actor)
@@ -604,7 +627,7 @@ void ULevel::SetMinLODLevel(int32 MinLevel)
 void ULevel::SetLODDistance1(float Distance)
 {
 	// 레벨의 모든 StaticMeshComponent에 대해 LOD1 전환 거리 설정
-	for (const TObjectPtr<AActor>& ActorPtr : LevelActors)
+	for (const TObjectPtr<AActor>& ActorPtr : Actors)
 	{
 		AActor* Actor = ActorPtr.Get();
 		if (Actor)
@@ -627,7 +650,7 @@ void ULevel::SetLODDistance1(float Distance)
 void ULevel::SetLODDistance2(float Distance)
 {
 	// 레벨의 모든 StaticMeshComponent에 대해 LOD2 전환 거리 설정
-	for (const TObjectPtr<AActor>& ActorPtr : LevelActors)
+	for (const TObjectPtr<AActor>& ActorPtr : Actors)
 	{
 		AActor* Actor = ActorPtr.Get();
 		if (Actor)
