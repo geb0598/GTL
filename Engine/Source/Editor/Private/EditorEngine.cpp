@@ -217,6 +217,16 @@ void UEditorEngine::StartPIE()
 		UE_LOG("Level Actor %llu", Context.World()->GetLevel()->GetActors().size());
 	}
 
+	// Editor World의 Level을 강제로 재초기화하여 렌더링 갱신
+	if (UWorld* PIEWorld = GetPIEWorld())
+	{
+		if (ULevel* GetPIELevel = PIEWorld->GetLevel())
+		{
+			GetPIELevel->InitializeActorsInLevel();
+			UE_LOG("EditorEngine: PIE Level reinitialized for rendering");
+		}
+	}
+
 	UE_LOG("EditorEngine: PIE World created successfully");
 }
 

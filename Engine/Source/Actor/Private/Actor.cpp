@@ -165,6 +165,11 @@ void AActor::Tick(float DeltaSeconds)
 			Component->TickComponent(DeltaSeconds);
 		}
 	}
+
+	static float TotalTime = 0.0f;
+	static FVector OriginLocation = GetActorLocation();
+	TotalTime += DeltaSeconds;
+	SetActorLocation(GetActorLocation() + FVector(0.05f * cosf(TotalTime * 0.01f), 0.05f * sinf(TotalTime * 0.01f), 0.0f));
 }
 
 void AActor::BeginPlay()

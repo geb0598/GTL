@@ -282,6 +282,7 @@ void UMainBarWidget::RenderShowFlagsMenu()
 				UE_LOG("MainBarWidget: Primitives 표시");
 			}
 			CurrentLevel->SetShowFlags(ShowFlags);
+			CurrentLevel->InitializeActorsInLevel();
 		}
 
 		// BillBoard Text 표시 옵션
@@ -299,6 +300,7 @@ void UMainBarWidget::RenderShowFlagsMenu()
 				UE_LOG("MainBarWidget: 빌보드 표시");
 			}
 			CurrentLevel->SetShowFlags(ShowFlags);
+			CurrentLevel->InitializeActorsInLevel();
 		}
 
 		// Bounds 표시 옵션
@@ -316,6 +318,7 @@ void UMainBarWidget::RenderShowFlagsMenu()
 				UE_LOG("MainBarWidget: 바운딩박스 표시");
 			}
 			CurrentLevel->SetShowFlags(ShowFlags);
+			CurrentLevel->InitializeActorsInLevel();
 		}
 
 		ImGui::EndMenu();
