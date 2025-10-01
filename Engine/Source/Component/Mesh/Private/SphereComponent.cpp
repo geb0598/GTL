@@ -10,6 +10,7 @@ IMPLEMENT_CLASS(USphereComponent, UPrimitiveComponent)
 USphereComponent::USphereComponent()
 {
 	UAssetManager& ResourceManager = UAssetManager::GetInstance();
+	SetName("SphereComponent");
 	Type = EPrimitiveType::Sphere;
 	Vertices = ResourceManager.GetVertexData(Type);
 	VertexBuffer = ResourceManager.GetVertexbuffer(Type);

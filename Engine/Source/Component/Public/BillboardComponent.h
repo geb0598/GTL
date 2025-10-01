@@ -2,10 +2,15 @@
 #include "PrimitiveComponent.h"
 #include "Editor/Public/Camera.h"
 
+UCLASS()
+
 class UBillboardComponent : public UPrimitiveComponent
 {
+	GENERATED_BODY()
+	DECLARE_CLASS(UBillboardComponent, UPrimitiveComponent)
+
 public:
-	UBillboardComponent(AActor* InOwnerActor);
+	UBillboardComponent();
 	~UBillboardComponent();
 
 	FMatrix GetRTMatrix() const { return RTMatrix; }
@@ -14,6 +19,5 @@ public:
 
 private:
 	FMatrix RTMatrix;
-	AActor* POwnerActor;
 	float ZOffset;
 };

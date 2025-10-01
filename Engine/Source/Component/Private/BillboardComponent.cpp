@@ -1,7 +1,9 @@
 ﻿#include "pch.h"
 #include "Component/Public/BillboardComponent.h"
 
-UBillboardComponent::UBillboardComponent(AActor* InOwnerActor)
+IMPLEMENT_CLASS(UBillboardComponent, UPrimitiveComponent)
+
+UBillboardComponent::UBillboardComponent()
 {
 	SetName("BillboardComponent");
 	Type = EPrimitiveType::Billboard;
@@ -14,7 +16,7 @@ UBillboardComponent::~UBillboardComponent()
 
 void UBillboardComponent::UpdateRotationMatrix(const UCamera* InCamera)
 {
-	const FVector& OwnerActorLocation = POwnerActor->GetActorLocation();
+	const FVector& OwnerActorLocation = GetOwner()->GetActorLocation();
 
 	FVector ToCamera = InCamera->GetForward();
 	ToCamera = FVector(-ToCamera.X, -ToCamera.Y, -ToCamera.Z);

@@ -8,6 +8,17 @@
 #include "Component/Public/BillboardComponent.h"
 #include "Component/Public/PrimitiveComponent.h"
 #include "Component/Public/SceneComponent.h"
+#include "Component/Mesh/Public/MeshComponent.h"
+#include "Component/Public/TextRenderComponent.h"
+#include "Component/Public/LineComponent.h"
+#include "Component/Mesh/Public/CubeComponent.h"
+#include "Component/Mesh/Public/SphereComponent.h"
+#include "Component/Mesh/Public/SquareComponent.h"
+#include "Component/Mesh/Public/TriangleComponent.h"
+#include "Component/Mesh/Public/StaticMeshComponent.h"
+#include "Core/Public/ObjectIterator.h"
+#include "Texture/Public/Texture.h"
+#include "Manager/BVH/Public/BVHManager.h"
 
 UActorDetailWidget::UActorDetailWidget()
 	: UWidget("Actor Detail Widget")
@@ -124,22 +135,46 @@ void UActorDetailWidget::RenderComponentTree(TObjectPtr<AActor> InSelectedActor)
 
 	if (ImGui::BeginPopup("AddComponentPopup"))
 	{
-		// Example menu items (replace with your actual component list)
+		auto AddComponentToActor = [&](UActorComponent* NewComponent)
+		{
+			if (!NewComponent)
+			{
+				return;
+			}
+
+			TObjectPtr<UActorComponent> ComponentPtr(NewComponent);
+			InSelectedActor->AddComponent(ComponentPtr);
+		};
+
 		if (ImGui::MenuItem("Text Render Component"))
 		{
-			UTextRenderComponent* TextRender = new UTextRenderComponent(InSelectedActor, 5.0f);
-			TObjectPtr TextRenderPtr(TextRender);
-			InSelectedActor->AddComponent(Cast<UActorComponent>(TextRenderPtr));
+			AddComponentToActor(new UTextRenderComponent());
 		}
 		if (ImGui::MenuItem("Billboard Component"))
 		{
-			UBillboardComponent* Billboard = new UBillboardComponent(InSelectedActor);
-			TObjectPtr BillboardPtr(Billboard);
-			InSelectedActor->AddComponent(Cast<UActorComponent>(BillboardPtr));
+			AddComponentToActor(new UBillboardComponent());
 		}
-		// if (ImGui::MenuItem("Light Component"))
-		// {
-		// }
+		ImGui::Separator();
+		if (ImGui::MenuItem("Cube Component"))
+		{
+			AddComponentToActor(new UCubeComponent());
+		}
+		if (ImGui::MenuItem("Sphere Component"))
+		{
+			AddComponentToActor(new USphereComponent());
+		}
+		if (ImGui::MenuItem("Square Component"))
+		{
+			AddComponentToActor(new USquareComponent());
+		}
+		if (ImGui::MenuItem("Triangle Component"))
+		{
+			AddComponentToActor(new UTriangleComponent());
+		}
+		if (ImGui::MenuItem("Static Mesh Component"))
+		{
+			AddComponentToActor(new UStaticMeshComponent());
+		}
 
 		ImGui::EndPopup();
 	}
@@ -250,35 +285,6 @@ void UActorDetailWidget::RenderComponentDetails(TObjectPtr<UActorComponent> InCo
 				TextComp->SetText(TextBuffer);
 			}
 		}
-
-		// --- Offset (Relative Location) ---
-		FVector Offset = TextComp->GetRelativeLocation();
-		float OffsetArr[3] = { Offset.X, Offset.Y, Offset.Z };
-		if (ImGui::SliderFloat3("Offset", OffsetArr, -10.0f, 10.0f))
-		{
-			TextComp->SetRelativeLocation(FVector(OffsetArr[0], OffsetArr[1], OffsetArr[2]));
-		}
-
-		// --- Rotation (Relative Rotation) ---
-		FVector Rotation = TextComp->GetRelativeRotation();
-		float RotArr[3] = { Rotation.X, Rotation.Y, Rotation.Z };
-		if (ImGui::DragFloat3("Rotation", RotArr, 0.1f, -360.0f, 360.0f, "%.3f"))
-		{
-			TextComp->SetRelativeRotation(FVector(RotArr[0], RotArr[1], RotArr[2]));
-		}
-
-		// --- Size (Relative Scale) ---
-		FVector Scale = TextComp->GetRelativeScale3D();
-		float ScaleArr[3] = { Scale.X, Scale.Y, Scale.Z };
-		if (Scale.X < 0.5f && Scale.Y < 0.5f && Scale.Z < 0.5f)
-		{
-			ScaleArr[0] = ScaleArr[1] = ScaleArr[2] = 1.0f;
-			TextComp->SetRelativeScale3D(FVector(1.0f, 1.0f, 1.0f));
-		}
-		if (ImGui::SliderFloat3("Size", ScaleArr, 1.0f, 10.0f))
-		{
-			TextComp->SetRelativeScale3D(FVector(ScaleArr[0], ScaleArr[1], ScaleArr[2]));
-		}
 	}
 	else if (InComponent->IsA(UBillboardComponent::StaticClass()))
 	{
@@ -302,6 +308,68 @@ void UActorDetailWidget::RenderComponentDetails(TObjectPtr<UActorComponent> InCo
 	else
 	{
 		ImGui::TextColored(ImVec4(0.6f,0.6f,0.6f,1.0f), "No detail view for this component type.");
+	}
+
+	ImGui::Separator();
+	ImGui::Text("Component Transform");
+
+	TObjectPtr<USceneComponent> SceneComponent = Cast<USceneComponent>(InComponent);
+
+	bool bTransformChanged = false;
+
+	FVector RelativeLocation = SceneComponent->GetRelativeLocation();
+	float LocationArr[3] = { RelativeLocation.X, RelativeLocation.Y, RelativeLocation.Z };
+	if (ImGui::DragFloat3("Relative Location", LocationArr, 0.1f))
+	{
+		SceneComponent->SetRelativeLocation(FVector(LocationArr[0], LocationArr[1], LocationArr[2]));
+		bTransformChanged = true;
+	}
+
+	FVector RelativeRotation = SceneComponent->GetRelativeRotation();
+	float RotationArr[3] = { RelativeRotation.X, RelativeRotation.Y, RelativeRotation.Z };
+	if (ImGui::DragFloat3("Relative Rotation", RotationArr, 0.1f))
+	{
+		SceneComponent->SetRelativeRotation(FVector(RotationArr[0], RotationArr[1], RotationArr[2]));
+		bTransformChanged = true;
+	}
+
+	bool bUniformScale = SceneComponent->IsUniformScale();
+	FVector RelativeScale = SceneComponent->GetRelativeScale3D();
+
+	if (bUniformScale)
+	{
+		float UniformScale = RelativeScale.X;
+		if (ImGui::DragFloat("Relative Scale", &UniformScale, 0.01f, 0.01f, 10.0f))
+		{
+			SceneComponent->SetRelativeScale3D(FVector(UniformScale, UniformScale, UniformScale));
+			bTransformChanged = true;
+		}
+	}
+	else
+	{
+		float ScaleArr[3] = { RelativeScale.X, RelativeScale.Y, RelativeScale.Z };
+		if (ImGui::DragFloat3("Relative Scale", ScaleArr, 0.01f))
+		{
+			SceneComponent->SetRelativeScale3D(FVector(ScaleArr[0], ScaleArr[1], ScaleArr[2]));
+			bTransformChanged = true;
+		}
+	}
+
+	if (ImGui::Checkbox("Relative Uniform Scale", &bUniformScale))
+	{
+		SceneComponent->SetUniformScale(bUniformScale);
+		bTransformChanged = true;
+
+		if (bUniformScale)
+		{
+			float UniformScale = SceneComponent->GetRelativeScale3D().X;
+			SceneComponent->SetRelativeScale3D(FVector(UniformScale, UniformScale, UniformScale));
+		}
+	}
+
+	if (bTransformChanged && InComponent->IsA(UPrimitiveComponent::StaticClass()))
+	{
+		UBVHManager::GetInstance().Refit();
 	}
 }
 

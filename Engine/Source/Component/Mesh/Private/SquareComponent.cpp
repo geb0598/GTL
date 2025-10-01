@@ -9,6 +9,7 @@ IMPLEMENT_CLASS(USquareComponent, UPrimitiveComponent)
 USquareComponent::USquareComponent()
 {
 	UAssetManager& ResourceManager = UAssetManager::GetInstance();
+	SetName("SquareComponent");
 	Type = EPrimitiveType::Square;
 	Vertices = ResourceManager.GetVertexData(Type);
 	VertexBuffer = ResourceManager.GetVertexbuffer(Type);
