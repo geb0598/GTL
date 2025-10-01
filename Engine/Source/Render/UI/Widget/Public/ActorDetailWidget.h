@@ -40,6 +40,8 @@ private:
 	void FinishRenamingActor(TObjectPtr<AActor> InActor);
 	void CancelRenamingActor();
 
+	FString GenerateUniqueComponentName(AActor* InActor, const FString& InBaseName);
+
 	//액터 복제
 	void DuplicateSelectedActor(TObjectPtr<AActor> InActor);
 };

@@ -118,6 +118,32 @@ void UActorDetailWidget::RenderActorHeader(TObjectPtr<AActor> InSelectedActor)
 	}
 }
 
+FString UActorDetailWidget::GenerateUniqueComponentName(AActor* InActor, const FString& InBaseName)
+{
+	int Suffix = 1;
+	std::string NewName = InBaseName;
+
+	auto& Components = InActor->GetOwnedComponents();
+	bool bNameExists = true;
+
+	while (bNameExists)
+	{
+		bNameExists = false;
+		for (const auto& Comp : Components)
+		{
+			if (Comp && Comp->GetName() == NewName)
+			{
+				++Suffix;
+				NewName = InBaseName + std::to_string(Suffix);
+				bNameExists = true;
+				break;
+			}
+		}
+	}
+
+	return NewName;
+}
+
 /**
  * @brief 컴포넌트들을 트리 형태로 표시하는 함수
  * @param InSelectedActor 선택된 Actor
@@ -155,6 +181,11 @@ void UActorDetailWidget::RenderComponentTree(TObjectPtr<AActor> InSelectedActor)
 			{
 				return;
 			}
+
+			FString BaseName = NewComponent->GetClass()->GetClassTypeName().ToString();
+			FString UniqueName = GenerateUniqueComponentName(InSelectedActor, BaseName);
+
+			NewComponent->SetName(UniqueName);
 
 			TObjectPtr<UActorComponent> ComponentPtr(NewComponent);
 			InSelectedActor->AddComponent(ComponentPtr);
@@ -374,6 +405,19 @@ void UActorDetailWidget::RenderComponentDetails(TObjectPtr<UActorComponent> InCo
 		// {
 		// 	Billboard->SetRelativeLocation(Offset);
 		// }
+	}
+	else if (InComponent->IsA(UStaticMeshComponent::StaticClass()))
+	{
+		UStaticMeshComponent* StaticMesh = Cast<UStaticMeshComponent>(InComponent);
+		// Texture field (for now, string path or ID)
+		// static char TexturePath[256];
+		// strncpy_s(TexturePath, StaticMesh->GetTexturePath().c_str(), sizeof(TexturePath)-1);
+		//
+		// if (ImGui::InputText("Texture Path", TexturePath, sizeof(TexturePath)))
+		// {
+		// 	StaticMesh->SetTexturePath(TexturePath);
+		// }
+
 	}
 	else
 	{
