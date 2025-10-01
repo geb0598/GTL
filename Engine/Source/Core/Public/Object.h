@@ -309,7 +309,7 @@ struct FObjectDuplicationParameters
  * @return 복사된 오브젝트, 혹은 실패할 경우 null 
  */
 template<typename T>
-T* DuplicateObject(T const* SourceObject, UObject* Outer, const FName Name = FName::GetNone())
+T* DuplicateObject(T* const SourceObject, UObject* Outer, const FName Name = FName::GetNone())
 {
 	if (SourceObject != nullptr)
 	{
@@ -317,7 +317,9 @@ T* DuplicateObject(T const* SourceObject, UObject* Outer, const FName Name = FNa
 		{
 			// [UE] TODO: Outer = (UObject*)GetTransientOuterForRename(T::StaticClass());
 		}
-		return static_cast<T*>(StaticDuplicateObject(SourceObject, Outer, Name));
+		TMap<UObject*, UObject*> DuplicatedSeed;
+		TMap<UObject*, UObject*> CreatedObjects;
+		return static_cast<T*>(StaticDuplicateObject(SourceObject, Outer, Name, DuplicatedSeed, CreatedObjects));
 	}
 	return nullptr;
 }

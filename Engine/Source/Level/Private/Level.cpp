@@ -119,6 +119,20 @@ UObject* ULevel::Duplicate(FObjectDuplicationParameters Parameters)
 
 	// @todo ActorsToDelete는 복제할 필요가 존재하는지 확인 
 
+	if (OwningWorld)
+	{
+		if (auto It = Parameters.DuplicationSeed.find(OwningWorld); It != Parameters.DuplicationSeed.end())
+		{
+			DupObject->OwningWorld = static_cast<UWorld*>(Parameters.DestOuter);
+			//DupObject->OwningWorld = static_cast<UWorld*>(It->second);
+		}
+		else
+		{
+			OwningWorld = nullptr;
+			UE_LOG_ERROR("Level의 생성 이전에 World가 생성되어야 합니다.");
+		}
+	}
+
 	for (auto& Actor : Actors)
 	{
 		if (auto It = Parameters.DuplicationSeed.find(Actor); It != Parameters.DuplicationSeed.end())

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Core/Public/Object.h"
 #include "Core/Public/ObjectPtr.h"
 #include "Actor/Public/Actor.h"
@@ -63,6 +63,7 @@ public:
 
 
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+	UObject* Duplicate(FObjectDuplicationParameters Parameters) override;
 
 private:
 	ULevel* Level;
