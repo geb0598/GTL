@@ -9,6 +9,7 @@ IMPLEMENT_CLASS(UTriangleComponent, UPrimitiveComponent)
 UTriangleComponent::UTriangleComponent()
 {
 	UAssetManager& ResourceManager = UAssetManager::GetInstance();
+	SetName("TriangleComponent");
 	Type = EPrimitiveType::Triangle;
 	Vertices = ResourceManager.GetVertexData(Type);
 	VertexBuffer = ResourceManager.GetVertexbuffer(Type);

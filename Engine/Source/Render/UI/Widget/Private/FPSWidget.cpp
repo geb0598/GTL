@@ -35,7 +35,7 @@ void UFPSWidget::Initialize()
 
 void UFPSWidget::Update()
 {
-	CurrentDeltaTime = DT;
+	CurrentDeltaSeconds = DT;
 	TotalGameTime += DT;
 
 	auto& TimeManager = UTimeManager::GetInstance();
@@ -64,12 +64,12 @@ void UFPSWidget::RenderWidget()
 	if (TotalGameTime - PreviousTime > REFRESH_INTERVAL)
 	{
 		PrintFPS = CurrentFPS;
-		PrintDeltaTime = CurrentDeltaTime * 1000.0f;
+		PrintDeltaSeconds = CurrentDeltaSeconds * 1000.0f;
 		PreviousTime = TotalGameTime;
 	}
 
 	ImVec4 FPSColor = GetFPSColor(CurrentFPS);
-	ImGui::TextColored(FPSColor, "FPS: %.1f (%.2f ms)", PrintFPS, PrintDeltaTime);
+	ImGui::TextColored(FPSColor, "FPS: %.1f (%.2f ms)", PrintFPS, PrintDeltaSeconds);
 
 	// Game Time 출력
 	ImGui::Text("Game Time: %.1f s", TotalGameTime);

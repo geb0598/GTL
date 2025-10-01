@@ -1,8 +1,12 @@
 #pragma once
 #include "Widget.h"
+// #include "Actor/Public/Actor.h"
+// #include "Component/Public/ActorComponent.h"
+#include "Component/Public/TextRenderComponent.h"
 
 class AActor;
 class UActorComponent;
+class USceneComponent;
 
 /**
  * @brief 선택된 Actor의 이름과 컴포넌트 트리를 표시하는 Widget
@@ -21,13 +25,15 @@ public:
 	~UActorDetailWidget() override;
 
 private:
+	TObjectPtr<UActorComponent> SelectedComponent;
 	bool bIsRenamingActor = false;
 	char ActorNameBuffer[256] = {};
 
 	// Helper functions
 	void RenderActorHeader(TObjectPtr<AActor> InSelectedActor);
-	static void RenderComponentTree(TObjectPtr<AActor> InSelectedActor);
-	static void RenderComponentNode(TObjectPtr<UActorComponent> InComponent);
+	void RenderComponentTree(TObjectPtr<AActor> InSelectedActor);
+	void RenderComponentNode(TObjectPtr<UActorComponent> InComponent, USceneComponent* InRootComponent);
+	void RenderComponentDetails(TObjectPtr<UActorComponent> InComponent);
 
 	// 이름 변경 함수
 	void StartRenamingActor(TObjectPtr<AActor> InActor);
@@ -37,3 +43,4 @@ private:
 	//액터 복제
 	void DuplicateSelectedActor(TObjectPtr<AActor> InActor);
 };
+

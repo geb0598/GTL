@@ -98,7 +98,7 @@ void USceneComponent::SetParentAttachment(USceneComponent* NewParent)
 	}
 
 	//부모의 조상중에 내 자식이 있으면 순환참조 -> 스택오버플로우 일어남.
-	for (USceneComponent* Ancester = NewParent; NewParent; Ancester = NewParent->ParentAttachment)
+	for (USceneComponent* Ancester = NewParent; Ancester; Ancester = NewParent->ParentAttachment)
 	{
 		if (NewParent == this) //조상중에 내 자식이 있다면 조상중에 내가 있을 것임.
 			return;
@@ -115,6 +115,16 @@ void USceneComponent::SetParentAttachment(USceneComponent* NewParent)
 
 	MarkAsDirty();
 
+}
+
+void USceneComponent::AddChild(USceneComponent* ChildAdded)
+{
+	if (!ChildAdded)
+	{
+		return;
+	}
+
+	Children.push_back(ChildAdded);
 }
 
 void USceneComponent::RemoveChild(USceneComponent* ChildDeleted)

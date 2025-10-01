@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "World/Public/World.h"
 
 class UEditor;
@@ -18,7 +18,7 @@ public:
 	void Shutdown();
 
 	virtual void BeginPlay();
-	virtual void Tick(float DeltaTime);
+	virtual void Tick(float DeltaSeconds);
 
 	// World 관리
 	UWorld* GetEditorWorld() const;

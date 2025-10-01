@@ -108,7 +108,7 @@ int FClientApp::InitializeSystem() const
 /**
  * @brief Update System While Game Processing
  */
-void FClientApp::TickSystem(float DeltaTime) const
+void FClientApp::TickSystem(float DeltaSeconds) const
 {
 	auto& InputManager = UInputManager::GetInstance();
 	auto& UIManager = UUIManager::GetInstance();
@@ -128,12 +128,12 @@ void FClientApp::TickSystem(float DeltaTime) const
 			GEngine->EndPIE();
 		}
 
-		GEngine->Tick(DeltaTime);
+		GEngine->Tick(DeltaSeconds);
 	}
 
-	InputManager.Tick(DeltaTime);
-	UIManager.Tick(DeltaTime);
-	Renderer.Tick(DeltaTime);
+	InputManager.Tick(DeltaSeconds);
+	UIManager.Tick(DeltaSeconds);
+	Renderer.Tick(DeltaSeconds);
 }
 
 /**
@@ -176,8 +176,8 @@ void FClientApp::MainLoop()
 		else
 		{
 			auto& TimeManager = UTimeManager::GetInstance();
-			TimeManager.UpdateDeltaTime();
-			TickSystem(TimeManager.GetDeltaTime());
+			TimeManager.UpdateDeltaSeconds();
+			TickSystem(TimeManager.GetDeltaSeconds());
 		}
 	}
 }

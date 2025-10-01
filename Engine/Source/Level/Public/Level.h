@@ -58,7 +58,7 @@ public:
 	}
 
 	virtual void Init();
-	virtual void Tick(float DeltaTime);
+	virtual void Tick(float DeltaSeconds);
 	virtual void Render();
 	virtual void Cleanup();
 
@@ -74,7 +74,8 @@ public:
 
 	TArray<TObjectPtr<UPrimitiveComponent>> GetVisiblePrimitiveComponents(UCamera* InCamera);
 
-	void AddLevelPrimitiveComponent(AActor* Actor);
+	void AddLevelPrimitiveComponentsInActor(AActor* Actor);
+	void AddLevelPrimitiveComponent(TObjectPtr<UPrimitiveComponent> InPrimitiveComponent);
 	void InitializeActorsInLevel();
 
 	AActor* SpawnActorToLevel(UClass* InActorClass, const FName& InName = FName::GetNone());

@@ -1,4 +1,5 @@
 #pragma once
+#include "Component/Public/BillboardComponent.h"
 
 #ifdef MULTI_THREADING
 #include <mutex>
@@ -13,7 +14,7 @@ class UPipeline;
 class UDeviceResources;
 class UPrimitiveComponent;
 class UStaticMeshComponent;
-class UBillBoardComponent;
+class UTextRenderComponent;
 class AActor;
 class AGizmo;
 class UEditor;
@@ -72,12 +73,13 @@ public:
 	void ReleaseRasterizerState();
 
 	// Render
-	void Tick(float DeltaTime);
+	void Tick(float DeltaSeconds);
 	void RenderBegin() const;
 	void RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewportClient);
 	void RenderEnd() const;
 	void RenderStaticMesh(UPipeline& InPipeline, UStaticMeshComponent* InMeshComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferMaterial);
-	void RenderBillboard(UBillBoardComponent* InBillBoardComp, UCamera* InCurrentCamera);
+	void RenderBillboard(UBillboardComponent* InBillboardComp, UCamera* InCurrentCamera);
+	void RenderText(UTextRenderComponent* InBillBoardComp, UCamera* InCurrentCamera);
 	void RenderPrimitiveDefault(UPipeline& InPipeline, UPrimitiveComponent* InPrimitiveComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferColor);
 	void RenderEditorPrimitive(UPipeline& InPipeline, const FEditorPrimitive& InEditorPrimitive, const FRenderState& InRenderState);
 	void RenderEditorPrimitiveIndexed(UPipeline& InPipeline, const FEditorPrimitive& InEditorPrimitive, const FRenderState& InRenderState,

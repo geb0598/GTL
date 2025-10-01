@@ -1,15 +1,17 @@
 #include "pch.h"
 #include "Actor/Public/Actor.h"
 #include "Component/Public/SceneComponent.h"
-#include "Component/Public/BillBoardComponent.h"
+#include "Component/Public/TextRenderComponent.h"
+#include "Editor/Public/EditorEngine.h"
+#include "Level/Public/Level.h"
 
 IMPLEMENT_CLASS(AActor, UObject)
 
 AActor::AActor()
 {
 	// to do: primitive factory로 빌보드 생성
-	BillBoardComponent = new UBillBoardComponent(this, 5.0f);
-	OwnedComponents.push_back(TObjectPtr<UBillBoardComponent>(BillBoardComponent));
+	// BillBoardComponent = new UBillboardComponent(this, 5.0f);
+	// OwnedComponents.push_back(TObjectPtr<UBillboardComponent>(BillBoardComponent));
 }
 
 AActor::AActor(UObject* InOuter)
@@ -51,21 +53,12 @@ UObject* AActor::Duplicate(FObjectDuplicationParameters Parameters)
 		RootComponent->Duplicate(Params);
 	}
 
-	if (BillBoardComponent)
-	{
-		auto Params = InitStaticDuplicateObjectParams(BillBoardComponent, DupObject, FName::GetNone(), Parameters.DuplicationSeed, Parameters.CreatedObjects);
-		/** @todo CreatedObjects는 업데이트 안해도 괜찮은지 확인 필요 */
-		Params.DuplicationSeed.emplace(BillBoardComponent, DupObject->BillBoardComponent);
-		/** @note 값 채워넣기만 수행 */
-		BillBoardComponent->Duplicate(Params);
-	}
-
 	/** @todo 이후 다른 AActor를 상속받는 클래스들이 생성하는 컴포넌트를 어떻게 복제할 것인지 생각 */
 
 	for (auto& Component : OwnedComponents)
 	{
 		/** 위에서 이미 처리함 */
-		if (Component == RootComponent || Component == BillBoardComponent)
+		if (Component == RootComponent)
 		{
 			continue;
 		}
@@ -145,15 +138,38 @@ const FVector& AActor::GetActorScale3D() const
 	return RootComponent->GetRelativeScale3D();
 }
 
-void AActor::Tick(float DeltaTime)
+void AActor::AddComponent(TObjectPtr<UActorComponent> InComponent)
+{
+	if (!InComponent || !RootComponent)
+	{
+		return;
+	}
+
+	InComponent->SetOwner(this);
+	OwnedComponents.push_back(InComponent);
+
+	USceneComponent* InSceneComponent = Cast<USceneComponent>(InComponent);
+	RootComponent->AddChild(InSceneComponent);
+	InSceneComponent->SetParentAttachment(RootComponent);
+
+	TObjectPtr<UPrimitiveComponent> PrimitiveComponent = Cast<UPrimitiveComponent>(InComponent);
+	GEngine->GetCurrentLevel()->AddLevelPrimitiveComponent(PrimitiveComponent);
+}
+
+void AActor::Tick(float DeltaSeconds)
 {
 	for (auto& Component : OwnedComponents)
 	{
 		if (Component)
 		{
-			Component->TickComponent(DeltaTime);
+			Component->TickComponent(DeltaSeconds);
 		}
 	}
+
+	static float TotalTime = 0.0f;
+	static FVector OriginLocation = GetActorLocation();
+	TotalTime += DeltaSeconds;
+	SetActorLocation(GetActorLocation() + FVector(0.05f * cosf(TotalTime * 0.01f), 0.05f * sinf(TotalTime * 0.01f), 0.0f));
 }
 
 void AActor::BeginPlay()

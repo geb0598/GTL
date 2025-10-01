@@ -1,6 +1,6 @@
 #pragma once
 
-#define DT UTimeManager::GetInstance().GetDeltaTime()
+#define DT UTimeManager::GetInstance().GetDeltaSeconds()
 
 // UE_LOG Macro 시스템
 // 기본 UE_LOG (Info 타입)
