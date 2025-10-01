@@ -21,7 +21,10 @@ UWorld::~UWorld()
 
 void UWorld::Tick(float DeltaTime)
 {
-	Level->Tick(DeltaTime);
+	if (Level)
+	{
+		Level->Tick(DeltaTime);
+	}
 }
 
 bool UWorld::LoadLevel(const FString& InFilePath)

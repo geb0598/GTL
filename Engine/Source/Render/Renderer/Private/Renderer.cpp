@@ -711,7 +711,7 @@ void URenderer::RenderEnd() const
 
 void URenderer::RenderStaticMesh(UPipeline& InPipeline, UStaticMeshComponent* InMeshComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferMaterial)
 {
-    if (!InMeshComp->GetStaticMesh()) return;
+    if (!InMeshComp || !InMeshComp->GetStaticMesh()) return;
 
     FStaticMesh* MeshAsset = InMeshComp->GetStaticMesh()->GetStaticMeshAsset();
     if (!MeshAsset)    return;

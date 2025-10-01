@@ -77,7 +77,8 @@ void UStaticMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 	{
 		if (StaticMesh)
 		{
-			InOutHandle["ObjStaticMeshAsset"] = StaticMesh->GetAssetPathFileName().ToString();
+			// LOD 메시가 아닌 원본 메시 경로를 저장
+			InOutHandle["ObjStaticMeshAsset"] = OriginalMeshPath.ToString();
 
 			if (0 < OverrideMaterials.size())
 			{

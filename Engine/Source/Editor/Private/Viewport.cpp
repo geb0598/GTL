@@ -36,22 +36,20 @@ void FViewport::UpdateCameraSettingsToConfig()
 	//}
 
 
-	for (int32 Index = 0; Index < ViewportClients.size(); ++Index)
-	{		FViewportCameraData Data;
-		FViewportClient& Viewport = ViewportClients[Index];
-		UCamera& Camera = Viewport.Camera;
+	// ActiveViewportClient가 없으면 첫 번째 뷰포트 사용
+	FViewportClient* TargetViewport = ActiveViewportClient ? ActiveViewportClient : &ViewportClients[0];
+	UCamera& Camera = TargetViewport->Camera;
 
-		// 현재 뷰포트와 카메라의 상태를 FViewportCameraData 구조체에 담습니다.
-		Data.ViewportCameraType = Viewport.GetCameraType();
-		Data.Location = Camera.GetLocation();
-		Data.Rotation = Camera.GetRotation();
-		Data.FovY = Camera.GetFovY();
-		Data.NearClip = Camera.GetNearZ();
-		Data.FarClip = Camera.GetFarZ();
+	FViewportCameraData Data;
+	Data.ViewportCameraType = TargetViewport->GetCameraType();
+	Data.Location = Camera.GetLocation();
+	Data.Rotation = Camera.GetRotation();
+	Data.FovY = Camera.GetFovY();
+	Data.NearClip = Camera.GetNearZ();
+	Data.FarClip = Camera.GetFarZ();
 
-		// 완성된 데이터를 ConfigManager에 전달합니다.
-		ConfigManager.SetViewportCameraData(Index, Data);
-	}
+	// Index 0에 활성 뷰포트 데이터 저장
+	ConfigManager.SetViewportCameraData(0, Data);
 }
 
 void FViewport::InitializeLayout(const D3D11_VIEWPORT& InViewport)

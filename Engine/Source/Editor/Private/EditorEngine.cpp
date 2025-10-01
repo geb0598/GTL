@@ -3,6 +3,7 @@
 #include "Editor/Public/Editor.h"
 #include "Level/Public/Level.h"
 #include "Manager/Config/Public/ConfigManager.h"
+#include "Render/Renderer/Public/Renderer.h"
 
 IMPLEMENT_CLASS(UEditorEngine, UObject);
 
@@ -44,10 +45,7 @@ void UEditorEngine::Shutdown()
 	// World 정리 (World 소멸자가 Level 정리)
 	for (auto& Context : WorldContexts)
 	{
-		if (Context.WorldPtr)
-		{
-			delete Context.WorldPtr;
-		}
+		delete Context.WorldPtr;
 	}
 	WorldContexts.clear();
 
@@ -166,10 +164,21 @@ bool UEditorEngine::CreateNewLevel(const FString& InLevelName)
 
 ULevel* UEditorEngine::GetCurrentLevel() const
 {
+	// PIE 모드일 때는 PIEWorld의 Level 반환
+	if (bPIEActive)
+	{
+		if (UWorld* PIEWorld = GetPIEWorld())
+		{
+			return PIEWorld->GetLevel();
+		}
+	}
+
+	// 에디터 모드일 때는 EditorWorld의 Level 반환
 	if (UWorld* EditorWorld = GetEditorWorld())
 	{
 		return EditorWorld->GetLevel();
 	}
+
 	return nullptr;
 }
 
@@ -182,11 +191,30 @@ void UEditorEngine::StartPIE()
 	}
 
 	UE_LOG("EditorEngine: Starting Play In Editor (PIE) Mode");
+
+	// PIE World 생성
+	FWorldContext PIEContext;
+	PIEContext.ContextHandle = FName("PIEWorld");
+	PIEContext.WorldType = EWorldType::PIE;
+	PIEContext.WorldPtr = NewObject<UWorld>();
+	PIEContext.WorldPtr->SetWorldType(EWorldType::PIE);
+
+	// 빈 레벨 생성
+	PIEContext.WorldPtr->CreateNewLevel("PIE_Level");
+
+	// WorldContexts에 추가
+	WorldContexts.push_back(PIEContext);
+
 	bPIEActive = true;
 
-	// TODO: PIEWorld 생성 및 EditorWorld 복제
-	// UWorld* EditorWorld = GetEditorWorld();
-	// UWorld* PIEWorld = DuplicateWorldForPIE(EditorWorld);
+	for (auto& Context : WorldContexts)
+	{
+		UE_LOG("EditorEngine: WorldContext - Handle: %s, Type: %s", Context.ContextHandle.ToString().data(),
+		       to_string(Context.WorldType).data());
+		UE_LOG("Level Actor %llu", Context.World()->GetLevel()->GetActors().size());
+	}
+
+	UE_LOG("EditorEngine: PIE World created successfully");
 }
 
 void UEditorEngine::EndPIE()
@@ -197,15 +225,51 @@ void UEditorEngine::EndPIE()
 		return;
 	}
 
-	UE_LOG("EditorEngine: Stop Play In Editor (PIE) Mode");
+	UE_LOG("EditorEngine: Stopping Play In Editor (PIE) Mode");
+
+	// bPIEActive를 먼저 false로 설정하여 Tick에서 EditorWorld로 전환
 	bPIEActive = false;
 
-	// TODO: PIEWorld 정리
+	// PIE World Context 찾기 및 삭제
+	for (auto It = WorldContexts.begin(); It != WorldContexts.end(); ++It)
+	{
+		if (It->WorldType == EWorldType::PIE)
+		{
+			// World 삭제
+			delete It->WorldPtr;
+
+			// Context 제거
+			WorldContexts.erase(It);
+			break;
+		}
+	}
+
+	// Editor World의 Level을 강제로 재초기화하여 렌더링 갱신
+	if (UWorld* EditorWorld = GetEditorWorld())
+	{
+		if (ULevel* EditorLevel = EditorWorld->GetLevel())
+		{
+			EditorLevel->InitializeActorsInLevel();
+			UE_LOG("EditorEngine: Editor Level reinitialized for rendering");
+		}
+	}
+
+	// Renderer의 Occlusion Culling 상태를 리셋하여 다음 프레임에서 제대로 렌더링되도록 함
+	URenderer::GetInstance().ResetOcclusionCullingState();
+
+	for (auto& Context : WorldContexts)
+	{
+		UE_LOG("EditorEngine: WorldContext - Handle: %s, Type: %s", Context.ContextHandle.ToString().data(),
+		       to_string(Context.WorldType).data());
+		UE_LOG("Level Actor %llu", Context.World()->GetLevel()->GetActors().size());
+	}
+
+	UE_LOG("EditorEngine: PIE World destroyed successfully");
+	UE_LOG("EditorEngine: Switched back to Editor World");
 }
 
 UWorld* UEditorEngine::DuplicateWorldForPIE(UWorld* SourceWorld)
 {
-
 }
 
 FWorldContext* UEditorEngine::GetEditorWorldContext()
@@ -231,5 +295,3 @@ FWorldContext* UEditorEngine::GetPIEWorldContext()
 	}
 	return nullptr;
 }
-
-
