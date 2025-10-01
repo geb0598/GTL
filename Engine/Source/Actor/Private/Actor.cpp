@@ -54,7 +54,6 @@ UObject* AActor::Duplicate(FObjectDuplicationParameters Parameters)
 	if (BillBoardComponent)
 	{
 		auto Params = InitStaticDuplicateObjectParams(BillBoardComponent, DupObject, FName::GetNone(), Parameters.DuplicationSeed, Parameters.CreatedObjects);
-		auto DupComponent = static_cast<UActorComponent*>(BillBoardComponent->Duplicate(Params)); 
 		/** @todo CreatedObjects는 업데이트 안해도 괜찮은지 확인 필요 */
 		Params.DuplicationSeed.emplace(BillBoardComponent, DupObject->BillBoardComponent);
 		/** @note 값 채워넣기만 수행 */

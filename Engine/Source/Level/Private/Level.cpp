@@ -271,14 +271,27 @@ void ULevel::RegisterDuplicatedActor(AActor* NewActor)
 {
 	if (!NewActor) return;
 
+	for (auto Comp : NewActor->GetOwnedComponents())
+	{
+		if (Comp == nullptr)
+		{
+			throw std::runtime_error("FAIL");
+		}
+
+		if (Comp->GetClass() == nullptr)
+		{
+			throw std::runtime_error("FAIL!");
+		}
+	}
+
 	Actors.emplace_back(NewActor);
 
 	if (this == GEngine->GetCurrentLevel())
 	{
 		AddLevelPrimitiveComponent(NewActor);
-		TArray<FBVHPrimitive> BVHPrimitives;
-		UBVHManager::GetInstance().ConvertComponentsToBVHPrimitives(LevelPrimitiveComponents, BVHPrimitives);
-		UBVHManager::GetInstance().Build(BVHPrimitives);
+		// TArray<FBVHPrimitive> BVHPrimitives;
+		// UBVHManager::GetInstance().ConvertComponentsToBVHPrimitives(LevelPrimitiveComponents, BVHPrimitives);
+		// UBVHManager::GetInstance().Build(BVHPrimitives);
 	}
 }
 

@@ -20,7 +20,7 @@ class AActor : public UObject
 public:
 	AActor();
 	AActor(UObject* InOuter);
-	~AActor() override;
+	virtual ~AActor();
 
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
