@@ -15,6 +15,8 @@
 #include "Component/Mesh/Public/SquareComponent.h"
 #include "Component/Mesh/Public/TriangleComponent.h"
 #include "Component/Mesh/Public/StaticMeshComponent.h"
+#include "Render/UI/Widget/Public/StaticMeshComponentWidget.h"
+#include "Global/Function.h"
 #include "Core/Public/ObjectIterator.h"
 #include "Texture/Public/Texture.h"
 #include "Manager/BVH/Public/BVHManager.h"
@@ -25,7 +27,10 @@ UActorDetailWidget::UActorDetailWidget()
 {
 }
 
-UActorDetailWidget::~UActorDetailWidget() = default;
+UActorDetailWidget::~UActorDetailWidget()
+{
+	ResetStaticMeshWidgetCache();
+}
 
 void UActorDetailWidget::Initialize()
 {
@@ -118,6 +123,32 @@ void UActorDetailWidget::RenderActorHeader(TObjectPtr<AActor> InSelectedActor)
 	}
 }
 
+FString UActorDetailWidget::GenerateUniqueComponentName(AActor* InActor, const FString& InBaseName)
+{
+	int Suffix = 1;
+	std::string NewName = InBaseName;
+
+	auto& Components = InActor->GetOwnedComponents();
+	bool bNameExists = true;
+
+	while (bNameExists)
+	{
+		bNameExists = false;
+		for (const auto& Comp : Components)
+		{
+			if (Comp && Comp->GetName() == NewName)
+			{
+				++Suffix;
+				NewName = InBaseName + std::to_string(Suffix);
+				bNameExists = true;
+				break;
+			}
+		}
+	}
+
+	return NewName;
+}
+
 /**
  * @brief 컴포넌트들을 트리 형태로 표시하는 함수
  * @param InSelectedActor 선택된 Actor
@@ -155,6 +186,11 @@ void UActorDetailWidget::RenderComponentTree(TObjectPtr<AActor> InSelectedActor)
 			{
 				return;
 			}
+
+			FString BaseName = NewComponent->GetClass()->GetClassTypeName().ToString();
+			FString UniqueName = GenerateUniqueComponentName(InSelectedActor, BaseName);
+
+			NewComponent->SetName(UniqueName);
 
 			TObjectPtr<UActorComponent> ComponentPtr(NewComponent);
 			InSelectedActor->AddComponent(ComponentPtr);
@@ -375,6 +411,15 @@ void UActorDetailWidget::RenderComponentDetails(TObjectPtr<UActorComponent> InCo
 		// 	Billboard->SetRelativeLocation(Offset);
 		// }
 	}
+	else if (InComponent->IsA(UStaticMeshComponent::StaticClass()))
+	{
+		UStaticMeshComponent* StaticMesh = Cast<UStaticMeshComponent>(InComponent);
+		if (UStaticMeshComponentWidget* StaticMeshWidget = GetOrCreateStaticMeshWidget(StaticMesh))
+		{
+			StaticMeshWidget->SetTargetComponent(StaticMesh);
+			StaticMeshWidget->RenderWidget();
+		}
+	}
 	else
 	{
 		ImGui::TextColored(ImVec4(0.6f,0.6f,0.6f,1.0f), "No detail view for this component type.");
@@ -387,6 +432,13 @@ void UActorDetailWidget::RenderComponentDetails(TObjectPtr<UActorComponent> InCo
 	if (!SceneComponent)
 	{
 		return;
+	}
+	AActor* OwningActor = SceneComponent->GetOwner();
+	const bool bIsRootComponent = (OwningActor && OwningActor->GetRootComponent() == SceneComponent.Get());
+	if (bIsRootComponent)
+	{
+		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Root component uses actor transform; relative adjustments are disabled.");
+		ImGui::BeginDisabled();
 	}
 	bool bTransformChanged = false;
 
@@ -441,6 +493,11 @@ void UActorDetailWidget::RenderComponentDetails(TObjectPtr<UActorComponent> InCo
 		}
 	}
 
+
+	if (bIsRootComponent)
+	{
+		ImGui::EndDisabled();
+	}
 	if (bTransformChanged && InComponent->IsA(UPrimitiveComponent::StaticClass()))
 	{
 		UBVHManager::GetInstance().Refit();
@@ -509,5 +566,85 @@ void UActorDetailWidget::DuplicateSelectedActor(TObjectPtr<AActor> InActor)
 		//NewActor->SetActorLocation(Location + FVector(1.0f, 0.0f, 0.0f)); // Offset by 100 on X
 
 		CurrentLevel->RegisterDuplicatedActor(NewActor);
+	}
+}
+
+UStaticMeshComponentWidget* UActorDetailWidget::GetOrCreateStaticMeshWidget(UStaticMeshComponent* InComponent)
+{
+	if (!InComponent)
+	{
+		return nullptr;
+	}
+
+	AActor* OwningActor = InComponent->GetOwner();
+	if (StaticMeshWidgetOwner != OwningActor)
+	{
+		ResetStaticMeshWidgetCache();
+		StaticMeshWidgetOwner = OwningActor;
+	}
+
+	if (OwningActor)
+	{
+		PruneInvalidStaticMeshWidgets(OwningActor->GetOwnedComponents());
+	}
+
+	TObjectPtr<UStaticMeshComponent> ComponentPtr = InComponent;
+	if (auto It = StaticMeshWidgetMap.find(ComponentPtr); It != StaticMeshWidgetMap.end())
+	{
+		return It->second;
+	}
+
+	UStaticMeshComponentWidget* NewWidget = new UStaticMeshComponentWidget();
+	NewWidget->SetTargetComponent(InComponent);
+	StaticMeshWidgetMap.emplace(ComponentPtr, NewWidget);
+	return NewWidget;
+}
+
+void UActorDetailWidget::ResetStaticMeshWidgetCache()
+{
+	for (auto& Pair : StaticMeshWidgetMap)
+	{
+		if (Pair.second)
+		{
+			SafeDelete(Pair.second);
+		}
+	}
+	StaticMeshWidgetMap.clear();
+	StaticMeshWidgetOwner = nullptr;
+}
+
+void UActorDetailWidget::PruneInvalidStaticMeshWidgets(const TArray<TObjectPtr<UActorComponent>>& InComponents)
+{
+	if (StaticMeshWidgetMap.empty())
+	{
+		return;
+	}
+
+	TSet<UStaticMeshComponent*> ValidComponents;
+	ValidComponents.reserve(InComponents.size());
+
+	for (const TObjectPtr<UActorComponent>& ComponentPtr : InComponents)
+	{
+		if (UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(ComponentPtr.Get()))
+		{
+			ValidComponents.insert(StaticMeshComponent);
+		}
+	}
+
+	for (auto It = StaticMeshWidgetMap.begin(); It != StaticMeshWidgetMap.end();)
+	{
+		UStaticMeshComponent* Component = It->first.Get();
+		if (!Component || ValidComponents.find(Component) == ValidComponents.end())
+		{
+			if (It->second)
+			{
+				SafeDelete(It->second);
+			}
+			It = StaticMeshWidgetMap.erase(It);
+		}
+		else
+		{
+			++It;
+		}
 	}
 }

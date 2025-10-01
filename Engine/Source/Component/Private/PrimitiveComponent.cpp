@@ -87,10 +87,9 @@ const FMatrix& USceneComponent::GetWorldTransformMatrix() const
 	{
 		WorldTransformMatrix = FMatrix::GetModelMatrix(RelativeLocation, FVector::GetDegreeToRadian(RelativeRotation), RelativeScale3D);
 
-
-		for (USceneComponent* Ancester = ParentAttachment; Ancester && Ancester->ParentAttachment; Ancester = Ancester->ParentAttachment)
+		for (USceneComponent* Ancestor = ParentAttachment; Ancestor; Ancestor = Ancestor->ParentAttachment)
 		{
-			WorldTransformMatrix *= FMatrix::GetModelMatrix(Ancester->RelativeLocation, FVector::GetDegreeToRadian(Ancester->RelativeRotation), Ancester->RelativeScale3D);
+			WorldTransformMatrix *= FMatrix::GetModelMatrix(Ancestor->RelativeLocation, FVector::GetDegreeToRadian(Ancestor->RelativeRotation), Ancestor->RelativeScale3D);
 		}
 
 		bIsTransformDirty = false;
@@ -101,17 +100,10 @@ const FMatrix& USceneComponent::GetWorldTransformMatrix() const
 
 const FMatrix& USceneComponent::GetWorldTransformMatrixInverse() const
 {
-	if (bIsTransformDirtyInverse)
+	if (bIsTransformDirtyInverse || bIsTransformDirty)
 	{
-		WorldTransformMatrixInverse = FMatrix::Identity();
-		// 아직은 부모가 없을꺼기 때문에 효율을 위해 아래를 뺀다
-		// for (USceneComponent* Ancester = ParentAttachment; Ancester && Ancester->ParentAttachment; Ancester = Ancester->ParentAttachment)
-		// {
-		// 	WorldTransformMatrixInverse = FMatrix::GetModelMatrixInverse(Ancester->RelativeLocation, FVector::GetDegreeToRadian(Ancester->RelativeRotation), Ancester->RelativeScale3D) * WorldTransformMatrixInverse;
-		// }
-		WorldTransformMatrixInverse = WorldTransformMatrixInverse *
-			FMatrix::GetModelMatrixInverse(RelativeLocation, FVector::GetDegreeToRadian(RelativeRotation), RelativeScale3D);
-
+		const FMatrix& WorldMatrix = GetWorldTransformMatrix();
+		WorldTransformMatrixInverse = WorldMatrix.Inverse();
 		bIsTransformDirtyInverse = false;
 	}
 

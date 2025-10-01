@@ -12,9 +12,11 @@ class UStaticMeshComponentWidget : public UWidget
 
 public:
 	void RenderWidget() override;
+	void SetTargetComponent(UStaticMeshComponent* InComponent);
+	UStaticMeshComponent* GetTargetComponent() const { return StaticMeshComponent; }
 
 private:
-	UStaticMeshComponent* StaticMeshComponent{};
+	UStaticMeshComponent* StaticMeshComponent = nullptr;
 
 	// Helper functions for rendering different sections
 	void RenderStaticMeshSelector();

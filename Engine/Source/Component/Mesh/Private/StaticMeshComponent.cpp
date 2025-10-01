@@ -23,6 +23,7 @@ UStaticMeshComponent::UStaticMeshComponent()
 	: bIsScrollEnabled(false)
 {
 	Type = EPrimitiveType::StaticMesh;
+	SetName("StaticMeshComponent");
 
 	FName DefaultObjPath = "Data/Cube/Cube.obj";
 	SetStaticMesh(DefaultObjPath);

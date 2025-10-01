@@ -1,5 +1,6 @@
 #pragma once
 #include "Widget.h"
+#include "Global/Types.h"
 // #include "Actor/Public/Actor.h"
 // #include "Component/Public/ActorComponent.h"
 #include "Component/Public/TextRenderComponent.h"
@@ -7,6 +8,8 @@
 class AActor;
 class UActorComponent;
 class USceneComponent;
+class UStaticMeshComponent;
+class UStaticMeshComponentWidget;
 
 /**
  * @brief 선택된 Actor의 이름과 컴포넌트 트리를 표시하는 Widget
@@ -40,7 +43,17 @@ private:
 	void FinishRenamingActor(TObjectPtr<AActor> InActor);
 	void CancelRenamingActor();
 
+	FString GenerateUniqueComponentName(AActor* InActor, const FString& InBaseName);
+
+	// Static mesh component widget helpers
+	UStaticMeshComponentWidget* GetOrCreateStaticMeshWidget(UStaticMeshComponent* InComponent);
+	void ResetStaticMeshWidgetCache();
+	void PruneInvalidStaticMeshWidgets(const TArray<TObjectPtr<UActorComponent>>& InComponents);
+
 	//액터 복제
 	void DuplicateSelectedActor(TObjectPtr<AActor> InActor);
-};
 
+	// Static mesh widget cache
+	TMap<TObjectPtr<UStaticMeshComponent>, UStaticMeshComponentWidget*> StaticMeshWidgetMap;
+	TObjectPtr<AActor> StaticMeshWidgetOwner = nullptr;
+};
