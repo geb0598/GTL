@@ -3,7 +3,7 @@
 struct FVector;
 struct FVector4;
 
-struct FMatrix
+struct alignas(16) FMatrix
 {
 	/**
 	* @brief 4x4 float 타입의 행렬
