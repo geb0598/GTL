@@ -21,7 +21,7 @@ public:
 	virtual UObject* Duplicate(FObjectDuplicationParameters Parameters) override;
 
 	virtual void BeginPlay();
-	virtual void TickComponent(float DeltaTime);
+	virtual void TickComponent(float DeltaSeconds);
 	virtual void EndPlay();
 
 	EComponentType GetComponentType() { return ComponentType; }

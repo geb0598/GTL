@@ -97,7 +97,7 @@ void UUIManager::Shutdown()
 /**
  * @brief 모든 UI 윈도우 업데이트
  */
-void UUIManager::Tick(float DeltaTime)
+void UUIManager::Tick(float DeltaSeconds)
 {
 	if (!bIsInitialized)
 	{

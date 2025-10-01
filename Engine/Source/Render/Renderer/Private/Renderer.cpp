@@ -360,7 +360,7 @@ void URenderer::ReleaseDepthStencilState()
 }
 
 // Renderer.cpp
-void URenderer::Tick(float DeltaTime)
+void URenderer::Tick(float DeltaSeconds)
 {
 	RenderBegin();
 	// FViewportClient로부터 모든 뷰포트를 가져옵니다.
@@ -749,7 +749,7 @@ void URenderer::RenderStaticMesh(UPipeline& InPipeline, UStaticMeshComponent* In
     if (InMeshComp->IsScrollEnabled())
     {
         UTimeManager& TimeManager = UTimeManager::GetInstance();
-        InMeshComp->SetElapsedTime(InMeshComp->GetElapsedTime() + TimeManager.GetDeltaTime());
+        InMeshComp->SetElapsedTime(InMeshComp->GetElapsedTime() + TimeManager.GetDeltaSeconds());
     }
 
     for (const FMeshSection& Section : MeshAsset->Sections)

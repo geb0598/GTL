@@ -36,13 +36,13 @@ private:
 	float MaxFPS = 0.0f;
 
 	float TotalGameTime = 0.0f;
-	float CurrentDeltaTime = 0.0f;
+	float CurrentDeltaSeconds = 0.0f;
 
 	float CellSize = 1.0f;
 
 	// 출력을 위한 변수
 	float PreviousTime = 0.0f;
 	float PrintFPS;
-	float PrintDeltaTime;
+	float PrintDeltaSeconds;
 	bool bShowGraph;
 };

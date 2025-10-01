@@ -20,12 +20,12 @@ UWorld::~UWorld()
 	SafeDelete(Level);
 }
 
-void UWorld::Tick(float DeltaTime)
+void UWorld::Tick(float DeltaSeconds)
 {
 	if (Level)
 	{
-		// UE_LOG("%s", to_string(WorldType).c_str());
-		Level->Tick(DeltaTime);
+		UE_LOG("%s", to_string(WorldType).c_str());
+		Level->Tick(DeltaSeconds);
 	}
 }
 

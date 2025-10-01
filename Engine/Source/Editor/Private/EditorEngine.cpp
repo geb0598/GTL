@@ -61,14 +61,14 @@ void UEditorEngine::BeginPlay()
 {
 }
 
-void UEditorEngine::Tick(float DeltaTime)
+void UEditorEngine::Tick(float DeltaSeconds)
 {
 	if (bPIEActive)
 	{
 		// PIE 중에는 PIEWorld만 Tick
 		if (UWorld* PIEWorld = GetPIEWorld())
 		{
-			PIEWorld->Tick(DeltaTime);
+			PIEWorld->Tick(DeltaSeconds);
 		}
 	}
 	else
@@ -76,14 +76,14 @@ void UEditorEngine::Tick(float DeltaTime)
 		// 일반 에디터 모드에서는 EditorWorld만 Tick
 		if (UWorld* EditorWorld = GetEditorWorld())
 		{
-			EditorWorld->Tick(DeltaTime);
+			EditorWorld->Tick(DeltaSeconds);
 		}
 	}
 
 	// Editor는 항상 Tick (Gizmo, Viewport 등)
 	if (Editor)
 	{
-		Editor->Tick(DeltaTime);
+		Editor->Tick(DeltaSeconds);
 	}
 }
 
@@ -197,14 +197,12 @@ void UEditorEngine::StartPIE()
 	PIEContext.ContextHandle = FName("PIEWorld");
 	PIEContext.WorldType = EWorldType::PIE;
 
-	// 빈 레벨 생성
-	//PIEContext.WorldPtr->CreateNewLevel("PIE_Level");
-
 	if (auto World = GetEditorWorld())
 	{
 		PIEContext.WorldPtr = DuplicateObject(World, World->GetOuter());
 		PIEContext.WorldPtr->SetName("PIE World");
 		PIEContext.WorldPtr->SetWorldType(EWorldType::PIE);
+		PIEContext.WorldPtr->GetLevel()->SetName("PIE Level");
 	}
 
 	// WorldContexts에 추가
@@ -217,6 +215,16 @@ void UEditorEngine::StartPIE()
 		UE_LOG("EditorEngine: WorldContext - Handle: %s, Type: %s", Context.ContextHandle.ToString().data(),
 		       to_string(Context.WorldType).data());
 		UE_LOG("Level Actor %llu", Context.World()->GetLevel()->GetActors().size());
+	}
+
+	// Editor World의 Level을 강제로 재초기화하여 렌더링 갱신
+	if (UWorld* PIEWorld = GetPIEWorld())
+	{
+		if (ULevel* GetPIELevel = PIEWorld->GetLevel())
+		{
+			GetPIELevel->InitializeActorsInLevel();
+			UE_LOG("EditorEngine: PIE Level reinitialized for rendering");
+		}
 	}
 
 	UE_LOG("EditorEngine: PIE World created successfully");

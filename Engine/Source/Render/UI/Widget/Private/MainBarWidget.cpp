@@ -282,6 +282,7 @@ void UMainBarWidget::RenderShowFlagsMenu()
 				UE_LOG("MainBarWidget: Primitives 표시");
 			}
 			CurrentLevel->SetShowFlags(ShowFlags);
+			CurrentLevel->InitializeActorsInLevel();
 		}
 
 		// BillBoard Text 표시 옵션
@@ -299,6 +300,7 @@ void UMainBarWidget::RenderShowFlagsMenu()
 				UE_LOG("MainBarWidget: 빌보드 표시");
 			}
 			CurrentLevel->SetShowFlags(ShowFlags);
+			CurrentLevel->InitializeActorsInLevel();
 		}
 
 		// Bounds 표시 옵션
@@ -316,6 +318,7 @@ void UMainBarWidget::RenderShowFlagsMenu()
 				UE_LOG("MainBarWidget: 바운딩박스 표시");
 			}
 			CurrentLevel->SetShowFlags(ShowFlags);
+			CurrentLevel->InitializeActorsInLevel();
 		}
 
 		ImGui::EndMenu();
@@ -500,17 +503,23 @@ void UMainBarWidget::RenderOcclusionCullingMenu()
  */
 void UMainBarWidget::RenderPIEMenu()
 {
-	if (ImGui::BeginMenu("PIE"))
+	if (!GEngine)
 	{
-		if (!GEngine)
+		if (ImGui::BeginMenu("PIE"))
 		{
 			ImGui::Text("엔진을 사용할 수 없습니다");
 			ImGui::EndMenu();
-			return;
 		}
+		return;
+	}
 
-		bool bIsPIEActive = GEngine->IsPIEActive();
+	bool bIsPIEActive = GEngine->IsPIEActive();
 
+	// PIE 상태에 따라 메뉴 이름 동적 변경
+	const char* MenuName = bIsPIEActive ? "PIE (플레이 중)" : "PIE";
+
+	if (ImGui::BeginMenu(MenuName))
+	{
 		if (!bIsPIEActive)
 		{
 			// PIE 비활성 상태 - Play 버튼 표시
