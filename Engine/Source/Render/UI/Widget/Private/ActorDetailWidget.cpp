@@ -433,6 +433,13 @@ void UActorDetailWidget::RenderComponentDetails(TObjectPtr<UActorComponent> InCo
 	{
 		return;
 	}
+	AActor* OwningActor = SceneComponent->GetOwner();
+	const bool bIsRootComponent = (OwningActor && OwningActor->GetRootComponent() == SceneComponent.Get());
+	if (bIsRootComponent)
+	{
+		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Root component uses actor transform; relative adjustments are disabled.");
+		ImGui::BeginDisabled();
+	}
 	bool bTransformChanged = false;
 
 	FVector RelativeLocation = SceneComponent->GetRelativeLocation();
@@ -486,6 +493,11 @@ void UActorDetailWidget::RenderComponentDetails(TObjectPtr<UActorComponent> InCo
 		}
 	}
 
+
+	if (bIsRootComponent)
+	{
+		ImGui::EndDisabled();
+	}
 	if (bTransformChanged && InComponent->IsA(UPrimitiveComponent::StaticClass()))
 	{
 		UBVHManager::GetInstance().Refit();
