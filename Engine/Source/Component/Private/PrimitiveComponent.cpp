@@ -11,6 +11,29 @@ UPrimitiveComponent::UPrimitiveComponent()
 	ComponentType = EComponentType::Primitive;
 }
 
+UObject* UPrimitiveComponent::Duplicate(FObjectDuplicationParameters Parameters)
+{
+	auto DupObject = static_cast<UPrimitiveComponent*>(Super::Duplicate(Parameters));
+
+	// @note 프로퍼티 얕은 복사(Shallow copy)
+	DupObject->Vertices		= Vertices;
+	DupObject->Indices		= Indices;
+	DupObject->VertexBuffer = VertexBuffer;
+	DupObject->IndexBuffer	= IndexBuffer;
+	DupObject->BoundingBox	= BoundingBox;
+
+	// @note 프로퍼티 깊은 복사(Deep copy)
+	DupObject->NumVertices	= NumVertices;
+	DupObject->NumIndices	= NumIndices;
+	DupObject->Color		= Color;
+	DupObject->Topology		= Topology;
+	DupObject->RenderState	= RenderState;
+	DupObject->Type			= Type;
+	DupObject->bVisible		= bVisible;
+
+	return DupObject;
+}
+
 void USceneComponent::SetRelativeLocation(const FVector& Location)
 {
 	RelativeLocation = Location;

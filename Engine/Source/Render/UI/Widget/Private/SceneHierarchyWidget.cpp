@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "Render/UI/Widget/Public/SceneHierarchyWidget.h"
 
-#include "Manager/Level/Public/LevelManager.h"
+#include "Editor/Public/EditorEngine.h"
 #include "Level/Public/Level.h"
 #include "Actor/Public/Actor.h"
 #include "Editor/Public/Camera.h"
@@ -37,7 +37,7 @@ void USceneHierarchyWidget::Update()
 void USceneHierarchyWidget::RenderWidget()
 {
 
-	ULevel* CurrentLevel = ULevelManager::GetInstance().GetCurrentLevel();
+	ULevel* CurrentLevel = GEngine->GetCurrentLevel();
 
 	if (!CurrentLevel)
 	{
@@ -51,7 +51,7 @@ void USceneHierarchyWidget::RenderWidget()
 
 	// 검색창 렌더링
 	RenderSearchBar();
-	const TArray<TObjectPtr<AActor>>& LevelActors = CurrentLevel->GetLevelActors();
+	const TArray<TObjectPtr<AActor>>& LevelActors = CurrentLevel->GetActors();
 
 	if (LevelActors.empty())
 	{
@@ -128,7 +128,7 @@ void USceneHierarchyWidget::RenderActorInfo(TObjectPtr<AActor> InActor, int32 In
 	ImGui::PushID(InIndex);
 
 	// 현재 선택된 Actor인지 확인
-	ULevel* CurrentLevel = ULevelManager::GetInstance().GetCurrentLevel();
+	ULevel* CurrentLevel = GEngine->GetCurrentLevel();
 	bool bIsSelected = (CurrentLevel && CurrentLevel->GetSelectedActor() == InActor);
 
 	// 선택된 Actor는 하이라이트
@@ -278,7 +278,7 @@ void USceneHierarchyWidget::RenderActorInfo(TObjectPtr<AActor> InActor, int32 In
  */
 void USceneHierarchyWidget::SelectActor(TObjectPtr<AActor> InActor, bool bInFocusCamera)
 {
-	TObjectPtr<ULevel> CurrentLevel = ULevelManager::GetInstance().GetCurrentLevel();
+	TObjectPtr<ULevel> CurrentLevel = GEngine->GetCurrentLevel();
 	if (CurrentLevel)
 	{
 		CurrentLevel->SetSelectedActor(InActor);
@@ -610,7 +610,7 @@ bool USceneHierarchyWidget::HasActorListChanged(const TArray<TObjectPtr<AActor>>
  */
 void USceneHierarchyWidget::UpdateCacheIfNeeded(const TArray<TObjectPtr<AActor>>& InLevelActors) const
 {
-	ULevel* CurrentLevel = ULevelManager::GetInstance().GetCurrentLevel();
+	ULevel* CurrentLevel = GEngine->GetCurrentLevel();
 
 	UE_LOG("SceneHierarchy: Cast 캐시 업데이트 시작...");
 

@@ -477,10 +477,11 @@ bool UFontRenderer::CreateShaders()
     URenderer& Renderer = URenderer::GetInstance();
 
     // 입력 레이아웃 정의 (위치 + UV + 문자 인덱스)
+    // FVector는 alignas(16)으로 16바이트, FVector2는 8바이트, uint32는 4바이트
     TArray<D3D11_INPUT_ELEMENT_DESC> layoutDesc = {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"TEXCOORD", 1, DXGI_FORMAT_R32_UINT, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0}
+        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 16, D3D11_INPUT_PER_VERTEX_DATA, 0},  // FVector = 16 bytes
+        {"TEXCOORD", 1, DXGI_FORMAT_R32_UINT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0}       // 16 + 8 = 24
     };
 
     // 버텍스 셰이더 및 입력 레이아웃 생성

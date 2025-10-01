@@ -2,8 +2,8 @@
 #include "Actor/Public/Actor.h"
 #include "Component/Public/SceneComponent.h"
 #include "Component/Public/TextRenderComponent.h"
+#include "Editor/Public/EditorEngine.h"
 #include "Level/Public/Level.h"
-#include "Manager/Level/Public/LevelManager.h"
 
 IMPLEMENT_CLASS(AActor, UObject)
 
@@ -37,6 +37,46 @@ void AActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 	{
 		RootComponent->Serialize(bInIsLoading, InOutHandle);
 	}
+}
+
+UObject* AActor::Duplicate(FObjectDuplicationParameters Parameters)
+{
+	auto DupObject = static_cast<AActor*>(Super::Duplicate(Parameters));
+
+	/** @note 기본 생성자가 생성하는 컴포넌트들 맵에 업데이트 */
+	if (RootComponent)
+	{
+		auto Params = InitStaticDuplicateObjectParams(RootComponent, DupObject, FName::GetNone(), Parameters.DuplicationSeed, Parameters.CreatedObjects);
+		/** @todo CreatedObjects는 업데이트 안해도 괜찮은지 확인 필요 */
+		Params.DuplicationSeed.emplace(RootComponent, DupObject->RootComponent);
+		/** @note 값 채워넣기만 수행 */
+		RootComponent->Duplicate(Params);
+	}
+
+	/** @todo 이후 다른 AActor를 상속받는 클래스들이 생성하는 컴포넌트를 어떻게 복제할 것인지 생각 */
+
+	for (auto& Component : OwnedComponents)
+	{
+		/** 위에서 이미 처리함 */
+		if (Component == RootComponent)
+		{
+			continue;
+		}
+
+		if (auto It = Parameters.DuplicationSeed.find(Component); It != Parameters.DuplicationSeed.end())
+		{
+			DupObject->OwnedComponents.emplace_back(static_cast<UActorComponent*>(It->second));
+		}
+		else
+		{
+			auto Params = InitStaticDuplicateObjectParams(Component, DupObject, FName::GetNone(), Parameters.DuplicationSeed, Parameters.CreatedObjects);
+			auto DupComponent = static_cast<UActorComponent*>(Component->Duplicate(Params));
+
+			DupObject->OwnedComponents.emplace_back(DupComponent);
+		}
+	}
+
+	return DupObject;
 }
 
 void AActor::SetActorLocation(const FVector& InLocation) const
@@ -113,16 +153,16 @@ void AActor::AddComponent(TObjectPtr<UActorComponent> InComponent)
 	InSceneComponent->SetParentAttachment(RootComponent);
 
 	TObjectPtr<UPrimitiveComponent> PrimitiveComponent = Cast<UPrimitiveComponent>(InComponent);
-	ULevelManager::GetInstance().GetCurrentLevel()->AddLevelPrimitiveComponent(PrimitiveComponent);
+	GEngine->GetCurrentLevel()->AddLevelPrimitiveComponent(PrimitiveComponent);
 }
 
-void AActor::Tick()
+void AActor::Tick(float DeltaTime)
 {
 	for (auto& Component : OwnedComponents)
 	{
 		if (Component)
 		{
-			Component->TickComponent();
+			Component->TickComponent(DeltaTime);
 		}
 	}
 }

@@ -39,5 +39,8 @@ private:
 	void StartRenamingActor(TObjectPtr<AActor> InActor);
 	void FinishRenamingActor(TObjectPtr<AActor> InActor);
 	void CancelRenamingActor();
+
+	//액터 복제
+	void DuplicateSelectedActor(TObjectPtr<AActor> InActor);
 };
 

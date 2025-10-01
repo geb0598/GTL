@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "Render/UI/Widget/Public/ActorDetailWidget.h"
-#include "Manager/Level/Public/LevelManager.h"
+#include "Editor/Public/EditorEngine.h"
 #include "Level/Public/Level.h"
 #include "Actor/Public/Actor.h"
 #include "Component/Public/ActorComponent.h"
@@ -18,6 +18,7 @@
 #include "Core/Public/ObjectIterator.h"
 #include "Texture/Public/Texture.h"
 #include "Manager/BVH/Public/BVHManager.h"
+#include "Core/Public/Object.h"
 
 UActorDetailWidget::UActorDetailWidget()
 	: UWidget("Actor Detail Widget")
@@ -25,6 +26,7 @@ UActorDetailWidget::UActorDetailWidget()
 }
 
 UActorDetailWidget::~UActorDetailWidget() = default;
+
 void UActorDetailWidget::Initialize()
 {
 	UE_LOG("ActorDetailWidget: Initialized");
@@ -37,7 +39,7 @@ void UActorDetailWidget::Update()
 
 void UActorDetailWidget::RenderWidget()
 {
-	TObjectPtr<ULevel> CurrentLevel = ULevelManager::GetInstance().GetCurrentLevel();
+	TObjectPtr CurrentLevel = GEngine->GetCurrentLevel();
 
 	if (!CurrentLevel)
 	{
@@ -105,6 +107,13 @@ void UActorDetailWidget::RenderActorHeader(TObjectPtr<AActor> InSelectedActor)
 		if (ImGui::IsItemHovered())
 		{
 			ImGui::SetTooltip("Double-Click to Rename");
+		}
+
+		// Duplicate 버튼 추가
+		ImGui::SameLine();
+		if (ImGui::Button("Duplicate"))
+		{
+			DuplicateSelectedActor(InSelectedActor);
 		}
 	}
 }
@@ -477,4 +486,28 @@ void UActorDetailWidget::CancelRenamingActor()
 	bIsRenamingActor = false;
 	ActorNameBuffer[0] = '\0';
 	UE_LOG_WARNING("ActorDetailWidget: 이름 변경 취소");
+}
+
+void UActorDetailWidget::DuplicateSelectedActor(TObjectPtr<AActor> InActor)
+{
+	if (!InActor)
+	{
+		return;
+	}
+
+	ULevel* CurrentLevel = GEngine->GetCurrentLevel();
+	if (!CurrentLevel)
+	{
+		return;
+	}
+
+	AActor* NewActor = DuplicateObject(InActor, CurrentLevel, FName::GetNone());
+
+	if (NewActor)
+	{
+		//FVector Location = NewActor->GetActorLocation();
+		//NewActor->SetActorLocation(Location + FVector(1.0f, 0.0f, 0.0f)); // Offset by 100 on X
+
+		CurrentLevel->RegisterDuplicatedActor(NewActor);
+	}
 }

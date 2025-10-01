@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include <immintrin.h>
 #include "Editor/Public/FrustumCull.h"
 #include "Physics/Public/AABB.h"
@@ -12,6 +12,18 @@ FFrustumCull::FFrustumCull()
 }
 FFrustumCull::~FFrustumCull()
 {
+}
+
+UObject* FFrustumCull::Duplicate(FObjectDuplicationParameters Parameters)
+{
+	auto DupObject = static_cast<FFrustumCull*>(Super::Duplicate(Parameters));
+
+	for (size_t i = 0; i < 6; ++i)
+	{
+		DupObject->Planes[i] = Planes[i];
+	}
+
+	return DupObject;
 }
 
 void FFrustumCull::Update(UCamera* InCamera)

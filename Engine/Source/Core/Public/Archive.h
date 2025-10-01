@@ -9,10 +9,21 @@ struct FArchive
 {
 	virtual ~FArchive() = default;
 
-	/** Returns true if this archive is for loading data. */
+	/** @brief 아카이브가 데이터를 불러올 경우 true를 반환한다. */
 	virtual bool IsLoading() const = 0;
 	virtual void Serialize(void* V, size_t Length) = 0;
 
+	virtual FArchive& operator<<(FName& Name)
+	{
+		return *this;
+	}
+
+	virtual FArchive& operator<<(UObject*& Object)
+	{
+		return *this;
+	}
+
+	/** @brief POD(Plain Old Data) 타입을 아카이브로 직렬화한다. */
 	template<typename T, typename = std::enable_if_t<std::is_trivially_copyable_v<T>>>
 	FArchive& operator<<(T& Value)
 	{
@@ -20,6 +31,7 @@ struct FArchive
 		return *this;
 	}
 
+	/** @brief TArray<T> 타입을 아카이브로 직렬화한다. */
 	template<typename T>
 	FArchive& operator<<(TArray<T>& Value)
 	{
@@ -39,6 +51,7 @@ struct FArchive
 		return *this;
 	}
 
+	/** @brief FString 타입을 아카이브로 직렬화한다. */
 	FArchive& operator<<(FString& Value)
 	{
 		size_t Length = Value.size();

@@ -2,7 +2,7 @@
 #include "Render/UI/Widget/Public/TargetActorTransformWidget.h"
 
 #include "Level/Public/Level.h"
-#include "Manager/Level/Public/LevelManager.h"
+#include "Editor/Public/EditorEngine.h"
 
 UTargetActorTransformWidget::UTargetActorTransformWidget()
 	: UWidget("Target Actor Tranform Widget")
@@ -20,8 +20,8 @@ void UTargetActorTransformWidget::Update()
 {
 	// 매 프레임 Level의 선택된 Actor를 확인해서 정보 반영
 	// TODO(KHJ): 적절한 위치를 찾을 것
-	ULevelManager& LevelManager = ULevelManager::GetInstance();
-	ULevel* CurrentLevel = LevelManager.GetCurrentLevel();
+	// GEngine is now a global pointer
+	ULevel* CurrentLevel = GEngine->GetCurrentLevel();
 
 	LevelMemoryByte = CurrentLevel->GetAllocatedBytes();
 	LevelObjectCount = CurrentLevel->GetAllocatedCount();

@@ -314,6 +314,7 @@
       <DeploymentContent>false</DeploymentContent>
     </ClInclude>
     <ClInclude Include="Source\Component\Public\ActorComponent.h" />
+    <ClInclude Include="Source\Component\Public\BillboardComponent.h" />
     <ClInclude Include="Source\Component\Public\TextRenderComponent.h" />
     <ClInclude Include="Source\Component\Public\LineComponent.h" />
     <ClInclude Include="Source\Component\Public\PrimitiveComponent.h" />
@@ -323,13 +324,14 @@
     <ClInclude Include="Source\Component\Mesh\Public\SquareComponent.h" />
     <ClInclude Include="Source\Component\Mesh\Public\TriangleComponent.h" />
     <ClInclude Include="Source\Component\Mesh\Public\VertexDatas.h" />
-    <ClInclude Include="Source\Component\Public\BillboardComponent.h" />
     <ClInclude Include="Source\Core\Public\Archive.h" />
+    <ClInclude Include="Source\Core\Public\DuplicatedDataReader.h" />
     <ClInclude Include="Source\Core\Public\ObjectIterator.h" />
     <ClInclude Include="Source\Core\Public\PlatformTime.h" />
     <ClInclude Include="Source\Core\Public\ScopeCycleCounter.h" />
     <ClInclude Include="Source\Core\Public\WindowsBinReader.h" />
     <ClInclude Include="Source\Core\Public\WindowsBinWriter.h" />
+    <ClInclude Include="Source\Editor\Public\EditorEngine.h" />
     <ClInclude Include="Source\Editor\Public\FrustumCull.h" />
     <ClInclude Include="Source\Editor\Public\SplitterWindow.h" />
     <ClInclude Include="Source\Editor\Public\ViewportClient.h" />
@@ -397,7 +399,6 @@
     <ClInclude Include="Source\Manager\Asset\Public\AssetManager.h" />
     <ClInclude Include="Source\Manager\Config\Public\ConfigManager.h" />
     <ClInclude Include="Source\Manager\Input\Public\InputManager.h" />
-    <ClInclude Include="Source\Manager\Level\Public\LevelManager.h" />
     <ClInclude Include="Source\Manager\Path\Public\PathManager.h" />
     <ClInclude Include="Source\Manager\Time\Public\TimeManager.h" />
     <ClInclude Include="Source\Manager\UI\Public\UIManager.h" />
@@ -443,6 +444,7 @@
     <ClInclude Include="Source\Utility\Public\FileDialog.h" />
     <ClInclude Include="Source\Utility\Public\JsonSerializer.h" />
     <ClInclude Include="Source\Utility\Public\UELogParser.h" />
+    <ClInclude Include="Source\World\Public\World.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -467,6 +469,7 @@
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
     <ClCompile Include="Source\Component\Private\ActorComponent.cpp" />
+    <ClCompile Include="Source\Component\Private\BillboardComponent.cpp" />
     <ClCompile Include="Source\Component\Private\TextRenderComponent.cpp" />
     <ClCompile Include="Source\Component\Private\LineComponent.cpp" />
     <ClCompile Include="Source\Component\Private\PrimitiveComponent.cpp" />
@@ -476,13 +479,13 @@
     <ClCompile Include="Source\Component\Mesh\Private\SquareComponent.cpp" />
     <ClCompile Include="Source\Component\Mesh\Private\TriangleComponent.cpp" />
     <ClCompile Include="Source\Component\Mesh\Private\VertexDatas.cpp" />
-    <ClCompile Include="Source\Component\Private\BillboardComponent.cpp" />
     <ClCompile Include="Source\Core\Private\Archive.cpp" />
     <ClCompile Include="Source\Core\Private\ObjectIterator.cpp" />
     <ClCompile Include="Source\Core\Private\PlatformTime.cpp" />
     <ClCompile Include="Source\Core\Private\ScopeCycleCounter.cpp" />
     <ClCompile Include="Source\Core\Private\WindowsBinReader.cpp" />
     <ClCompile Include="Source\Core\Private\WindowsBinWriter.cpp" />
+    <ClCompile Include="Source\Editor\Private\EditorEngine.cpp" />
     <ClCompile Include="Source\Editor\Private\FrustumCull.cpp" />
     <ClCompile Include="Source\Editor\Private\SplitterWindow.cpp" />
     <ClCompile Include="Source\Editor\Private\ViewportClient.cpp" />
@@ -537,7 +540,6 @@
     <ClCompile Include="Source\Level\Private\Level.cpp" />
     <ClCompile Include="Source\Manager\Config\Private\ConfigManager.cpp" />
     <ClCompile Include="Source\Manager\Input\Private\InputManager.cpp" />
-    <ClCompile Include="Source\Manager\Level\Private\LevelManager.cpp" />
     <ClCompile Include="Source\Manager\Path\Private\PathManager.cpp" />
     <ClCompile Include="Source\Manager\Time\Private\TimeManager.cpp" />
     <ClCompile Include="Source\Manager\UI\Private\UIManager.cpp" />
@@ -582,6 +584,7 @@
     </ClCompile>
     <ClCompile Include="Source\Utility\Private\FileDialog.cpp" />
     <ClCompile Include="Source\Utility\Private\UELogParser.cpp" />
+    <ClCompile Include="Source\World\Private\World.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

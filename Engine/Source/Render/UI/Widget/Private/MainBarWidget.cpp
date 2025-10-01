@@ -6,13 +6,12 @@
 #include <shobjidl.h>
 
 #include "Level/Public/Level.h"
-#include "Manager/Level/Public/LevelManager.h"
+#include "Editor/Public/EditorEngine.h"
 #include "Actor/Public/Actor.h"
 #include "Component/Mesh/Public/StaticMeshComponent.h"
 #include "Render/Renderer/Public/Renderer.h"
 
 
-class ULevelManager;
 IMPLEMENT_CLASS(UMainBarWidget, UWidget)
 
 UMainBarWidget::UMainBarWidget()
@@ -62,6 +61,7 @@ void UMainBarWidget::RenderWidget()
 		RenderGraphicsMenu();
 		RenderLODMenu();
 		RenderOcclusionCullingMenu();
+		RenderPIEMenu();
 		RenderWindowsMenu();
 		RenderHelpMenu();
 
@@ -208,9 +208,8 @@ void UMainBarWidget::RenderViewMenu()
 {
 	if (ImGui::BeginMenu("보기"))
 	{
-		// LevelManager에서 Editor 가져오기
-		ULevelManager& LevelMgr = ULevelManager::GetInstance();
-		UEditor* EditorInstance = LevelMgr.GetEditor();
+		// GEngine에서 Editor 가져오기
+		UEditor* EditorInstance = GEngine->GetEditor();
 		if (!EditorInstance)
 		{
 			ImGui::Text("에디터를 사용할 수 없습니다");
@@ -255,9 +254,9 @@ void UMainBarWidget::RenderShowFlagsMenu()
 {
 	if (ImGui::BeginMenu("표시 옵션"))
 	{
-		// LevelManager에서 현재 레벨 가져오기
-		ULevelManager& LevelMgr = ULevelManager::GetInstance();
-		ULevel* CurrentLevel = LevelMgr.GetCurrentLevel();
+		// GEngine에서 현재 레벨 가져오기
+		// GEngine is now a global pointer
+		ULevel* CurrentLevel = GEngine->GetCurrentLevel();
 		if (!CurrentLevel)
 		{
 			ImGui::Text("현재 레벨을 찾을 수 없습니다");
@@ -331,9 +330,9 @@ void UMainBarWidget::RenderGraphicsMenu()
 {
 	if (ImGui::BeginMenu("그래픽"))
 	{
-		// LevelManager에서 현재 레벨 가져오기
-		ULevelManager& LevelMgr = ULevelManager::GetInstance();
-		ULevel* CurrentLevel = LevelMgr.GetCurrentLevel();
+		// GEngine에서 현재 레벨 가져오기
+		// GEngine is now a global pointer
+		ULevel* CurrentLevel = GEngine->GetCurrentLevel();
 		if (!CurrentLevel)
 		{
 			ImGui::Text("현재 레벨을 찾을 수 없습니다");
@@ -402,9 +401,9 @@ void UMainBarWidget::RenderLODMenu()
 {
 	if (ImGui::BeginMenu("LOD"))
 	{
-		// LevelManager에서 현재 레벨 가져오기
-		ULevelManager& LevelMgr = ULevelManager::GetInstance();
-		ULevel* CurrentLevel = LevelMgr.GetCurrentLevel();
+		// GEngine에서 현재 레벨 가져오기
+		// GEngine is now a global pointer
+		ULevel* CurrentLevel = GEngine->GetCurrentLevel();
 		if (!CurrentLevel)
 		{
 			ImGui::Text("현재 레벨을 찾을 수 없습니다");
@@ -496,6 +495,51 @@ void UMainBarWidget::RenderOcclusionCullingMenu()
 }
 
 /**
+ * @brief PIE 메뉴 렌더링 함수
+ * Play In Editor 시작/종료 기능 제공
+ */
+void UMainBarWidget::RenderPIEMenu()
+{
+	if (ImGui::BeginMenu("PIE"))
+	{
+		if (!GEngine)
+		{
+			ImGui::Text("엔진을 사용할 수 없습니다");
+			ImGui::EndMenu();
+			return;
+		}
+
+		bool bIsPIEActive = GEngine->IsPIEActive();
+
+		if (!bIsPIEActive)
+		{
+			// PIE 비활성 상태 - Play 버튼 표시
+			if (ImGui::MenuItem("Play In Editor", "F5"))
+			{
+				GEngine->StartPIE();
+				UE_LOG("MainBarWidget: PIE 시작");
+			}
+		}
+		else
+		{
+			// PIE 활성 상태 - Stop 버튼 표시
+			if (ImGui::MenuItem("Stop", "F5"))
+			{
+				GEngine->EndPIE();
+				UE_LOG("MainBarWidget: PIE 종료");
+			}
+		}
+
+		ImGui::Separator();
+
+		// 현재 상태 표시
+		ImGui::Text("상태: %s", bIsPIEActive ? "실행 중" : "중지됨");
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
  * @brief Help 메뉴에 대한 렌더링 함수
  */
 void UMainBarWidget::RenderHelpMenu()
@@ -520,11 +564,11 @@ void UMainBarWidget::SaveCurrentLevel()
 	path FilePath = OpenSaveFileDialog();
 	if (!FilePath.empty())
 	{
-		ULevelManager& LevelManager = ULevelManager::GetInstance();
+		// GEngine is now a global pointer
 
 		try
 		{
-			bool bSuccess = LevelManager.SaveCurrentLevel(FilePath.string());
+			bool bSuccess = GEngine->SaveCurrentLevel(FilePath.string());
 
 			if (bSuccess)
 			{
@@ -554,8 +598,7 @@ void UMainBarWidget::LoadLevel()
 	{
 		try
 		{
-			ULevelManager& LevelManager = ULevelManager::GetInstance();
-			bool bSuccess = LevelManager.LoadLevel(FilePath.string());
+			bool bSuccess = GEngine->LoadLevel(FilePath.string());
 
 			if (bSuccess)
 			{
@@ -579,8 +622,8 @@ void UMainBarWidget::LoadLevel()
  */
 void UMainBarWidget::CreateNewLevel()
 {
-	ULevelManager& LevelMgr = ULevelManager::GetInstance();
-	if (ULevelManager::GetInstance().CreateNewLevel())
+	// GEngine is now a global pointer
+	if (GEngine->CreateNewLevel())
 	{
 		UE_LOG("MainBarWidget: 새로운 레벨이 성공적으로 생성되었습니다");
 	}
