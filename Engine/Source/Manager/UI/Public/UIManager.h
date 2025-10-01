@@ -23,7 +23,7 @@ public:
 	void Initialize();
 	void Initialize(HWND InWindowHandle);
 	void Shutdown();
-	void Update();
+	void Tick(float DeltaTime);
 	void Render();
 	bool RegisterUIWindow(UUIWindow* InWindow);
 	bool UnregisterUIWindow(UUIWindow* InWindow);

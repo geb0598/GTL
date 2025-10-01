@@ -52,7 +52,7 @@ public:
 	int32 GetForcedLODLevel() const { return ForcedLODLevel; }
 	bool IsForcedLODEnabled() const { return ForcedLODLevel >= 0; }
 
-	void TickComponent() override;
+	void TickComponent(float DeltaTime) override;
 
 	void EnableScroll() { bIsScrollEnabled = true; }
 	void DisableScroll() { bIsScrollEnabled = false; }

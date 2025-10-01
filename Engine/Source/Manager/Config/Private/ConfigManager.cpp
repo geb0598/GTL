@@ -101,6 +101,7 @@ JSON UConfigManager::GetCameraSettingsAsJson()
 	const auto& Data = ViewportCameraSettings[0];
 
 	// FJsonSerializer 유틸리티 함수를 사용하여 FVector를 JSON 배열로 변환
+	RootJson["CameraType"] = static_cast<int>(Data.ViewportCameraType);
 	RootJson["Location"] = FJsonSerializer::VectorToJson(Data.Location);
 	RootJson["Rotation"] = FJsonSerializer::VectorToJson(Data.Rotation);
 	RootJson["FarClip"] = FJsonSerializer::FloatToArrayJson(Data.FarClip);
@@ -152,6 +153,14 @@ void UConfigManager::SetCameraSettingsFromJson(const JSON& InData)
 		// ReadObject 유틸리티 함수로 해당 뷰포트의 JSON 데이터를 안전하게 가져옴
 		// 유틸리티 함수를 사용하여 반복적인 검사 없이 간결하게 데이터 파싱
 		// 실패 시 각 함수 내부에서 로그를 남기고 기본값을 할당함
+
+		// CameraType 읽기
+		int32 CameraTypeInt;
+		if (FJsonSerializer::ReadInt32(InData, "CameraType", CameraTypeInt))
+		{
+			ViewportCameraSettings[Index].ViewportCameraType = static_cast<EViewportCameraType>(CameraTypeInt);
+		}
+
 		FJsonSerializer::ReadArrayFloat(InData, "FOV", ViewportCameraSettings[Index].FovY);
 		FJsonSerializer::ReadArrayFloat(InData, "FarClip", ViewportCameraSettings[Index].FarClip);
 		FJsonSerializer::ReadVector(InData, "Location", ViewportCameraSettings[Index].Location);

@@ -2,7 +2,7 @@
 #include "Render/UI/Widget/Public/PrimitiveSpawnWidget.h"
 
 #include "Level/Public/Level.h"
-#include "Manager/Level/Public/LevelManager.h"
+#include "Editor/Public/EditorEngine.h"
 #include "Actor/Public/CubeActor.h"
 #include "Actor/Public/SphereActor.h"
 #include "Actor/Public/SquareActor.h"
@@ -83,8 +83,8 @@ void UPrimitiveSpawnWidget::RenderWidget()
  */
 void UPrimitiveSpawnWidget::SpawnActors() const
 {
-	ULevelManager& LevelManager = ULevelManager::GetInstance();
-	ULevel* CurrentLevel = LevelManager.GetCurrentLevel();
+	// GEngine is now a global pointer
+	ULevel* CurrentLevel = GEngine->GetCurrentLevel();
 
 	if (!CurrentLevel)
 	{
@@ -137,7 +137,7 @@ void UPrimitiveSpawnWidget::SpawnActors() const
 
 			TArray<FBVHPrimitive> BVHPrimitives;
 			TArray<TObjectPtr<UPrimitiveComponent>> LevelComp =
-				ULevelManager::GetInstance().GetCurrentLevel()->GetLevelPrimitiveComponents();
+				GEngine->GetCurrentLevel()->GetLevelPrimitiveComponents();
 			UBVHManager::GetInstance().ConvertComponentsToBVHPrimitives(LevelComp, BVHPrimitives);
 			UBVHManager::GetInstance().Build(BVHPrimitives);
 
