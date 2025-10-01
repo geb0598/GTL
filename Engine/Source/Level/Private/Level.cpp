@@ -189,7 +189,7 @@ void ULevel::Tick(float DeltaSeconds)
 
 	if (OwningWorld->GetWorldType() == EWorldType::Editor)
 	{
-		UE_LOG("In Editor");
+		// UE_LOG("In Editor");
 		for (auto& Actor : Actors)
 		{
 			if (Actor && Actor->IsActorTickEnabled() && Actor->IsTickInEditor())
@@ -200,7 +200,7 @@ void ULevel::Tick(float DeltaSeconds)
 	}
 	else if (OwningWorld->GetWorldType() == EWorldType::PIE)
 	{
-		UE_LOG("In PIE");
+		// UE_LOG("In PIE");
 		for (auto& Actor : Actors)
 		{
 			Actor->SetActorTickEnabled(true);
