@@ -6,6 +6,23 @@
 namespace json { class JSON; }
 using JSON = json::JSON;
 
+struct FObjectDuplicationParameters;
+
+
+/** StaticDuplicateObject()와 관련 함수에서 사용되는 Enum */
+namespace EDuplicateMode
+{
+	enum Type
+	{
+		/** 복제에 구체적인 정보가 없는경우 */
+		Normal,
+		/** 월드 복제의 일부로 오브젝트가 복제되는 경우 */
+		World,
+		/** PIE(Play In Editor)를 위해 오브젝트가 복사되는 경우 */
+		PIE
+	};
+}
+
 UCLASS()
 class UObject
 {
@@ -19,7 +36,21 @@ public:
 	virtual ~UObject();
 
 	// 2. 가상 함수 (인터페이스)
-	virtual void Serialize(const bool bInIsLoading, JSON& InOutHandle);
+	virtual void Serialize(const bool bInIsLoading, JSON& InOutHandle) {};
+
+	/** @brief UObject 계층을 타고 재귀적으로 UObject에서 상속 받는 클래스를 복제한다. */
+	virtual UObject* Duplicate(FObjectDuplicationParameters Parameters);
+
+	/** @deprecated 아무런 작업을 수행하지 않는다. 발제 내용과의 호환을 위해 남겨둠. */
+	[[deprecated]] virtual void DuplicateSubObjects(FObjectDuplicationParameters Parameters);
+
+	virtual void PreDuplicate(FObjectDuplicationParameters& DupParams) {}
+
+	virtual void PostDuplicate(bool bDuplicateForPIE) {}
+	virtual void PostDuplicate(EDuplicateMode::Type DuplicateMode)
+	{
+		PostDuplicate(DuplicateMode == EDuplicateMode::PIE);
+	}
 
 	// 3. Public 멤버 함수
 	bool IsA(TObjectPtr<UClass> InClass) const;
@@ -38,11 +69,9 @@ public:
 	void SetDisplayName(const FString& InName) const { Name.SetDisplayName(InName); }
 
 private:
-	// 4. Private 멤버 함수
 	void PropagateMemoryChange(uint64 InBytesDelta, uint32 InCountDelta);
 
 private:
-	// 5. Private 멤버 변수
 	uint32 UUID;
 	uint32 InternalIndex;
 	FName Name;
@@ -226,3 +255,127 @@ bool IsValid(const TObjectPtr<U>& InObjectPtr)
 }
 
 TArray<TObjectPtr<UObject>>& GetUObjectArray();
+
+/*-----------------------------------------------------------------------------
+	UObject 헬퍼 함수(UObjectGlobals.h 참고)
+-----------------------------------------------------------------------------*/
+
+
+struct FObjectDuplicationParameters
+{
+	/** 복사될 오브젝트 */
+	UObject*	SourceObject;
+
+	/** 복사될 오브젝트의 소유자로 사용될 오브젝트 */
+	UObject*	DestOuter;
+
+	/** SourceObject의 복제에 사용될 이름 */
+	FName		DestName;
+
+	/** 복제될 클래스의 타입 */
+	UClass*		DestClass;
+
+	EDuplicateMode::Type DuplicateMode;
+
+	/**
+	 * StaticDuplicateObject에서 사용하는 복제 매핑 테이블을 미리 채워넣기 위한 용도.
+	 * 특정 오브젝트를 복제하지 않고, 이미 존재하는 다른 오브젝트를 그 복제본으로 사용하고 싶을 때 활용한다.
+	 *
+	 * 이 맵에 들어간 오브젝트들은 실제로 복제되지 않는다.
+	 * Key는 원본 오브젝트, Value는 복제본으로 사용될 오브젝트이다.
+	 */
+	TMap<UObject*, UObject*>& DuplicationSeed;
+
+	/**
+	 * null이 아니라면, StaticDuplicateObject 호출 시 생성된 모든 복제 오브젝트들이 이 맵에 기록된다.
+	 *
+	 * Key는 원본 오브젝트, Value는 새로 생성된 복제 오브젝트이다.
+	 * DuplicationSeed에 의해 미리 매핑된 오브젝트들은 여기에는 들어가지 않는다.
+	 */
+	TMap<UObject*, UObject*>& CreatedObjects;
+
+	/** 생성자 */
+	FObjectDuplicationParameters(UObject* InSourceObject, UObject* InDestOuter, TMap<UObject*, UObject*>& InDuplicationSeed, TMap<UObject*, UObject*>& InCreatedObjects)
+		: SourceObject(InSourceObject), DestOuter(InDestOuter), DuplicationSeed(InDuplicationSeed), CreatedObjects(InCreatedObjects) {}
+};
+
+/**
+ * @brief 오브젝트 복사를 위한 편의성 템플릿 
+ *
+ * @param SourceObject 복사되는 오브젝트
+ * @param Outer 복사된 오브젝트의 소유자
+ * @param Name 오브젝트를 위한 선택적 이름 
+ *
+ * @return 복사된 오브젝트, 혹은 실패할 경우 null 
+ */
+template<typename T>
+T* DuplicateObject(T* const SourceObject, UObject* Outer, const FName Name = FName::GetNone())
+{
+	if (SourceObject != nullptr)
+	{
+		if (Outer == nullptr)
+		{
+			// [UE] TODO: Outer = (UObject*)GetTransientOuterForRename(T::StaticClass());
+		}
+		TMap<UObject*, UObject*> DuplicatedSeed;
+		TMap<UObject*, UObject*> CreatedObjects;
+		return static_cast<T*>(StaticDuplicateObject(SourceObject, Outer, Name, DuplicatedSeed, CreatedObjects));
+	}
+	return nullptr;
+}
+
+template<typename T>
+T* DuplicateObject(const TObjectPtr<T> SourceObject, UObject* Outer, const FName Name = FName::GetNone())
+{
+	if (SourceObject != nullptr)
+	{
+		if (Outer == nullptr)
+		{
+			// [UE] TODO: Outer = (UObject*)GetTransientOuterForRename(T::StaticClass());
+		}
+		TMap<UObject*, UObject*> DuplicatedSeed;
+		TMap<UObject*, UObject*> CreatedObjects;
+		return static_cast<T*>(StaticDuplicateObject(SourceObject, Outer, Name, DuplicatedSeed, CreatedObjects));
+	}
+	return nullptr;
+}
+
+inline FObjectDuplicationParameters InitStaticDuplicateObjectParams(UObject const* SourceObject, UObject* DestOuter, const FName DestName,
+	TMap<UObject*, UObject*>& DuplicationSeed, TMap<UObject*, UObject*>& CreatedObjects, EDuplicateMode::Type DuplicateMode = EDuplicateMode::Normal)
+{
+	FObjectDuplicationParameters Parameters(const_cast<UObject*>(SourceObject), DestOuter, DuplicationSeed, CreatedObjects);
+	if (DestName != FName::GetNone())
+	{
+		Parameters.DestName = DestName;
+	}
+
+	Parameters.DestClass = SourceObject->GetClass();
+
+	Parameters.DuplicateMode = DuplicateMode;
+
+	return Parameters;
+}
+
+inline UObject* StaticDuplicateObjectEX(FObjectDuplicationParameters Parameters)
+{
+	Parameters.SourceObject->PreDuplicate(Parameters);
+
+	UObject* DupRootObject = nullptr;
+	if (auto It = Parameters.DuplicationSeed.find(Parameters.SourceObject); It != Parameters.DuplicationSeed.end())
+	{
+		DupRootObject = It->second;	
+	}
+
+	if (DupRootObject == nullptr)
+	{
+		DupRootObject = Parameters.SourceObject->Duplicate(Parameters);
+	}
+
+	return DupRootObject;
+}
+
+inline UObject* StaticDuplicateObject(UObject* SourceObject, UObject* DestOuter, const FName DestName, TMap<UObject*, UObject*>& DuplicatedSeed, TMap<UObject*, UObject*>& CreatedObjects)
+{
+	FObjectDuplicationParameters Parameters = InitStaticDuplicateObjectParams(SourceObject, DestOuter, DestName, DuplicatedSeed, CreatedObjects);
+	return StaticDuplicateObjectEX(Parameters);
+}

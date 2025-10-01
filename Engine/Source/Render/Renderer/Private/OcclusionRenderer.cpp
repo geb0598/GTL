@@ -4,7 +4,7 @@
 
 #include "Global/CoreTypes.h"
 #include "Level/Public/Level.h"
-#include "Manager/Level/Public/LevelManager.h"
+#include "Editor/Public/EditorEngine.h"
 #include "Render/Renderer/Public/OcclusionRenderer.h"
 #include "Component/Public/PrimitiveComponent.h"
 #include "Editor/Public/Camera.h"

@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Manager/Asset/Public/LODMaker.h"
 
 #include <map>

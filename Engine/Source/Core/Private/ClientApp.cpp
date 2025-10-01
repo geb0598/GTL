@@ -1,10 +1,9 @@
 #include "pch.h"
 #include "Core/Public/ClientApp.h"
 
-#include "Editor/Public/Editor.h"
+#include "Editor/Public/EditorEngine.h"
 #include "Core/Public/AppWindow.h"
 #include "Manager/Input/Public/InputManager.h"
-#include "Manager/Level/Public/LevelManager.h"
 #include "Manager/Asset/Public/AssetManager.h"
 #include "Manager/Time/Public/TimeManager.h"
 
@@ -83,7 +82,7 @@ int FClientApp::InitializeSystem() const
 
 	// Initialize By Get Instance
 	UTimeManager::GetInstance();
-	UInputManager::GetInstance();
+	UInputManager::GetInstance().Initialize(Window);
 
 	auto& Renderer = URenderer::GetInstance();
 	Renderer.Init(Window->GetWindowHandle());
@@ -99,16 +98,9 @@ int FClientApp::InitializeSystem() const
 
 	UAssetManager::GetInstance().Initialize();
 
-	// Create Default Level
-	FString LastSavedLevelPath = UConfigManager::GetInstance().GetLastSavedLevelPath();
-	if (ULevelManager::GetInstance().LoadLevel(LastSavedLevelPath))
-	{
-		// 마지막을 저장한 레벨을 성공적으로 로드
-	}
-	else
-	{
-		ULevelManager::GetInstance().CreateNewLevel();
-	}
+	// GEngine 생성 및 초기화 (내부에서 Editor 생성 및 마지막 레벨 로드)
+	GEngine = NewObject<UEditorEngine>();
+	GEngine->Initialize();
 
 	return S_OK;
 }
@@ -116,19 +108,32 @@ int FClientApp::InitializeSystem() const
 /**
  * @brief Update System While Game Processing
  */
-void FClientApp::UpdateSystem() const
+void FClientApp::TickSystem(float DeltaTime) const
 {
-	auto& TimeManager = UTimeManager::GetInstance();
 	auto& InputManager = UInputManager::GetInstance();
 	auto& UIManager = UUIManager::GetInstance();
 	auto& Renderer = URenderer::GetInstance();
-	auto& LevelManager = ULevelManager::GetInstance();
 
-	LevelManager.Update();
-	TimeManager.Update();
-	InputManager.Update(Window);
-	UIManager.Update();
-	Renderer.Update();
+	if (GEngine)
+	{
+		// PIE 실행 중이 아닐 때 F5 키로 PIE 시작
+		if (!GEngine->IsPIEActive() && InputManager.IsKeyPressed(EKeyInput::F5))
+		{
+			GEngine->StartPIE();
+		}
+
+		// PIE 실행 중일 때 ESC로 종료
+		if (GEngine->IsPIEActive() && InputManager.IsKeyPressed(EKeyInput::Esc))
+		{
+			GEngine->EndPIE();
+		}
+
+		GEngine->Tick(DeltaTime);
+	}
+
+	InputManager.Tick(DeltaTime);
+	UIManager.Tick(DeltaTime);
+	Renderer.Tick(DeltaTime);
 }
 
 /**
@@ -170,7 +175,9 @@ void FClientApp::MainLoop()
 		// Game System Update
 		else
 		{
-			UpdateSystem();
+			auto& TimeManager = UTimeManager::GetInstance();
+			TimeManager.UpdateDeltaTime();
+			TickSystem(TimeManager.GetDeltaTime());
 		}
 	}
 }
@@ -184,7 +191,15 @@ void FClientApp::ShutdownSystem() const
 	UStatOverlay::GetInstance().Release();
 	URenderer::GetInstance().Release();
 	UUIManager::GetInstance().Shutdown();
-	ULevelManager::GetInstance().Shutdown();
+
+	// GEngine 종료 및 삭제
+	if (GEngine)
+	{
+		GEngine->Shutdown();
+		delete GEngine;
+		GEngine = nullptr;
+	}
+
 	UAssetManager::GetInstance().Release();
 
 	// Release되지 않은 UObject의 메모리 할당 해제

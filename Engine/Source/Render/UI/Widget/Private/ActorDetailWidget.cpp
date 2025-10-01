@@ -1,13 +1,24 @@
 #include "pch.h"
 #include "Render/UI/Widget/Public/ActorDetailWidget.h"
-
-#include "Manager/Level/Public/LevelManager.h"
+#include "Editor/Public/EditorEngine.h"
 #include "Level/Public/Level.h"
 #include "Actor/Public/Actor.h"
 #include "Component/Public/ActorComponent.h"
 #include "Component/Public/BillboardComponent.h"
 #include "Component/Public/PrimitiveComponent.h"
 #include "Component/Public/SceneComponent.h"
+#include "Component/Mesh/Public/MeshComponent.h"
+#include "Component/Public/TextRenderComponent.h"
+#include "Component/Public/LineComponent.h"
+#include "Component/Mesh/Public/CubeComponent.h"
+#include "Component/Mesh/Public/SphereComponent.h"
+#include "Component/Mesh/Public/SquareComponent.h"
+#include "Component/Mesh/Public/TriangleComponent.h"
+#include "Component/Mesh/Public/StaticMeshComponent.h"
+#include "Core/Public/ObjectIterator.h"
+#include "Texture/Public/Texture.h"
+#include "Manager/BVH/Public/BVHManager.h"
+#include "Core/Public/Object.h"
 #include "Core/Public/ObjectIterator.h"
 #include "Texture/Public/Texture.h"
 #include "Manager/Asset/Public/AssetManager.h"
@@ -113,7 +124,7 @@ void UActorDetailWidget::Update()
 
 void UActorDetailWidget::RenderWidget()
 {
-	TObjectPtr<ULevel> CurrentLevel = ULevelManager::GetInstance().GetCurrentLevel();
+	TObjectPtr CurrentLevel = GEngine->GetCurrentLevel();
 
 	if (!CurrentLevel)
 	{
@@ -182,7 +193,40 @@ void UActorDetailWidget::RenderActorHeader(TObjectPtr<AActor> InSelectedActor)
 		{
 			ImGui::SetTooltip("Double-Click to Rename");
 		}
+
+		// Duplicate 버튼 추가
+		ImGui::SameLine();
+		if (ImGui::Button("Duplicate"))
+		{
+			DuplicateSelectedActor(InSelectedActor);
+		}
 	}
+}
+
+FString UActorDetailWidget::GenerateUniqueComponentName(AActor* InActor, const FString& InBaseName)
+{
+	int Suffix = 1;
+	std::string NewName = InBaseName;
+
+	auto& Components = InActor->GetOwnedComponents();
+	bool bNameExists = true;
+
+	while (bNameExists)
+	{
+		bNameExists = false;
+		for (const auto& Comp : Components)
+		{
+			if (Comp && Comp->GetName() == NewName)
+			{
+				++Suffix;
+				NewName = InBaseName + std::to_string(Suffix);
+				bNameExists = true;
+				break;
+			}
+		}
+	}
+
+	return NewName;
 }
 
 /**
@@ -191,9 +235,15 @@ void UActorDetailWidget::RenderActorHeader(TObjectPtr<AActor> InSelectedActor)
  */
 void UActorDetailWidget::RenderComponentTree(TObjectPtr<AActor> InSelectedActor)
 {
-	if (!InSelectedActor) return;
+	if (!InSelectedActor)
+	{
+		return;
+	}
 
 	const TArray<TObjectPtr<UActorComponent>>& Components = InSelectedActor->GetOwnedComponents();
+	USceneComponent* RootSceneComponentRaw = InSelectedActor->GetRootComponent();
+	TObjectPtr<USceneComponent> RootSceneComponent = TObjectPtr(RootSceneComponentRaw);
+	TObjectPtr<UActorComponent> RootAsActorComponent = Cast<UActorComponent>(RootSceneComponent);
 
 	ImGui::Text("Components (%d)", static_cast<int>(Components.size()));
 	ImGui::SameLine();
@@ -202,6 +252,7 @@ void UActorDetailWidget::RenderComponentTree(TObjectPtr<AActor> InSelectedActor)
 	{
 		ImGui::OpenPopup("AddComponentPopup");
 	}
+
 	if (ImGui::IsItemHovered())
 	{
 		ImGui::SetTooltip("Adds a new component to this actor");
@@ -209,43 +260,90 @@ void UActorDetailWidget::RenderComponentTree(TObjectPtr<AActor> InSelectedActor)
 
 	if (ImGui::BeginPopup("AddComponentPopup"))
 	{
-		// Example menu items (replace with your actual component list)
+		auto AddComponentToActor = [&](UActorComponent* NewComponent)
+		{
+			if (!NewComponent)
+			{
+				return;
+			}
+
+			FString BaseName = NewComponent->GetClass()->GetClassTypeName().ToString();
+			FString UniqueName = GenerateUniqueComponentName(InSelectedActor, BaseName);
+
+			NewComponent->SetName(UniqueName);
+
+			TObjectPtr<UActorComponent> ComponentPtr(NewComponent);
+			InSelectedActor->AddComponent(ComponentPtr);
+		};
+
 		if (ImGui::MenuItem("Text Render Component"))
 		{
-			UTextRenderComponent* TextRender = new UTextRenderComponent(InSelectedActor, 5.0f);
-			TObjectPtr TextRenderPtr(TextRender);
-			InSelectedActor->AddComponent(Cast<UActorComponent>(TextRenderPtr));
+			AddComponentToActor(new UTextRenderComponent());
 		}
 		if (ImGui::MenuItem("Billboard Component"))
 		{
-			UBillboardComponent* Billboard = new UBillboardComponent(InSelectedActor);
-			TObjectPtr BillboardPtr(Billboard);
-			InSelectedActor->AddComponent(Cast<UActorComponent>(BillboardPtr));
+			AddComponentToActor(new UBillboardComponent());
 		}
-		// if (ImGui::MenuItem("Light Component"))
-		// {
-		// }
+		ImGui::Separator();
+		if (ImGui::MenuItem("Cube Component"))
+		{
+			AddComponentToActor(new UCubeComponent());
+		}
+		if (ImGui::MenuItem("Sphere Component"))
+		{
+			AddComponentToActor(new USphereComponent());
+		}
+		if (ImGui::MenuItem("Square Component"))
+		{
+			AddComponentToActor(new USquareComponent());
+		}
+		if (ImGui::MenuItem("Triangle Component"))
+		{
+			AddComponentToActor(new UTriangleComponent());
+		}
+		if (ImGui::MenuItem("Static Mesh Component"))
+		{
+			AddComponentToActor(new UStaticMeshComponent());
+		}
 
 		ImGui::EndPopup();
 	}
 
 	ImGui::Separator();
 
-	if (Components.empty())
+	const bool bHasRootComponent = (RootSceneComponentRaw != nullptr);
+	const bool bHasAnyComponent = bHasRootComponent || !Components.empty();
+
+	if (!bHasAnyComponent)
 	{
 		ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "No components");
 		return;
 	}
 
-	for (int32 i = 0; i < static_cast<int32>(Components.size()); ++i)
+	if (bHasRootComponent && RootAsActorComponent)
 	{
-		if (Components[i])
+		RenderComponentNode(RootAsActorComponent, RootSceneComponentRaw);
+	}
+
+
+	for (int32 ComponentIndex = 0; ComponentIndex < static_cast<int32>(Components.size()); ++ComponentIndex)
+	{
+		const TObjectPtr<UActorComponent>& Component = Components[ComponentIndex];
+		if (!Component)
 		{
-			RenderComponentNode(Components[i]);
+			continue;
 		}
+
+		if (bHasRootComponent && RootSceneComponentRaw && Component.Get() == RootSceneComponentRaw)
+		{
+			continue;
+		}
+
+		RenderComponentNode(Component, RootSceneComponentRaw);
 	}
 
 	ImGui::Separator();
+
 	if (SelectedComponent)
 	{
 		RenderComponentDetails(SelectedComponent);
@@ -257,7 +355,7 @@ void UActorDetailWidget::RenderComponentTree(TObjectPtr<AActor> InSelectedActor)
  * 내부적으로 RTTI를 활용한 GetName 처리가 되어 있음
  * @param InComponent
  */
-void UActorDetailWidget::RenderComponentNode(TObjectPtr<UActorComponent> InComponent)
+void UActorDetailWidget::RenderComponentNode(TObjectPtr<UActorComponent> InComponent, USceneComponent* InRootComponent)
 {
 	if (!InComponent)
 	{
@@ -268,44 +366,82 @@ void UActorDetailWidget::RenderComponentNode(TObjectPtr<UActorComponent> InCompo
 	FName ComponentTypeName = InComponent.Get()->GetClass()->GetClassTypeName();
 	FString ComponentIcon = "[C]"; // 기본 컴포넌트 아이콘
 
+	bool bIsPrimitiveComponent = false;
+
 	if (Cast<UPrimitiveComponent>(InComponent))
 	{
-		ComponentIcon = "[P]"; // PrimitiveComponent 아이콘
+		ComponentIcon = "[P]";
+		bIsPrimitiveComponent = true;
 	}
 	else if (Cast<USceneComponent>(InComponent))
 	{
-		ComponentIcon = "[S]"; // SceneComponent 아이콘
+		ComponentIcon = "[S]";
 	}
 
-	// 트리 노드 생성
+	TObjectPtr<USceneComponent> AsSceneComponent = Cast<USceneComponent>(InComponent);
+	const bool bIsRootComponent = (InRootComponent != nullptr) && AsSceneComponent && (AsSceneComponent.Get() == InRootComponent);
+
+	FString NodeLabel;
+	if (bIsRootComponent)
+	{
+		NodeLabel = "[Root] ";
+	}
+	else
+	{
+		NodeLabel = ComponentIcon + " ";
+	}
+	NodeLabel += InComponent->GetName().ToString();
+
+	if (bIsRootComponent)
+	{
+		NodeLabel += " (Root Component)";
+	}
+
 	ImGuiTreeNodeFlags NodeFlags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
-
-	FString NodeLabel = ComponentIcon + " " + InComponent->GetName().ToString();
 	if (SelectedComponent == InComponent)
+	{
 		NodeFlags |= ImGuiTreeNodeFlags_Selected;
+	}
 
-	ImGui::TreeNodeEx(NodeLabel.data(), NodeFlags);
+	if (bIsRootComponent)
+	{
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.95f, 0.82f, 0.25f, 1.0f));
+	}
+
+	ImGui::TreeNodeEx(NodeLabel.c_str(), NodeFlags);
+
+	if (bIsRootComponent)
+	{
+		ImGui::PopStyleColor();
+	}
 
 	if (ImGui::IsItemClicked())
 	{
 		SelectedComponent = InComponent;
 	}
 
-	// 컴포넌트 세부 정보를 추가로 표시할 수 있음
 	if (ImGui::IsItemHovered())
 	{
-		// 컴포넌트 타입 정보를 툴팁으로 표시
-		ImGui::SetTooltip("Component Type: %s", ComponentTypeName.ToString().data());
+		if (bIsRootComponent)
+		{
+			ImGui::SetTooltip("Root Component\nType: %s", ComponentTypeName.ToString().data());
+		}
+		else
+		{
+			ImGui::SetTooltip("Component Type: %s", ComponentTypeName.ToString().data());
+		}
 	}
 
-	// PrimitiveComponent인 경우 추가 정보
-	if (UPrimitiveComponent* PrimitiveComponent = Cast<UPrimitiveComponent>(InComponent))
+	if (bIsPrimitiveComponent)
 	{
-		ImGui::SameLine();
-		ImGui::TextColored(
-			PrimitiveComponent->IsVisible() ? ImVec4(0.0f, 1.0f, 0.0f, 1.0f) : ImVec4(1.0f, 0.0f, 0.0f, 1.0f),
-			PrimitiveComponent->IsVisible() ? "[Visible]" : "[Hidden]"
-		);
+		if (UPrimitiveComponent* PrimitiveComponent = Cast<UPrimitiveComponent>(InComponent))
+		{
+			ImGui::SameLine();
+			ImGui::TextColored(
+				PrimitiveComponent->IsVisible() ? ImVec4(0.0f, 1.0f, 0.0f, 1.0f) : ImVec4(1.0f, 0.0f, 0.0f, 1.0f),
+				PrimitiveComponent->IsVisible() ? "[Visible]" : "[Hidden]"
+			);
+		}
 	}
 }
 
@@ -334,35 +470,6 @@ void UActorDetailWidget::RenderComponentDetails(TObjectPtr<UActorComponent> InCo
 			{
 				TextComp->SetText(TextBuffer);
 			}
-		}
-
-		// --- Offset (Relative Location) ---
-		FVector Offset = TextComp->GetRelativeLocation();
-		float OffsetArr[3] = { Offset.X, Offset.Y, Offset.Z };
-		if (ImGui::SliderFloat3("Offset", OffsetArr, -10.0f, 10.0f))
-		{
-			TextComp->SetRelativeLocation(FVector(OffsetArr[0], OffsetArr[1], OffsetArr[2]));
-		}
-
-		// --- Rotation (Relative Rotation) ---
-		FVector Rotation = TextComp->GetRelativeRotation();
-		float RotArr[3] = { Rotation.X, Rotation.Y, Rotation.Z };
-		if (ImGui::DragFloat3("Rotation", RotArr, 0.1f, -360.0f, 360.0f, "%.3f"))
-		{
-			TextComp->SetRelativeRotation(FVector(RotArr[0], RotArr[1], RotArr[2]));
-		}
-
-		// --- Size (Relative Scale) ---
-		FVector Scale = TextComp->GetRelativeScale3D();
-		float ScaleArr[3] = { Scale.X, Scale.Y, Scale.Z };
-		if (Scale.X < 0.5f && Scale.Y < 0.5f && Scale.Z < 0.5f)
-		{
-			ScaleArr[0] = ScaleArr[1] = ScaleArr[2] = 1.0f;
-			TextComp->SetRelativeScale3D(FVector(1.0f, 1.0f, 1.0f));
-		}
-		if (ImGui::SliderFloat3("Size", ScaleArr, 1.0f, 10.0f))
-		{
-			TextComp->SetRelativeScale3D(FVector(ScaleArr[0], ScaleArr[1], ScaleArr[2]));
 		}
 	}
 	else if (InComponent->IsA(UBillboardComponent::StaticClass()))
@@ -456,10 +563,104 @@ void UActorDetailWidget::RenderComponentDetails(TObjectPtr<UActorComponent> InCo
 
 			ImGui::EndCombo();
 		}
+		// // Texture field (for now, string path or ID)
+		// static char TexturePath[256];
+		// strncpy_s(TexturePath, Billboard->GetTexturePath().c_str(), sizeof(TexturePath)-1);
+		//
+		// if (ImGui::InputText("Texture Path", TexturePath, sizeof(TexturePath)))
+		// {
+		// 	Billboard->SetTexturePath(TexturePath);
+		// }
+		//
+		// // Relative offset transform
+		// FVector Offset = Billboard->GetRelativeLocation();
+		// if (ImGui::DragFloat3("Offset", &Offset.X, 0.1f))
+		// {
+		// 	Billboard->SetRelativeLocation(Offset);
+		// }
+	}
+	else if (InComponent->IsA(UStaticMeshComponent::StaticClass()))
+	{
+		UStaticMeshComponent* StaticMesh = Cast<UStaticMeshComponent>(InComponent);
+		// Texture field (for now, string path or ID)
+		// static char TexturePath[256];
+		// strncpy_s(TexturePath, StaticMesh->GetTexturePath().c_str(), sizeof(TexturePath)-1);
+		//
+		// if (ImGui::InputText("Texture Path", TexturePath, sizeof(TexturePath)))
+		// {
+		// 	StaticMesh->SetTexturePath(TexturePath);
+		// }
+
 	}
 	else
 	{
 		ImGui::TextColored(ImVec4(0.6f,0.6f,0.6f,1.0f), "No detail view for this component type.");
+	}
+
+	ImGui::Separator();
+	ImGui::Text("Component Transform");
+
+	TObjectPtr<USceneComponent> SceneComponent = Cast<USceneComponent>(InComponent);
+	if (!SceneComponent)
+	{
+		return;
+	}
+	bool bTransformChanged = false;
+
+	FVector RelativeLocation = SceneComponent->GetRelativeLocation();
+	float LocationArr[3] = { RelativeLocation.X, RelativeLocation.Y, RelativeLocation.Z };
+
+	if (ImGui::DragFloat3("Relative Location", LocationArr, 0.1f))
+	{
+		SceneComponent->SetRelativeLocation(FVector(LocationArr[0], LocationArr[1], LocationArr[2]));
+		bTransformChanged = true;
+	}
+
+	FVector RelativeRotation = SceneComponent->GetRelativeRotation();
+	float RotationArr[3] = { RelativeRotation.X, RelativeRotation.Y, RelativeRotation.Z };
+	if (ImGui::DragFloat3("Relative Rotation", RotationArr, 0.1f))
+	{
+		SceneComponent->SetRelativeRotation(FVector(RotationArr[0], RotationArr[1], RotationArr[2]));
+		bTransformChanged = true;
+	}
+
+	bool bUniformScale = SceneComponent->IsUniformScale();
+	FVector RelativeScale = SceneComponent->GetRelativeScale3D();
+
+	if (bUniformScale)
+	{
+		float UniformScale = RelativeScale.X;
+		if (ImGui::DragFloat("Relative Scale", &UniformScale, 0.01f, 0.01f, 10.0f))
+		{
+			SceneComponent->SetRelativeScale3D(FVector(UniformScale, UniformScale, UniformScale));
+			bTransformChanged = true;
+		}
+	}
+	else
+	{
+		float ScaleArr[3] = { RelativeScale.X, RelativeScale.Y, RelativeScale.Z };
+		if (ImGui::DragFloat3("Relative Scale", ScaleArr, 0.01f))
+		{
+			SceneComponent->SetRelativeScale3D(FVector(ScaleArr[0], ScaleArr[1], ScaleArr[2]));
+			bTransformChanged = true;
+		}
+	}
+
+	if (ImGui::Checkbox("Relative Uniform Scale", &bUniformScale))
+	{
+		SceneComponent->SetUniformScale(bUniformScale);
+		bTransformChanged = true;
+
+		if (bUniformScale)
+		{
+			float UniformScale = SceneComponent->GetRelativeScale3D().X;
+			SceneComponent->SetRelativeScale3D(FVector(UniformScale, UniformScale, UniformScale));
+		}
+	}
+
+	if (bTransformChanged && InComponent->IsA(UPrimitiveComponent::StaticClass()))
+	{
+		UBVHManager::GetInstance().Refit();
 	}
 }
 
@@ -502,5 +703,29 @@ void UActorDetailWidget::CancelRenamingActor()
 	bIsRenamingActor = false;
 	ActorNameBuffer[0] = '\0';
 	UE_LOG_WARNING("ActorDetailWidget: 이름 변경 취소");
+}
+
+void UActorDetailWidget::DuplicateSelectedActor(TObjectPtr<AActor> InActor)
+{
+	if (!InActor)
+	{
+		return;
+	}
+
+	ULevel* CurrentLevel = GEngine->GetCurrentLevel();
+	if (!CurrentLevel)
+	{
+		return;
+	}
+
+	AActor* NewActor = DuplicateObject(InActor, CurrentLevel, FName::GetNone());
+
+	if (NewActor)
+	{
+		//FVector Location = NewActor->GetActorLocation();
+		//NewActor->SetActorLocation(Location + FVector(1.0f, 0.0f, 0.0f)); // Offset by 100 on X
+
+		CurrentLevel->RegisterDuplicatedActor(NewActor);
+	}
 }
 

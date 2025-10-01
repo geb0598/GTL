@@ -20,9 +20,11 @@ class AActor : public UObject
 public:
 	AActor();
 	AActor(UObject* InOuter);
-	~AActor() override;
+	virtual ~AActor();
 
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+
+	UObject* Duplicate(FObjectDuplicationParameters Parameters) override;
 
 	void SetActorLocation(const FVector& InLocation) const;
 	void SetActorRotation(const FVector& InRotation) const;
@@ -33,7 +35,7 @@ public:
 
 	virtual void BeginPlay();
 	virtual void EndPlay();
-	virtual void Tick();
+	virtual void Tick(float DeltaTime);
 
 	// Getter & Setter
 	USceneComponent* GetRootComponent() const { return RootComponent.Get(); }
@@ -47,7 +49,13 @@ public:
 
 	void AddComponent(TObjectPtr<UActorComponent> InComponent);
 
-	template<class T>
+	bool IsActorTickEnabled() const { return bIsActorTickEnabled; }
+	void SetActorTickEnabled(bool bInActorTickEnabled) { bIsActorTickEnabled = bInActorTickEnabled; }
+
+	bool IsTickInEditor() const { return bTickInEditor; }
+	void SetTickInEditor(bool InTickInEditor) { bTickInEditor = InTickInEditor; }
+
+	template <class T>
 	T* CreateDefaultSubobject(const FName& InName)
 	{
 		static_assert(is_base_of_v<UObject, T>, "생성할 클래스는 UObject를 반드시 상속 받아야 합니다");
@@ -71,6 +79,8 @@ public:
 
 private:
 	TObjectPtr<USceneComponent> RootComponent = nullptr;
-	// TObjectPtr<UBillboardComponent> BillBoardComponent = nullptr;
 	TArray<TObjectPtr<UActorComponent>> OwnedComponents;
+
+	bool bIsActorTickEnabled = false;
+	bool bTickInEditor = false;
 };

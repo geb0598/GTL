@@ -6,6 +6,7 @@
 
 class AActor;
 class UActorComponent;
+class USceneComponent;
 
 /**
  * @brief 선택된 Actor의 이름과 컴포넌트 트리를 표시하는 Widget
@@ -31,11 +32,17 @@ private:
 	// Helper functions
 	void RenderActorHeader(TObjectPtr<AActor> InSelectedActor);
 	void RenderComponentTree(TObjectPtr<AActor> InSelectedActor);
-	void RenderComponentNode(TObjectPtr<UActorComponent> InComponent);
+	void RenderComponentNode(TObjectPtr<UActorComponent> InComponent, USceneComponent* InRootComponent);
 	void RenderComponentDetails(TObjectPtr<UActorComponent> InComponent);
 
 	// 이름 변경 함수
 	void StartRenamingActor(TObjectPtr<AActor> InActor);
 	void FinishRenamingActor(TObjectPtr<AActor> InActor);
 	void CancelRenamingActor();
+
+	FString GenerateUniqueComponentName(AActor* InActor, const FString& InBaseName);
+
+	//액터 복제
+	void DuplicateSelectedActor(TObjectPtr<AActor> InActor);
 };
+

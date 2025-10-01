@@ -1,9 +1,10 @@
 #include "pch.h"
 #include "Component/Public/BillboardComponent.h"
 
+IMPLEMENT_CLASS(UBillboardComponent, UPrimitiveComponent)
+
 #include "Actor/Public/Actor.h"
 
-IMPLEMENT_CLASS(UBillboardComponent, UPrimitiveComponent);
 
 UBillboardComponent::UBillboardComponent()
     : Sprite(nullptr)
@@ -34,6 +35,7 @@ void UBillboardComponent::SetSprite(UTexture* InTexture)
 
 void UBillboardComponent::UpdateRotationMatrix(const UCamera* InCamera)
 {
+	const FVector& OwnerActorLocation = GetOwner()->GetActorLocation();
     if (!InCamera)
     {
         return;
@@ -45,7 +47,6 @@ void UBillboardComponent::UpdateRotationMatrix(const UCamera* InCamera)
         return;
     }
 
-    const FVector& OwnerActorLocation = OwnerActor->GetActorLocation();
 
     FVector ToCamera = InCamera->GetForward();
     ToCamera = FVector(-ToCamera.X, -ToCamera.Y, -ToCamera.Z);

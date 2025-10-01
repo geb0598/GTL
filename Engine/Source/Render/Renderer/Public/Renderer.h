@@ -75,7 +75,7 @@ public:
 	void ReleaseBillboardResources();
 
 	// Render
-	void Update();
+	void Tick(float DeltaTime);
 	void RenderBegin() const;
 	void RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewportClient);
 	void RenderEnd() const;
@@ -125,6 +125,7 @@ public:
 
 	void SetIsResizing(bool isResizing) { bIsResizing = isResizing; }
 	void SetOcclusionCullingEnabled(bool bEnabled) { bOcclusionCulling = bEnabled; }
+	void ResetOcclusionCullingState() { bIsFirstPass = true; }
 
 private:
 	void PerformOcclusionCulling(UCamera* InCurrentCamera, const TArray<TObjectPtr<UPrimitiveComponent>>& InPrimitiveComponents);

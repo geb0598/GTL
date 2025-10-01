@@ -5,7 +5,13 @@
 
 #include "Editor/Public/Camera.h"
 
-namespace json { class JSON; }
+class UWorld;
+
+namespace json
+{
+	class JSON;
+}
+
 using JSON = json::JSON;
 
 class AAxis;
@@ -35,22 +41,31 @@ inline uint64 operator&(uint64 lhs, EEngineShowFlags rhs)
 	return lhs & static_cast<uint64>(rhs);
 }
 
-class ULevel :
-	public UObject
+UCLASS()
+
+class ULevel : public UObject
 {
+	GENERATED_BODY()
+	DECLARE_CLASS(ULevel, UObject)
+
 public:
 	ULevel();
 	ULevel(const FName& InName);
-	~ULevel() override;
+	~ULevel() override
+	{
+		// 소멸자는 Cleanup 함수를 호출하여 모든 리소스를 정리하도록 합니다.
+		Cleanup();
+	}
 
 	virtual void Init();
-	virtual void Update();
+	virtual void Tick(float DeltaTime);
 	virtual void Render();
 	virtual void Cleanup();
 
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+	UObject* Duplicate(FObjectDuplicationParameters Parameters) override;
 
-	const TArray<TObjectPtr<AActor>>& GetLevelActors() const { return LevelActors; }
+	const TArray<TObjectPtr<AActor>>& GetActors() const { return Actors; }
 
 	const TArray<TObjectPtr<UPrimitiveComponent>>& GetLevelPrimitiveComponents() const
 	{
@@ -64,19 +79,20 @@ public:
 	void InitializeActorsInLevel();
 
 	AActor* SpawnActorToLevel(UClass* InActorClass, const FName& InName = FName::GetNone());
+	void RegisterDuplicatedActor(AActor* NewActor);
 
 	bool DestroyActor(AActor* InActor);
 	void MarkActorForDeletion(AActor* InActor);
 
 	void SetSelectedActor(AActor* InActor);
-	TObjectPtr<AActor> GetSelectedActor() const { return SelectedActor; }
+	const TObjectPtr<AActor>& GetSelectedActor() const { return SelectedActor; }
 
 	uint64 GetShowFlags() const { return ShowFlags; }
 	void SetShowFlags(uint64 InShowFlags) { ShowFlags = InShowFlags; }
 
 	// LOD Update System
 	void UpdateLODForAllMeshes();
-	void TickLODUpdate();
+	void TickLODUpdate(float DeltaSeconds);
 
 	// Graphics Quality Control
 	void SetGraphicsQuality(int32 QualityLevel);
@@ -87,12 +103,19 @@ public:
 	void SetLODDistance1(float Distance);
 	void SetLODDistance2(float Distance);
 
+	TObjectPtr<UWorld> GetOwningWorld() const { return OwningWorld; }
+	void SetOwningWorld(const TObjectPtr<UWorld>& OwningWorld) { this->OwningWorld = OwningWorld; }
+
 private:
-	TArray<TObjectPtr<AActor>> LevelActors;
-	TArray<TObjectPtr<UPrimitiveComponent>> LevelPrimitiveComponents;	// 액터의 하위 컴포넌트는 액터에서 관리&해제됨
+	TArray<TObjectPtr<AActor>> Actors;
+	TArray<TObjectPtr<UPrimitiveComponent>> LevelPrimitiveComponents; // 액터의 하위 컴포넌트는 액터에서 관리&해제됨
 
 	FFrustumCull* Frustum = nullptr;
 
+	// 자기를 가지고 있는 World
+	TObjectPtr<UWorld> OwningWorld;
+
+private:
 	// 지연 삭제를 위한 리스트
 	TArray<AActor*> ActorsToDelete;
 
@@ -103,8 +126,8 @@ private:
 		static_cast<uint64>(EEngineShowFlags::SF_Bounds);
 
 	// LOD Update System
-	int32 LODUpdateFrameCounter = 0;
-	static constexpr int32 LOD_UPDATE_INTERVAL = 10;  // 10프레임마다 업데이트
+	float LODUpdateFrameCounter = 0.f;
+	static constexpr float LOD_UPDATE_INTERVAL = 0.2f; // 0.2초 마다 업데이트
 
 	/**
 	 * @brief Level에서 Actor를 실질적으로 제거하는 함수

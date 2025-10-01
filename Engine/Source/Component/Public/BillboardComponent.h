@@ -7,15 +7,16 @@ class AActor;
 
 UCLASS()
 
+
 class UBillboardComponent : public UPrimitiveComponent
 {
     GENERATED_BODY()
     DECLARE_CLASS(UBillboardComponent, UPrimitiveComponent)
 
+
 public:
-    UBillboardComponent();
-    explicit UBillboardComponent(AActor* InOwnerActor);
-    ~UBillboardComponent();
+	UBillboardComponent();
+	~UBillboardComponent();
 
     FMatrix GetRTMatrix() const { return RTMatrix; }
 
@@ -28,4 +29,5 @@ private:
     FMatrix RTMatrix;
     TObjectPtr<UTexture> Sprite;
     AActor* POwnerActor;
+	float ZOffset;
 };

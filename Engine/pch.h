@@ -1,6 +1,7 @@
 #pragma once
 
 #define NOMINMAX
+#define _ENABLE_EXTENDED_ALIGNED_STORAGE  // SIMD 16-byte 정렬 지원
 
 // Window Library
 #include <windows.h>
@@ -84,4 +85,8 @@ using filesystem::create_directories;
 #pragma comment(lib, "d2d1")
 #pragma comment(lib, "dwrite")
 #pragma comment(lib, DIRECTX_TOOL_KIT)
+#ifdef _DEBUG
+#pragma comment(lib, "cpp-thread-pool/thread_pool_debug")
+#else
 #pragma comment(lib, "thread_pool")
+#endif

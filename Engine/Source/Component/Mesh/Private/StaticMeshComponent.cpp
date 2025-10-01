@@ -23,6 +23,7 @@ UStaticMeshComponent::UStaticMeshComponent()
 	: bIsScrollEnabled(false)
 {
 	Type = EPrimitiveType::StaticMesh;
+	SetName("StaticMeshComponent");
 
 	FName DefaultObjPath = "Data/Cube/Cube.obj";
 	SetStaticMesh(DefaultObjPath);
@@ -77,7 +78,8 @@ void UStaticMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 	{
 		if (StaticMesh)
 		{
-			InOutHandle["ObjStaticMeshAsset"] = StaticMesh->GetAssetPathFileName().ToString();
+			// LOD 메시가 아닌 원본 메시 경로를 저장
+			InOutHandle["ObjStaticMeshAsset"] = OriginalMeshPath.ToString();
 
 			if (0 < OverrideMaterials.size())
 			{
@@ -94,6 +96,28 @@ void UStaticMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 			}
 		}
 	}
+}
+
+UObject* UStaticMeshComponent::Duplicate(FObjectDuplicationParameters Parameters)
+{
+	auto DupObject = static_cast<UStaticMeshComponent*>(Super::Duplicate(Parameters));
+
+	/** @note 프로퍼티 얕은 복사(Shallow Copy) */
+	DupObject->StaticMesh = StaticMesh;
+	DupObject->OverrideMaterials = OverrideMaterials;
+
+	/** @note 프로퍼티 깊은 복사(Deep Copy) */
+	DupObject->CurrentLODLevel = CurrentLODLevel;
+	DupObject->bLODEnabled = bLODEnabled;
+	DupObject->LODDistanceSquared1 = LODDistanceSquared1;
+	DupObject->LODDistanceSquared2 = LODDistanceSquared2;
+	DupObject->MinLODLevel = MinLODLevel;
+	DupObject->ForcedLODLevel = ForcedLODLevel;
+	DupObject->OriginalMeshPath = OriginalMeshPath;
+	DupObject->bIsScrollEnabled = bIsScrollEnabled;
+	DupObject->ElapsedTime = ElapsedTime;
+
+	return DupObject;
 }
 
 TObjectPtr<UClass> UStaticMeshComponent::GetSpecificWidgetClass() const
@@ -275,8 +299,8 @@ void UStaticMeshComponent::UpdateLODBasedOnDistance(const FVector& CameraPositio
 	}
 }
 
-void UStaticMeshComponent::TickComponent()
+void UStaticMeshComponent::TickComponent(float DeltaTime)
 {
 	// 부모 클래스의 TickComponent 호출
-	Super::TickComponent();
+	Super::TickComponent(DeltaTime);
 }
