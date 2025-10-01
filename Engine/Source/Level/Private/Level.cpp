@@ -111,7 +111,7 @@ UObject* ULevel::Duplicate(FObjectDuplicationParameters Parameters)
 	DupObject->LODUpdateFrameCounter = LODUpdateFrameCounter;
 	//DupObject->SelectedActor = SelectedActor;
 
-	// @todo ActorsToDelete는 복제할 필요가 존재하는지 확인 
+	// @todo ActorsToDelete는 복제할 필요가 존재하는지 확인
 
 	if (Frustum)
 	{
@@ -245,7 +245,7 @@ void ULevel::InitializeActorsInLevel()
 	{
 		if (Actor)
 		{
-			AddLevelPrimitiveComponent(Actor);
+			AddLevelPrimitiveComponentsInActor(Actor);
 		}
 	}
 
@@ -275,7 +275,7 @@ AActor* ULevel::SpawnActorToLevel(UClass* InActorClass, const FName& InName)
 
 	if (this == GEngine->GetCurrentLevel())
 	{
-		AddLevelPrimitiveComponent(NewActor);
+		AddLevelPrimitiveComponentsInActor(NewActor);
 		TArray<FBVHPrimitive> BVHPrimitives;
 		UBVHManager::GetInstance().ConvertComponentsToBVHPrimitives(LevelPrimitiveComponents, BVHPrimitives);
 		UBVHManager::GetInstance().Build(BVHPrimitives);
@@ -305,7 +305,7 @@ void ULevel::RegisterDuplicatedActor(AActor* NewActor)
 
 	if (this == GEngine->GetCurrentLevel())
 	{
-		AddLevelPrimitiveComponent(NewActor);
+		AddLevelPrimitiveComponentsInActor(NewActor);
 		TArray<FBVHPrimitive> BVHPrimitives;
 		UBVHManager::GetInstance().ConvertComponentsToBVHPrimitives(LevelPrimitiveComponents, BVHPrimitives);
 		UBVHManager::GetInstance().Build(BVHPrimitives);
@@ -347,7 +347,7 @@ TArray<TObjectPtr<UPrimitiveComponent>> ULevel::GetVisiblePrimitiveComponents(UC
 	return VisibleComponents;
 }
 
-void ULevel::AddLevelPrimitiveComponent(AActor* Actor)
+void ULevel::AddLevelPrimitiveComponentsInActor(AActor* Actor)
 {
 	if (!Actor) return;
 
@@ -372,11 +372,11 @@ void ULevel::AddLevelPrimitiveComponent(AActor* Actor)
 			continue; // 현재 컴포넌트만 스킵하고 다음 컴포넌트로 계속
 		}
 
-		if (PrimitiveComponent->GetPrimitiveType() != EPrimitiveType::BillBoard)
+		if (PrimitiveComponent->GetPrimitiveType() != EPrimitiveType::TextRender)
 		{
 			LevelPrimitiveComponents.push_back(PrimitiveComponent);
 		}
-		else if (PrimitiveComponent->GetPrimitiveType() == EPrimitiveType::BillBoard && (ShowFlags &
+		else if (PrimitiveComponent->GetPrimitiveType() == EPrimitiveType::TextRender && (ShowFlags &
 			EEngineShowFlags::SF_BillboardText) && (GEngine->GetCurrentLevel()->GetSelectedActor()
 			== Actor))
 		{
@@ -385,6 +385,20 @@ void ULevel::AddLevelPrimitiveComponent(AActor* Actor)
 			LevelPrimitiveComponents.push_back(PrimitiveComponent);
 		}
 	}
+}
+
+void ULevel::AddLevelPrimitiveComponent(TObjectPtr<UPrimitiveComponent> InPrimitiveComponent)
+{
+	if (!InPrimitiveComponent)
+	{
+		return;
+	}
+
+	LevelPrimitiveComponents.push_back(InPrimitiveComponent);
+
+	TArray<FBVHPrimitive> BVHPrimitives;
+	UBVHManager::GetInstance().ConvertComponentsToBVHPrimitives(LevelPrimitiveComponents, BVHPrimitives);
+	UBVHManager::GetInstance().Build(BVHPrimitives);
 }
 
 void ULevel::SetSelectedActor(AActor* InActor)
