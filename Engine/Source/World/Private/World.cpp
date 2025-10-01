@@ -24,7 +24,6 @@ void UWorld::Tick(float DeltaSeconds)
 {
 	if (Level)
 	{
-
 		// UE_LOG("%s", to_string(WorldType).c_str());
 		Level->Tick(DeltaSeconds);
 	}

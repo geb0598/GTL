@@ -568,21 +568,6 @@ void UActorDetailWidget::RenderComponentDetails(TObjectPtr<UActorComponent> InCo
 
 			ImGui::EndCombo();
 		}
-		// // Texture field (for now, string path or ID)
-		// static char TexturePath[256];
-		// strncpy_s(TexturePath, Billboard->GetTexturePath().c_str(), sizeof(TexturePath)-1);
-		//
-		// if (ImGui::InputText("Texture Path", TexturePath, sizeof(TexturePath)))
-		// {
-		// 	Billboard->SetTexturePath(TexturePath);
-		// }
-		//
-		// // Relative offset transform
-		// FVector Offset = Billboard->GetRelativeLocation();
-		// if (ImGui::DragFloat3("Offset", &Offset.X, 0.1f))
-		// {
-		// 	Billboard->SetRelativeLocation(Offset);
-		// }
 	}
 	else if (InComponent->IsA(UStaticMeshComponent::StaticClass()))
 	{
@@ -821,4 +806,3 @@ void UActorDetailWidget::PruneInvalidStaticMeshWidgets(const TArray<TObjectPtr<U
 		}
 	}
 }
-
