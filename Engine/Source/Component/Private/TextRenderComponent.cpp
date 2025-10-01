@@ -13,14 +13,13 @@ IMPLEMENT_CLASS(UTextRenderComponent, UPrimitiveComponent);
 UTextRenderComponent::UTextRenderComponent()
 {
 	POwnerActor = nullptr;
-	ZOffset = 20.0f;
+	SetRelativeScale3D(FVector(1.0f, 1.0f, 1.0f));
 	SetName("TextRenderComponent");
 	Type = EPrimitiveType::TextRender;
 }
 
 UTextRenderComponent::UTextRenderComponent(AActor* InOwnerActor, float InYOffset)
 	: POwnerActor(InOwnerActor)
-	, ZOffset(InYOffset)
 {
 	SetName("TextRenderComponent");
 	Type = EPrimitiveType::TextRender;
@@ -29,30 +28,6 @@ UTextRenderComponent::UTextRenderComponent(AActor* InOwnerActor, float InYOffset
 UTextRenderComponent::~UTextRenderComponent()
 {
 	POwnerActor = nullptr;
-}
-
-void UTextRenderComponent::UpdateRotationMatrix(const FVector& InCameraLocation, const UCamera* InCamera)
-{
-	const FVector& OwnerActorLocation = POwnerActor->GetActorLocation();
-
-	FVector ToCamera = InCamera->GetForward();
-	ToCamera = FVector(-ToCamera.X, -ToCamera.Y, -ToCamera.Z);
-
-	const FVector4 worldUp4 = FVector4(0, 0, 1, 1);
-	const FVector worldUp = { worldUp4.X, worldUp4.Y, worldUp4.Z };
-	FVector Right = worldUp.Cross(ToCamera);
-	Right.Normalize();
-	FVector Up = ToCamera.Cross(Right);
-	Up.Normalize();
-
-	RTMatrix = FMatrix(FVector4(0, 1, 0, 1), worldUp4, FVector4(1,0,0,1));
-	RTMatrix = FMatrix(ToCamera, Right, Up);
-	//RTMatrix = FMatrix::Identity();
-	//UE_LOG("%.2f, %.2f, %.2f", ToCamera.X, ToCamera.Y, ToCamera.Z);
-
-	const FVector Translation = OwnerActorLocation + FVector(0.0f, 0.0f, ZOffset);
-	//UE_LOG("%.2f, %.2f, %.2f", Translation.X, Translation.Y, Translation.Z);
-	RTMatrix *= FMatrix::TranslationMatrix(Translation);
 }
 
 FString UTextRenderComponent::GetText() const

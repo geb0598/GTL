@@ -1,4 +1,5 @@
 #pragma once
+#include "Component/Public/BillboardComponent.h"
 
 #ifdef MULTI_THREADING
 #include <mutex>
@@ -77,6 +78,7 @@ public:
 	void RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewportClient);
 	void RenderEnd() const;
 	void RenderStaticMesh(UPipeline& InPipeline, UStaticMeshComponent* InMeshComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferMaterial);
+	void RenderBillboard(UBillboardComponent* InBillboardComp, UCamera* InCurrentCamera);
 	void RenderText(UTextRenderComponent* InBillBoardComp, UCamera* InCurrentCamera);
 	void RenderPrimitiveDefault(UPipeline& InPipeline, UPrimitiveComponent* InPrimitiveComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferColor);
 	void RenderEditorPrimitive(UPipeline& InPipeline, const FEditorPrimitive& InEditorPrimitive, const FRenderState& InRenderState);

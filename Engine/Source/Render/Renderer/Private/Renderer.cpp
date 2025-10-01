@@ -800,15 +800,22 @@ void URenderer::RenderStaticMesh(UPipeline& InPipeline, UStaticMeshComponent* In
     }
 }
 
-void URenderer::RenderText(UTextRenderComponent* InTextRenderComp, UCamera* InCurrentCamera)
+void URenderer::RenderBillboard(UBillboardComponent* InBillboardComp, UCamera* InCurrentCamera)
 {
 	if (!InCurrentCamera)	return;
 
 	// 이제 올바른 카메라 위치를 전달하여 빌보드 회전 업데이트
-	InTextRenderComp->UpdateRotationMatrix(InCurrentCamera->GetLocation(), InCurrentCamera);
-	FMatrix RT = InTextRenderComp->GetRTMatrix();
-	// UEditor에서 가져오는 대신, 인자로 받은 카메라의 ViewProj 행렬을 사용
+	InBillboardComp->UpdateRotationMatrix(InCurrentCamera);
+	FMatrix RT = InBillboardComp->GetRTMatrix();
+
 	const FViewProjConstants& viewProjConstData = InCurrentCamera->GetFViewProjConstants();
+
+	// TODO: render billboard
+}
+
+void URenderer::RenderText(UTextRenderComponent* InTextRenderComp, UCamera* InCurrentCamera)
+{
+	if (!InCurrentCamera)	return;
 
 	FString RenderedString;
 
@@ -819,9 +826,17 @@ void URenderer::RenderText(UTextRenderComponent* InTextRenderComp, UCamera* InCu
 	else
 	{
 		RenderedString = InTextRenderComp->GetText();
+		if (strlen(RenderedString.c_str()) == 0)
+		{
+			RenderedString = "Insert Text";
+		}
 	}
 
-	FontRenderer->RenderText(RenderedString.c_str(), RT, viewProjConstData);
+	const FViewProjConstants& ViewProjConstData = InCurrentCamera->GetFViewProjConstants();
+	FMatrix Translation = FMatrix::TranslationMatrix(InTextRenderComp->GetOwner()->GetActorLocation() + InTextRenderComp->GetRelativeLocation());
+	FMatrix Rotation = FMatrix::RotationMatrix(InTextRenderComp->GetRelativeRotation());
+	FMatrix Scale = FMatrix::ScaleMatrix(InTextRenderComp->GetRelativeScale3D());
+	FontRenderer->RenderText(RenderedString.c_str(), Scale * Rotation * Translation, ViewProjConstData);
 }
 
 void URenderer::RenderPrimitiveDefault(UPipeline& InPipeline, UPrimitiveComponent* InPrimitiveComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferColor)

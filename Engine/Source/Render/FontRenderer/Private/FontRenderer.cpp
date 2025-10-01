@@ -321,9 +321,9 @@ void UFontRenderer::RenderText(const char* Text, const FMatrix& WorldMatrix, con
 	DeviceContext->RSSetState(solidState);
 
 	D3D11_DEPTH_STENCIL_DESC dsDesc = {};
-	dsDesc.DepthEnable = FALSE;   // 깊이 검사 끄기
+	dsDesc.DepthEnable = TRUE;
 	dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-	dsDesc.DepthFunc = D3D11_COMPARISON_ALWAYS;
+	dsDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
 
 	ID3D11DepthStencilState* depthDisabledState = nullptr;
 	Device->CreateDepthStencilState(&dsDesc, &depthDisabledState);

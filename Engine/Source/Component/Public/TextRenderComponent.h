@@ -17,9 +17,6 @@ public:
 	UTextRenderComponent(AActor* InOwnerActor, float InYOffset);
 	~UTextRenderComponent();
 
-	void UpdateRotationMatrix(const FVector& InCameraLocation, const UCamera* InCamera);
-	FMatrix GetRTMatrix() const { return RTMatrix; }
-
 	FString GetText() const;
 	void SetText(const FString& InText);
 
@@ -27,8 +24,5 @@ public:
 
 private:
 	FString Text;
-
-	FMatrix RTMatrix;
 	AActor* POwnerActor;
-	float ZOffset;
 };

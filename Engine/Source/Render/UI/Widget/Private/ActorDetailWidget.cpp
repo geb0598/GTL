@@ -251,7 +251,34 @@ void UActorDetailWidget::RenderComponentDetails(TObjectPtr<UActorComponent> InCo
 			}
 		}
 
-		// TODO: let player set offset and size of the text
+		// --- Offset (Relative Location) ---
+		FVector Offset = TextComp->GetRelativeLocation();
+		float OffsetArr[3] = { Offset.X, Offset.Y, Offset.Z };
+		if (ImGui::SliderFloat3("Offset", OffsetArr, -10.0f, 10.0f))
+		{
+			TextComp->SetRelativeLocation(FVector(OffsetArr[0], OffsetArr[1], OffsetArr[2]));
+		}
+
+		// --- Rotation (Relative Rotation) ---
+		FVector Rotation = TextComp->GetRelativeRotation();
+		float RotArr[3] = { Rotation.X, Rotation.Y, Rotation.Z };
+		if (ImGui::DragFloat3("Rotation", RotArr, 0.1f, -360.0f, 360.0f, "%.3f"))
+		{
+			TextComp->SetRelativeRotation(FVector(RotArr[0], RotArr[1], RotArr[2]));
+		}
+
+		// --- Size (Relative Scale) ---
+		FVector Scale = TextComp->GetRelativeScale3D();
+		float ScaleArr[3] = { Scale.X, Scale.Y, Scale.Z };
+		if (Scale.X < 0.5f && Scale.Y < 0.5f && Scale.Z < 0.5f)
+		{
+			ScaleArr[0] = ScaleArr[1] = ScaleArr[2] = 1.0f;
+			TextComp->SetRelativeScale3D(FVector(1.0f, 1.0f, 1.0f));
+		}
+		if (ImGui::SliderFloat3("Size", ScaleArr, 1.0f, 10.0f))
+		{
+			TextComp->SetRelativeScale3D(FVector(ScaleArr[0], ScaleArr[1], ScaleArr[2]));
+		}
 	}
 	else if (InComponent->IsA(UBillboardComponent::StaticClass()))
 	{
