@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "Render/UI/Widget/Public/ActorDetailWidget.h"
-
 #include "Manager/Level/Public/LevelManager.h"
 #include "Level/Public/Level.h"
 #include "Actor/Public/Actor.h"
@@ -26,7 +25,6 @@ UActorDetailWidget::UActorDetailWidget()
 }
 
 UActorDetailWidget::~UActorDetailWidget() = default;
-
 void UActorDetailWidget::Initialize()
 {
 	UE_LOG("ActorDetailWidget: Initialized");
@@ -117,9 +115,15 @@ void UActorDetailWidget::RenderActorHeader(TObjectPtr<AActor> InSelectedActor)
  */
 void UActorDetailWidget::RenderComponentTree(TObjectPtr<AActor> InSelectedActor)
 {
-	if (!InSelectedActor) return;
+	if (!InSelectedActor)
+	{
+		return;
+	}
 
 	const TArray<TObjectPtr<UActorComponent>>& Components = InSelectedActor->GetOwnedComponents();
+	USceneComponent* RootSceneComponentRaw = InSelectedActor->GetRootComponent();
+	TObjectPtr<USceneComponent> RootSceneComponent = TObjectPtr(RootSceneComponentRaw);
+	TObjectPtr<UActorComponent> RootAsActorComponent = Cast<UActorComponent>(RootSceneComponent);
 
 	ImGui::Text("Components (%d)", static_cast<int>(Components.size()));
 	ImGui::SameLine();
@@ -128,6 +132,7 @@ void UActorDetailWidget::RenderComponentTree(TObjectPtr<AActor> InSelectedActor)
 	{
 		ImGui::OpenPopup("AddComponentPopup");
 	}
+
 	if (ImGui::IsItemHovered())
 	{
 		ImGui::SetTooltip("Adds a new component to this actor");
@@ -181,21 +186,39 @@ void UActorDetailWidget::RenderComponentTree(TObjectPtr<AActor> InSelectedActor)
 
 	ImGui::Separator();
 
-	if (Components.empty())
+	const bool bHasRootComponent = (RootSceneComponentRaw != nullptr);
+	const bool bHasAnyComponent = bHasRootComponent || !Components.empty();
+
+	if (!bHasAnyComponent)
 	{
 		ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "No components");
 		return;
 	}
 
-	for (int32 i = 0; i < static_cast<int32>(Components.size()); ++i)
+	if (bHasRootComponent && RootAsActorComponent)
 	{
-		if (Components[i])
+		RenderComponentNode(RootAsActorComponent, RootSceneComponentRaw);
+	}
+
+
+	for (int32 ComponentIndex = 0; ComponentIndex < static_cast<int32>(Components.size()); ++ComponentIndex)
+	{
+		const TObjectPtr<UActorComponent>& Component = Components[ComponentIndex];
+		if (!Component)
 		{
-			RenderComponentNode(Components[i]);
+			continue;
 		}
+
+		if (bHasRootComponent && RootSceneComponentRaw && Component.Get() == RootSceneComponentRaw)
+		{
+			continue;
+		}
+
+		RenderComponentNode(Component, RootSceneComponentRaw);
 	}
 
 	ImGui::Separator();
+
 	if (SelectedComponent)
 	{
 		RenderComponentDetails(SelectedComponent);
@@ -207,7 +230,7 @@ void UActorDetailWidget::RenderComponentTree(TObjectPtr<AActor> InSelectedActor)
  * 내부적으로 RTTI를 활용한 GetName 처리가 되어 있음
  * @param InComponent
  */
-void UActorDetailWidget::RenderComponentNode(TObjectPtr<UActorComponent> InComponent)
+void UActorDetailWidget::RenderComponentNode(TObjectPtr<UActorComponent> InComponent, USceneComponent* InRootComponent)
 {
 	if (!InComponent)
 	{
@@ -218,44 +241,82 @@ void UActorDetailWidget::RenderComponentNode(TObjectPtr<UActorComponent> InCompo
 	FName ComponentTypeName = InComponent.Get()->GetClass()->GetClassTypeName();
 	FString ComponentIcon = "[C]"; // 기본 컴포넌트 아이콘
 
+	bool bIsPrimitiveComponent = false;
+
 	if (Cast<UPrimitiveComponent>(InComponent))
 	{
-		ComponentIcon = "[P]"; // PrimitiveComponent 아이콘
+		ComponentIcon = "[P]";
+		bIsPrimitiveComponent = true;
 	}
 	else if (Cast<USceneComponent>(InComponent))
 	{
-		ComponentIcon = "[S]"; // SceneComponent 아이콘
+		ComponentIcon = "[S]";
 	}
 
-	// 트리 노드 생성
+	TObjectPtr<USceneComponent> AsSceneComponent = Cast<USceneComponent>(InComponent);
+	const bool bIsRootComponent = (InRootComponent != nullptr) && AsSceneComponent && (AsSceneComponent.Get() == InRootComponent);
+
+	FString NodeLabel;
+	if (bIsRootComponent)
+	{
+		NodeLabel = "[Root] ";
+	}
+	else
+	{
+		NodeLabel = ComponentIcon + " ";
+	}
+	NodeLabel += InComponent->GetName().ToString();
+
+	if (bIsRootComponent)
+	{
+		NodeLabel += " (Root Component)";
+	}
+
 	ImGuiTreeNodeFlags NodeFlags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
-
-	FString NodeLabel = ComponentIcon + " " + InComponent->GetName().ToString();
 	if (SelectedComponent == InComponent)
+	{
 		NodeFlags |= ImGuiTreeNodeFlags_Selected;
+	}
 
-	ImGui::TreeNodeEx(NodeLabel.data(), NodeFlags);
+	if (bIsRootComponent)
+	{
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.95f, 0.82f, 0.25f, 1.0f));
+	}
+
+	ImGui::TreeNodeEx(NodeLabel.c_str(), NodeFlags);
+
+	if (bIsRootComponent)
+	{
+		ImGui::PopStyleColor();
+	}
 
 	if (ImGui::IsItemClicked())
 	{
 		SelectedComponent = InComponent;
 	}
 
-	// 컴포넌트 세부 정보를 추가로 표시할 수 있음
 	if (ImGui::IsItemHovered())
 	{
-		// 컴포넌트 타입 정보를 툴팁으로 표시
-		ImGui::SetTooltip("Component Type: %s", ComponentTypeName.ToString().data());
+		if (bIsRootComponent)
+		{
+			ImGui::SetTooltip("Root Component\nType: %s", ComponentTypeName.ToString().data());
+		}
+		else
+		{
+			ImGui::SetTooltip("Component Type: %s", ComponentTypeName.ToString().data());
+		}
 	}
 
-	// PrimitiveComponent인 경우 추가 정보
-	if (UPrimitiveComponent* PrimitiveComponent = Cast<UPrimitiveComponent>(InComponent))
+	if (bIsPrimitiveComponent)
 	{
-		ImGui::SameLine();
-		ImGui::TextColored(
-			PrimitiveComponent->IsVisible() ? ImVec4(0.0f, 1.0f, 0.0f, 1.0f) : ImVec4(1.0f, 0.0f, 0.0f, 1.0f),
-			PrimitiveComponent->IsVisible() ? "[Visible]" : "[Hidden]"
-		);
+		if (UPrimitiveComponent* PrimitiveComponent = Cast<UPrimitiveComponent>(InComponent))
+		{
+			ImGui::SameLine();
+			ImGui::TextColored(
+				PrimitiveComponent->IsVisible() ? ImVec4(0.0f, 1.0f, 0.0f, 1.0f) : ImVec4(1.0f, 0.0f, 0.0f, 1.0f),
+				PrimitiveComponent->IsVisible() ? "[Visible]" : "[Hidden]"
+			);
+		}
 	}
 }
 
@@ -314,11 +375,15 @@ void UActorDetailWidget::RenderComponentDetails(TObjectPtr<UActorComponent> InCo
 	ImGui::Text("Component Transform");
 
 	TObjectPtr<USceneComponent> SceneComponent = Cast<USceneComponent>(InComponent);
-
+	if (!SceneComponent)
+	{
+		return;
+	}
 	bool bTransformChanged = false;
 
 	FVector RelativeLocation = SceneComponent->GetRelativeLocation();
 	float LocationArr[3] = { RelativeLocation.X, RelativeLocation.Y, RelativeLocation.Z };
+
 	if (ImGui::DragFloat3("Relative Location", LocationArr, 0.1f))
 	{
 		SceneComponent->SetRelativeLocation(FVector(LocationArr[0], LocationArr[1], LocationArr[2]));
