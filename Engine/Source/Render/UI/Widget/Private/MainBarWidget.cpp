@@ -500,17 +500,23 @@ void UMainBarWidget::RenderOcclusionCullingMenu()
  */
 void UMainBarWidget::RenderPIEMenu()
 {
-	if (ImGui::BeginMenu("PIE"))
+	if (!GEngine)
 	{
-		if (!GEngine)
+		if (ImGui::BeginMenu("PIE"))
 		{
 			ImGui::Text("엔진을 사용할 수 없습니다");
 			ImGui::EndMenu();
-			return;
 		}
+		return;
+	}
 
-		bool bIsPIEActive = GEngine->IsPIEActive();
+	bool bIsPIEActive = GEngine->IsPIEActive();
 
+	// PIE 상태에 따라 메뉴 이름 동적 변경
+	const char* MenuName = bIsPIEActive ? "PIE (플레이 중)" : "PIE";
+
+	if (ImGui::BeginMenu(MenuName))
+	{
 		if (!bIsPIEActive)
 		{
 			// PIE 비활성 상태 - Play 버튼 표시

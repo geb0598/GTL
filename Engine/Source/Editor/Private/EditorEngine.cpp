@@ -197,14 +197,12 @@ void UEditorEngine::StartPIE()
 	PIEContext.ContextHandle = FName("PIEWorld");
 	PIEContext.WorldType = EWorldType::PIE;
 
-	// 빈 레벨 생성
-	//PIEContext.WorldPtr->CreateNewLevel("PIE_Level");
-
 	if (auto World = GetEditorWorld())
 	{
 		PIEContext.WorldPtr = DuplicateObject(World, World->GetOuter());
 		PIEContext.WorldPtr->SetName("PIE World");
 		PIEContext.WorldPtr->SetWorldType(EWorldType::PIE);
+		PIEContext.WorldPtr->GetLevel()->SetName("PIE Level");
 	}
 
 	// WorldContexts에 추가
