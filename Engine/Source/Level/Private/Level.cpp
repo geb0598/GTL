@@ -2,19 +2,19 @@
 #include "Level/Public/Level.h"
 
 #include "Actor/Public/Actor.h"
-#include "Component/Public/PrimitiveComponent.h"
-#include "Editor/Public/EditorEngine.h"
-#include "Manager/UI/Public/UIManager.h"
-#include "Utility/Public/JsonSerializer.h"
-#include "Factory/Public/NewObject.h"
-#include "Core/Public/Object.h"
-#include "Manager/Config/Public/ConfigManager.h"
-#include "Render/Renderer/Public/Renderer.h"
-#include "Editor/Public/Viewport.h"
-#include "Utility/Public/ActorTypeMapper.h"
-#include "Editor/Public/FrustumCull.h"
 #include "Component/Mesh/Public/StaticMeshComponent.h"
+#include "Component/Public/PrimitiveComponent.h"
+#include "Core/Public/Object.h"
 #include "Editor/Public/Camera.h"
+#include "Editor/Public/EditorEngine.h"
+#include "Editor/Public/FrustumCull.h"
+#include "Editor/Public/Viewport.h"
+#include "Factory/Public/NewObject.h"
+#include "Manager/Config/Public/ConfigManager.h"
+#include "Manager/UI/Public/UIManager.h"
+#include "Render/Renderer/Public/Renderer.h"
+#include "Utility/Public/ActorTypeMapper.h"
+#include "Utility/Public/JsonSerializer.h"
 
 #include <json.hpp>
 
@@ -28,12 +28,6 @@ ULevel::ULevel() = default;
 ULevel::ULevel(const FName& InName)
 	: UObject(InName), Frustum(NewObject<FFrustumCull>())
 {
-}
-
-ULevel::~ULevel()
-{
-	// 소멸자는 Cleanup 함수를 호출하여 모든 리소스를 정리하도록 합니다.
-	Cleanup();
 }
 
 void ULevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
@@ -118,6 +112,21 @@ UObject* ULevel::Duplicate(FObjectDuplicationParameters Parameters)
 	//DupObject->SelectedActor = SelectedActor;
 
 	// @todo ActorsToDelete는 복제할 필요가 존재하는지 확인 
+
+	if (Frustum)
+	{
+		if (auto It = Parameters.DuplicationSeed.find(Frustum); It != Parameters.DuplicationSeed.end())
+		{
+			DupObject->Frustum = static_cast<FFrustumCull*>(It->second);
+		}
+		else
+		{
+			auto Params = InitStaticDuplicateObjectParams(Frustum, DupObject, FName::GetNone(), Parameters.DuplicationSeed, Parameters.CreatedObjects);
+			auto DupFrustum = static_cast<FFrustumCull*>(Frustum->Duplicate(Params));
+
+			DupObject->Frustum = DupFrustum;
+		}
+	}
 
 	if (OwningWorld)
 	{
@@ -227,12 +236,6 @@ void ULevel::Cleanup()
 
 	// 4. 선택된 액터 참조를 안전하게 해제합니다.
 	SelectedActor = nullptr;
-
-	if (Frustum)
-	{
-		delete Frustum;
-		Frustum = nullptr;
-	}
 }
 
 void ULevel::InitializeActorsInLevel()

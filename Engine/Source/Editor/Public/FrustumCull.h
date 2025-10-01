@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 class UCamera;
 struct  FAABB;
@@ -70,10 +70,13 @@ struct FFrustum
 class FFrustumCull : public UObject
 {
 	DECLARE_CLASS(FFrustumCull, UObject)
+	GENERATED_BODY()
 
 public:
 	FFrustumCull();
 	~FFrustumCull();
+
+	UObject* Duplicate(FObjectDuplicationParameters Parameters);
 
 	void Update(UCamera* InCamera);
 	EFrustumTestResult IsInFrustum(const FAABB& TargetAABB);

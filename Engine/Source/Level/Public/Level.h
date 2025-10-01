@@ -51,7 +51,11 @@ class ULevel : public UObject
 public:
 	ULevel();
 	ULevel(const FName& InName);
-	~ULevel() override;
+	~ULevel() override
+	{
+		// 소멸자는 Cleanup 함수를 호출하여 모든 리소스를 정리하도록 합니다.
+		Cleanup();
+	}
 
 	virtual void Init();
 	virtual void Tick(float DeltaTime);

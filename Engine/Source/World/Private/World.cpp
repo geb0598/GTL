@@ -1,9 +1,10 @@
 #include "pch.h"
-#include "World/Public/World.h"
+#include "Editor/Public/FrustumCull.h"
 #include "Level/Public/Level.h"
-#include "Manager/Path/Public/PathManager.h"
 #include "Manager/Config/Public/ConfigManager.h"
+#include "Manager/Path/Public/PathManager.h"
 #include "Utility/Public/JsonSerializer.h"
+#include "World/Public/World.h"
 #include <json.hpp>
 
 using JSON = json::JSON;
@@ -16,7 +17,7 @@ UWorld::UWorld()
 
 UWorld::~UWorld()
 {
-	delete Level;
+	SafeDelete(Level);
 }
 
 void UWorld::Tick(float DeltaTime)

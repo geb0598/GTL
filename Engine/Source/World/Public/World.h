@@ -69,6 +69,8 @@ private:
 	ULevel* Level;
 	EWorldType WorldType{EWorldType::None};
 
+	FFrustumCull* Frustum;
+
 	void SwitchToLevel(ULevel* InNewLevel);
 	static path GetLevelDirectory();
 	static path GenerateLevelFilePath(const FString& InLevelName);
