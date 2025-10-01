@@ -232,7 +232,7 @@ void UActorDetailWidget::DuplicateSelectedActor(TObjectPtr<AActor> InActor)
 		return;
 	}
 
-	ULevel* CurrentLevel = ULevelManager::GetInstance().GetCurrentLevel();
+	ULevel* CurrentLevel = GEngine->GetCurrentLevel();
 	if (!CurrentLevel)
 	{
 		return;

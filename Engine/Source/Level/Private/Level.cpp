@@ -119,17 +119,17 @@ UObject* ULevel::Duplicate(FObjectDuplicationParameters Parameters)
 
 	// @todo ActorsToDelete는 복제할 필요가 존재하는지 확인 
 
-	for (auto& Actor : LevelActors)
+	for (auto& Actor : Actors)
 	{
 		if (auto It = Parameters.DuplicationSeed.find(Actor); It != Parameters.DuplicationSeed.end())
 		{
-			DupObject->LevelActors.emplace_back(static_cast<AActor*>(It->second));
+			DupObject->Actors.emplace_back(static_cast<AActor*>(It->second));
 		}
 		else
 		{
 			auto Params = InitStaticDuplicateObjectParams(Actor, DupObject, FName::GetNone(), Parameters.DuplicationSeed, Parameters.CreatedObjects);
 			auto DupActor = static_cast<AActor*>(Actor->Duplicate(Params));
-			DupObject->LevelActors.emplace_back(DupActor);
+			DupObject->Actors.emplace_back(DupActor);
 		}
 	}
 
@@ -200,7 +200,7 @@ void ULevel::Cleanup()
 	// 1. 지연 삭제 목록에 남아있는 액터들을 먼저 처리합니다.
 	ProcessPendingDeletions();
 
-	// 2. LevelActors 배열에 남아있는 모든 액터의 메모리를 해제합니다.
+	// 2. Actors 배열에 남아있는 모든 액터의 메모리를 해제합니다.
 	for (const auto& Actor : Actors)
 	{
 		delete Actor;
@@ -271,9 +271,9 @@ void ULevel::RegisterDuplicatedActor(AActor* NewActor)
 {
 	if (!NewActor) return;
 
-	LevelActors.emplace_back(NewActor);
+	Actors.emplace_back(NewActor);
 
-	if (this == ULevelManager::GetInstance().GetCurrentLevel())
+	if (this == GEngine->GetCurrentLevel())
 	{
 		AddLevelPrimitiveComponent(NewActor);
 		TArray<FBVHPrimitive> BVHPrimitives;
@@ -408,7 +408,7 @@ bool ULevel::DestroyActor(AActor* InActor)
 		return false;
 	}
 
-	// LevelActors 리스트에서 제거
+	// Actors 리스트에서 제거
 	for (auto Iterator = Actors.begin(); Iterator != Actors.end(); ++Iterator)
 	{
 		if (*Iterator == InActor)
