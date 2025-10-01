@@ -53,7 +53,7 @@ UObject::UObject(const FName& InName)
 UObject* UObject::Duplicate(FObjectDuplicationParameters Parameters)
 {
 	/** @note 이미 오브젝트가 존재할 경우 복제하지 않음 */
-	if (auto It = Parameters.DuplicationSeed.find(this); It != Parameters.DuplicationSeed.end())
+	if (auto It = Parameters.DuplicationSeed.find(Parameters.SourceObject); It != Parameters.DuplicationSeed.end())
 	{
 		return It->second;
 	}

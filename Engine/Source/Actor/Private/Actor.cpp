@@ -41,20 +41,49 @@ UObject* AActor::Duplicate(FObjectDuplicationParameters Parameters)
 {
 	auto DupObject = static_cast<AActor*>(Super::Duplicate(Parameters));
 
-		for (auto& Component : OwnedComponents)
+	/** @note 기본 생성자가 생성하는 컴포넌트들 맵에 업데이트 */
+	if (RootComponent)
+	{
+		auto Params = InitStaticDuplicateObjectParams(RootComponent, DupObject, FName::GetNone(), Parameters.DuplicationSeed, Parameters.CreatedObjects);
+		/** @todo CreatedObjects는 업데이트 안해도 괜찮은지 확인 필요 */
+		Params.DuplicationSeed.emplace(RootComponent, DupObject->RootComponent);
+		/** @note 값 채워넣기만 수행 */
+		RootComponent->Duplicate(Params);
+	}
+
+	if (BillBoardComponent)
+	{
+		auto Params = InitStaticDuplicateObjectParams(BillBoardComponent, DupObject, FName::GetNone(), Parameters.DuplicationSeed, Parameters.CreatedObjects);
+		auto DupComponent = static_cast<UActorComponent*>(BillBoardComponent->Duplicate(Params)); 
+		/** @todo CreatedObjects는 업데이트 안해도 괜찮은지 확인 필요 */
+		Params.DuplicationSeed.emplace(BillBoardComponent, DupObject->BillBoardComponent);
+		/** @note 값 채워넣기만 수행 */
+		BillBoardComponent->Duplicate(Params);
+	}
+
+	/** @todo 이후 다른 AActor를 상속받는 클래스들이 생성하는 컴포넌트를 어떻게 복제할 것인지 생각 */
+
+	for (auto& Component : OwnedComponents)
+	{
+		/** 위에서 이미 처리함 */
+		if (Component == RootComponent || Component == BillBoardComponent)
 		{
-			if (auto It = Parameters.DuplicationSeed.find(Component); It != Parameters.DuplicationSeed.end())
-			{
-				DupObject->OwnedComponents.emplace_back(static_cast<UActorComponent*>(It->second));
-			}
-			else
-			{
-				FObjectDuplicationParameters Params(Component, DupObject, Parameters.DuplicationSeed, Parameters.CreatedObjects);
-				auto DupComponent = static_cast<UActorComponent*>(Component->Duplicate(Params));
-	
-				DupObject->OwnedComponents.emplace_back(DupComponent);
-			}
+			continue;
 		}
+
+		if (auto It = Parameters.DuplicationSeed.find(Component); It != Parameters.DuplicationSeed.end())
+		{
+			DupObject->OwnedComponents.emplace_back(static_cast<UActorComponent*>(It->second));
+		}
+		else
+		{
+			auto Params = InitStaticDuplicateObjectParams(Component, DupObject, FName::GetNone(), Parameters.DuplicationSeed, Parameters.CreatedObjects);
+			auto DupComponent = static_cast<UActorComponent*>(Component->Duplicate(Params));
+
+			DupObject->OwnedComponents.emplace_back(DupComponent);
+		}
+	}
+
 	return DupObject;
 }
 

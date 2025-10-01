@@ -26,10 +26,11 @@ UObject* UActorComponent::Duplicate(FObjectDuplicationParameters Parameters)
 
 	if (Owner != nullptr)
 	{
-					if (auto It = Parameters.DuplicationSeed.find(Owner); It != Parameters.DuplicationSeed.end())
-					{
-						DupObject->Owner = static_cast<AActor*>(It->second);
-					}		else
+		if (auto It = Parameters.DuplicationSeed.find(Owner); It != Parameters.DuplicationSeed.end())
+		{
+			DupObject->Owner = static_cast<AActor*>(It->second);
+		}
+		else
 		{
 			/** @todo 플래그를 도입해서 위쪽 계층이 반영될 수 있도록 변경한다. */
 			UE_LOG_ERROR("Owner는 UActorComponent보다 먼저 생성되어야 합니다.");

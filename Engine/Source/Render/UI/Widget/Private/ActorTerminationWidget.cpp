@@ -6,6 +6,7 @@
 #include "Manager/Level/Public/LevelManager.h"
 
 
+
 UActorTerminationWidget::UActorTerminationWidget()
 	: UWidget("Actor Termination Widget")
 	  , SelectedActor(nullptr)
@@ -58,6 +59,7 @@ void UActorTerminationWidget::RenderWidget()
 		{
 			DeleteSelectedActor();
 		}
+
 	}
 	else
 	{

@@ -124,7 +124,7 @@ UObject* ULevel::Duplicate(FObjectDuplicationParameters Parameters)
 		}
 		else
 		{
-			FObjectDuplicationParameters Params(Actor, DupObject, Parameters.DuplicationSeed, Parameters.CreatedObjects);
+			auto Params = InitStaticDuplicateObjectParams(Actor, DupObject, FName::GetNone(), Parameters.DuplicationSeed, Parameters.CreatedObjects);
 			auto DupActor = static_cast<AActor*>(Actor->Duplicate(Params));
 			DupObject->LevelActors.emplace_back(DupActor);
 		}
@@ -246,6 +246,21 @@ AActor* ULevel::SpawnActorToLevel(UClass* InActorClass, const FName& InName)
 	}
 
 	return NewActor;
+}
+
+void ULevel::RegisterDuplicatedActor(AActor* NewActor)
+{
+	if (!NewActor) return;
+
+	LevelActors.emplace_back(NewActor);
+
+	if (this == ULevelManager::GetInstance().GetCurrentLevel())
+	{
+		AddLevelPrimitiveComponent(NewActor);
+		TArray<FBVHPrimitive> BVHPrimitives;
+		UBVHManager::GetInstance().ConvertComponentsToBVHPrimitives(LevelPrimitiveComponents, BVHPrimitives);
+		UBVHManager::GetInstance().Build(BVHPrimitives);
+	}
 }
 
 TArray<TObjectPtr<UPrimitiveComponent>> ULevel::GetVisiblePrimitiveComponents(UCamera* InCamera)

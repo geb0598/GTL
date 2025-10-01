@@ -331,12 +331,14 @@ T* DuplicateObject(const TObjectPtr<T> SourceObject, UObject* Outer, const FName
 		{
 			// [UE] TODO: Outer = (UObject*)GetTransientOuterForRename(T::StaticClass());
 		}
-		return static_cast<T*>(StaticDuplicateObject(SourceObject, Outer, Name));
+		TMap<UObject*, UObject*> DuplicatedSeed;
+		TMap<UObject*, UObject*> CreatedObjects;
+		return static_cast<T*>(StaticDuplicateObject(SourceObject, Outer, Name, DuplicatedSeed, CreatedObjects));
 	}
 	return nullptr;
 }
 
-FObjectDuplicationParameters InitStaticDuplicateObjectParams(UObject const* SourceObject, UObject* DestOuter, const FName DestName,
+inline FObjectDuplicationParameters InitStaticDuplicateObjectParams(UObject const* SourceObject, UObject* DestOuter, const FName DestName,
 	TMap<UObject*, UObject*>& DuplicationSeed, TMap<UObject*, UObject*>& CreatedObjects, EDuplicateMode::Type DuplicateMode = EDuplicateMode::Normal)
 {
 	FObjectDuplicationParameters Parameters(const_cast<UObject*>(SourceObject), DestOuter, DuplicationSeed, CreatedObjects);
@@ -352,7 +354,7 @@ FObjectDuplicationParameters InitStaticDuplicateObjectParams(UObject const* Sour
 	return Parameters;
 }
 
-UObject* StaticDuplicateObjectEX(FObjectDuplicationParameters Parameters)
+inline UObject* StaticDuplicateObjectEX(FObjectDuplicationParameters Parameters)
 {
 	Parameters.SourceObject->PreDuplicate(Parameters);
 
@@ -370,7 +372,7 @@ UObject* StaticDuplicateObjectEX(FObjectDuplicationParameters Parameters)
 	return DupRootObject;
 }
 
-UObject* StaticDuplicateObject(UObject* SourceObject, UObject* DestOuter, const FName DestName, TMap<UObject*, UObject*>& DuplicatedSeed, TMap<UObject*, UObject*>& CreatedObjects)
+inline UObject* StaticDuplicateObject(UObject* SourceObject, UObject* DestOuter, const FName DestName, TMap<UObject*, UObject*>& DuplicatedSeed, TMap<UObject*, UObject*>& CreatedObjects)
 {
 	FObjectDuplicationParameters Parameters = InitStaticDuplicateObjectParams(SourceObject, DestOuter, DestName, DuplicatedSeed, CreatedObjects);
 	return StaticDuplicateObjectEX(Parameters);
