@@ -339,7 +339,7 @@ void ULevel::AddLevelPrimitiveComponent(AActor* Actor)
 		// 빌보드는 무조건 피킹이 된 actor의 빌보드여야 렌더링 가능
 		if (!PrimitiveComponent->IsVisible() && (ShowFlags & EEngineShowFlags::SF_Primitives))
 		{
-			return;
+			continue; // 현재 컴포넌트만 스킵하고 다음 컴포넌트로 계속
 		}
 
 		if (PrimitiveComponent->GetPrimitiveType() != EPrimitiveType::BillBoard)
@@ -385,6 +385,8 @@ void ULevel::SetSelectedActor(AActor* InActor)
 
 	if (!SelectedActor)
 	{
+		// 선택 해제 시에도 LevelPrimitiveComponents 재구성 (Billboard 제거)
+		InitializeActorsInLevel();
 		return;
 	}
 
@@ -398,6 +400,9 @@ void ULevel::SetSelectedActor(AActor* InActor)
 			PrimitiveComponent->SetColor({1.f, 0.8f, 0.2f, 0.4f});
 		}
 	}
+
+	// 선택된 Actor의 Billboard를 LevelPrimitiveComponents에 추가하기 위해 재구성
+	InitializeActorsInLevel();
 }
 
 // Level에서 Actor 제거하는 함수
