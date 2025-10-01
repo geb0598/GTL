@@ -35,9 +35,8 @@ void UTextRenderComponent::UpdateRotationMatrix(const FVector& InCameraLocation,
 {
 	const FVector& OwnerActorLocation = POwnerActor->GetActorLocation();
 
-	FVector ToCamera = InCameraLocation - OwnerActorLocation;
-	ToCamera.Normalize();
-	// FVector ToCamera = FVector(1, 0, 0);
+	FVector ToCamera = InCamera->GetForward();
+	ToCamera = FVector(-ToCamera.X, -ToCamera.Y, -ToCamera.Z);
 
 	const FVector4 worldUp4 = FVector4(0, 0, 1, 1);
 	const FVector worldUp = { worldUp4.X, worldUp4.Y, worldUp4.Z };
