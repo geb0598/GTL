@@ -8,7 +8,7 @@ IMPLEMENT_CLASS(UBillboardComponent, UPrimitiveComponent)
 
 UBillboardComponent::UBillboardComponent()
     : Sprite(nullptr)
-    , POwnerActor(nullptr)
+    , POwnerActor(GetOwner())
 {
     SetName("BillboardComponent");
     Type = EPrimitiveType::Billboard;

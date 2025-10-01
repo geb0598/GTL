@@ -22,7 +22,7 @@ public:
 
     void UpdateRotationMatrix(const UCamera* InCamera);
 
-    UTexture* GetSprite() const { return Sprite; }
+    UTexture* GetSprite() const { return Sprite.Get(); }
     void SetSprite(UTexture* InTexture);
 
 private:
