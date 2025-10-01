@@ -133,13 +133,13 @@ enum class EPrimitiveType : uint8
 	Triangle,
 	Square,
 	StaticMesh,
+	Billboard,
 	Torus,
 	Arrow,
 	CubeArrow,
 	Ring,
 	Line,
 	TextRender,
-	Billboard,
 
 	End = 0xFF
 };

@@ -21,7 +21,92 @@
 #include "Texture/Public/Texture.h"
 #include "Manager/BVH/Public/BVHManager.h"
 #include "Core/Public/Object.h"
+#include "Core/Public/ObjectIterator.h"
+#include "Texture/Public/Texture.h"
+#include "Manager/Asset/Public/AssetManager.h"
 
+#include <algorithm>
+#include <cctype>
+#include <exception>
+#include <filesystem>
+
+namespace
+{
+struct FBillboardSpriteOption
+{
+    FString DisplayName;
+    FString FilePath;
+    TObjectPtr<UTexture> Texture;
+};
+
+TArray<FBillboardSpriteOption>& GetBillboardSpriteOptions()
+{
+    static bool bInitialized = false;
+    static TArray<FBillboardSpriteOption> Options;
+
+    if (!bInitialized)
+    {
+    	bInitialized = true;
+
+        const std::filesystem::path IconDirectory = std::filesystem::absolute(std::filesystem::path("Asset/Icon"));
+        const FString IconDirectoryString = IconDirectory.generic_string();
+
+        if (!std::filesystem::exists(IconDirectory))
+        {
+            UE_LOG_WARNING("ActorDetailWidget: Icon directory not found: %s", IconDirectoryString.c_str());
+            return Options;
+        }
+
+        UAssetManager& AssetManager = UAssetManager::GetInstance();
+
+        try
+        {
+            for (const auto& Entry : std::filesystem::directory_iterator(IconDirectory))
+            {
+                if (!Entry.is_regular_file())
+                {
+                    continue;
+                }
+
+                FString Extension = Entry.path().extension().string();
+                std::transform(Extension.begin(), Extension.end(), Extension.begin(), [](unsigned char InChar)
+                {
+                    return static_cast<char>(std::tolower(InChar));
+                });
+
+                if (Extension != ".png")
+                {
+                    continue;
+                }
+
+                FString FilePath = Entry.path().generic_string();
+                FString DisplayName = Entry.path().stem().string();
+
+                UTexture* Texture = AssetManager.CreateTexture(FilePath, DisplayName);
+                if (!Texture)
+                {
+                    UE_LOG_WARNING("ActorDetailWidget: Failed to load billboard icon texture %s", FilePath.c_str());
+                    continue;
+                }
+
+                Options.push_back(FBillboardSpriteOption { DisplayName, FilePath, TObjectPtr(Texture) });
+            }
+        }
+        catch (const std::exception& Exception)
+        {
+            UE_LOG_ERROR("ActorDetailWidget: Failed to enumerate billboard icons: %s", Exception.what());
+            Options.clear();
+        }
+
+        std::sort(Options.begin(), Options.end(), [](const FBillboardSpriteOption& A, const FBillboardSpriteOption& B)
+        {
+            return A.DisplayName < B.DisplayName;
+        });
+    }
+
+    return Options;
+}
+}
 UActorDetailWidget::UActorDetailWidget()
 	: UWidget("Actor Detail Widget")
 {
@@ -395,6 +480,94 @@ void UActorDetailWidget::RenderComponentDetails(TObjectPtr<UActorComponent> InCo
 	else if (InComponent->IsA(UBillboardComponent::StaticClass()))
 	{
 		UBillboardComponent* Billboard = Cast<UBillboardComponent>(InComponent);
+
+		auto GetTextureDisplayName = [](UTexture* InTexture) -> FString
+		{
+			if (!InTexture)
+			{
+				return "None";
+			}
+
+			FString DisplayName = InTexture->GetName().ToString();
+			if (!DisplayName.empty() && DisplayName.rfind("Object_", 0) != 0)
+			{
+				return DisplayName;
+			}
+
+			FString FilePath = InTexture->GetFilePath().ToString();
+			if (!FilePath.empty())
+			{
+				size_t LastSlash = FilePath.find_last_of("/\\");
+				FString FileName = (LastSlash != FString::npos) ? FilePath.substr(LastSlash + 1) : FilePath;
+
+				size_t LastDot = FileName.find_last_of('.');
+				if (LastDot != FString::npos)
+				{
+					FileName = FileName.substr(0, LastDot);
+				}
+
+				if (!FileName.empty())
+				{
+					return FileName;
+				}
+			}
+
+			return "Texture_" + std::to_string(InTexture->GetUUID());
+		};
+
+		UTexture* CurrentSprite = Billboard->GetSprite();
+		auto& SpriteOptions = GetBillboardSpriteOptions();
+		FString PreviewName = GetTextureDisplayName(CurrentSprite);
+
+		if (CurrentSprite)
+		{
+			const auto Found = std::find_if(SpriteOptions.begin(), SpriteOptions.end(), [CurrentSprite](const FBillboardSpriteOption& Option)
+			{
+				return Option.Texture.Get() == CurrentSprite;
+			});
+			if (Found != SpriteOptions.end())
+			{
+				PreviewName = Found->DisplayName;
+			}
+		}
+
+		if (SpriteOptions.empty())
+		{
+			ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "No icon textures found under Engine/Asset/Icon");
+		}
+
+		if (ImGui::BeginCombo("Sprite", PreviewName.c_str()))
+		{
+			bool bNoneSelected = (CurrentSprite == nullptr);
+			if (ImGui::Selectable("None", bNoneSelected))
+			{
+				Billboard->SetSprite(nullptr);
+				CurrentSprite = nullptr;
+			}
+
+			if (bNoneSelected)
+			{
+				ImGui::SetItemDefaultFocus();
+			}
+
+			for (const FBillboardSpriteOption& Option : SpriteOptions)
+			{
+				bool bIsSelected = (Option.Texture.Get() == CurrentSprite);
+
+				if (ImGui::Selectable(Option.DisplayName.c_str(), bIsSelected))
+				{
+					Billboard->SetSprite(Option.Texture.Get());
+					CurrentSprite = Option.Texture.Get();
+				}
+
+				if (bIsSelected)
+				{
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+
+			ImGui::EndCombo();
+		}
 		// // Texture field (for now, string path or ID)
 		// static char TexturePath[256];
 		// strncpy_s(TexturePath, Billboard->GetTexturePath().c_str(), sizeof(TexturePath)-1);
@@ -648,3 +821,4 @@ void UActorDetailWidget::PruneInvalidStaticMeshWidgets(const TArray<TObjectPtr<U
 		}
 	}
 }
+
