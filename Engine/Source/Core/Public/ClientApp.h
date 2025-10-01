@@ -22,7 +22,7 @@ public:
 
 private:
     int InitializeSystem() const;
-    void TickSystem(float DeltaTime) const;
+    void TickSystem(float DeltaSeconds) const;
     void MainLoop();
 	void ShutdownSystem() const;
 

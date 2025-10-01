@@ -98,7 +98,7 @@ void UInputManager::Initialize(FAppWindow* InWindow)
 	Window = InWindow;
 }
 
-void UInputManager::Tick(float DeltaTime)
+void UInputManager::Tick(float DeltaSeconds)
 {
 	// 이전 프레임 상태를 현재 프레임 상태로 복사
 	PreviousKeyState = CurrentKeyState;

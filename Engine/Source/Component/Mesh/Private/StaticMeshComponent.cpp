@@ -299,8 +299,8 @@ void UStaticMeshComponent::UpdateLODBasedOnDistance(const FVector& CameraPositio
 	}
 }
 
-void UStaticMeshComponent::TickComponent(float DeltaTime)
+void UStaticMeshComponent::TickComponent(float DeltaSeconds)
 {
 	// 부모 클래스의 TickComponent 호출
-	Super::TickComponent(DeltaTime);
+	Super::TickComponent(DeltaSeconds);
 }

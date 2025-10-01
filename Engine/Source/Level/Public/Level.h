@@ -58,7 +58,7 @@ public:
 	}
 
 	virtual void Init();
-	virtual void Tick(float DeltaTime);
+	virtual void Tick(float DeltaSeconds);
 	virtual void Render();
 	virtual void Cleanup();
 

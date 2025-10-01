@@ -50,19 +50,20 @@ void UDetailWindow::OnSelectedActorChanged(AActor* InActor)
 	AddWidget(new UTargetActorTransformWidget);
 	AddWidget(new UActorTerminationWidget);
 
-	if (InActor)
-	{
-		for (const auto& Component : InActor->GetOwnedComponents())
-		{
-			TObjectPtr<UClass> WidgetClass = Component->GetSpecificWidgetClass();
-			if (WidgetClass)
-			{
-				UWidget* NewWidget = NewObject<UWidget>(nullptr, WidgetClass);
-				if (NewWidget)
-				{
-					AddWidget(NewWidget);
-				}
-			}
-		}
-	}
+	// if (InActor)
+	// {
+	// 	for (const auto& Component : InActor->GetOwnedComponents())
+	// 	{
+	// 		TObjectPtr<UClass> WidgetClass = Component->GetSpecificWidgetClass();
+	// 		if (WidgetClass)
+	// 		{
+	// 			UWidget* NewWidget = NewObject<UWidget>(nullptr, WidgetClass);
+	// 			if (NewWidget)
+	// 			{
+	// 				AddWidget(NewWidget);
+	// 				UE_LOG("NEW WIDGET ADDED");
+	// 			}
+	// 		}
+	// 	}
+	// }
 }

@@ -35,7 +35,7 @@ public:
 
 	virtual void BeginPlay();
 	virtual void EndPlay();
-	virtual void Tick(float DeltaTime);
+	virtual void Tick(float DeltaSeconds);
 
 	// Getter & Setter
 	USceneComponent* GetRootComponent() const { return RootComponent.Get(); }

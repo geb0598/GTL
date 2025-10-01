@@ -49,7 +49,7 @@ public:
 	UWorld();
 	~UWorld() override;
 
-	virtual void Tick(float DeltaTime);
+	virtual void Tick(float DeltaSeconds);
 
 	bool LoadLevel(const FString& InFilePath);
 	bool SaveLevel(const FString& InFilePath);
