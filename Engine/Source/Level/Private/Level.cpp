@@ -289,9 +289,9 @@ void ULevel::RegisterDuplicatedActor(AActor* NewActor)
 	if (this == GEngine->GetCurrentLevel())
 	{
 		AddLevelPrimitiveComponent(NewActor);
-		// TArray<FBVHPrimitive> BVHPrimitives;
-		// UBVHManager::GetInstance().ConvertComponentsToBVHPrimitives(LevelPrimitiveComponents, BVHPrimitives);
-		// UBVHManager::GetInstance().Build(BVHPrimitives);
+		TArray<FBVHPrimitive> BVHPrimitives;
+		UBVHManager::GetInstance().ConvertComponentsToBVHPrimitives(LevelPrimitiveComponents, BVHPrimitives);
+		UBVHManager::GetInstance().Build(BVHPrimitives);
 	}
 }
 
