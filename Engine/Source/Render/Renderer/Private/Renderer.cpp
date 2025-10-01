@@ -808,7 +808,7 @@ void URenderer::RenderBillboard(UBillboardComponent* InBillboardComp, UCamera* I
 	InBillboardComp->UpdateRotationMatrix(InCurrentCamera);
 	FMatrix RT = InBillboardComp->GetRTMatrix();
 
-	const FViewProjConstants& viewProjConstData = InCurrentCamera->GetFViewProjConstants();
+	const FViewProjConstants& ViewProjConstData = InCurrentCamera->GetFViewProjConstants();
 
 	// TODO: render billboard
 }

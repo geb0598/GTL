@@ -312,7 +312,7 @@ void UFontRenderer::RenderText(const char* Text, const FMatrix& WorldMatrix, con
 
 	D3D11_RASTERIZER_DESC rasterDesc = {};
 	rasterDesc.FillMode = D3D11_FILL_SOLID;   // ← 와이어프레임 대신 Solid
-	rasterDesc.CullMode = D3D11_CULL_BACK;    // 보통은 Back-face culling
+	rasterDesc.CullMode = D3D11_CULL_NONE;    // 보통은 Back-face culling
 	rasterDesc.FrontCounterClockwise = FALSE;
 	rasterDesc.DepthClipEnable = TRUE;
 

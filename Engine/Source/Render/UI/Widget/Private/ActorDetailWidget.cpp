@@ -8,6 +8,8 @@
 #include "Component/Public/BillboardComponent.h"
 #include "Component/Public/PrimitiveComponent.h"
 #include "Component/Public/SceneComponent.h"
+#include "Core/Public/ObjectIterator.h"
+#include "Texture/Public/Texture.h"
 
 UActorDetailWidget::UActorDetailWidget()
 	: UWidget("Actor Detail Widget")
@@ -281,24 +283,86 @@ void UActorDetailWidget::RenderComponentDetails(TObjectPtr<UActorComponent> InCo
 		}
 	}
 	else if (InComponent->IsA(UBillboardComponent::StaticClass()))
-	{
-		UBillboardComponent* Billboard = Cast<UBillboardComponent>(InComponent);
-		// // Texture field (for now, string path or ID)
-		// static char TexturePath[256];
-		// strncpy_s(TexturePath, Billboard->GetTexturePath().c_str(), sizeof(TexturePath)-1);
-		//
-		// if (ImGui::InputText("Texture Path", TexturePath, sizeof(TexturePath)))
-		// {
-		// 	Billboard->SetTexturePath(TexturePath);
-		// }
-		//
-		// // Relative offset transform
-		// FVector Offset = Billboard->GetRelativeLocation();
-		// if (ImGui::DragFloat3("Offset", &Offset.X, 0.1f))
-		// {
-		// 	Billboard->SetRelativeLocation(Offset);
-		// }
-	}
+{
+    UBillboardComponent* Billboard = Cast<UBillboardComponent>(InComponent);
+
+    auto GetTextureDisplayName = [](UTexture* InTexture) -> std::string
+    {
+        if (!InTexture)
+        {
+            return "None";
+        }
+
+        std::string DisplayName = InTexture->GetName().ToString();
+        if (!DisplayName.empty() && DisplayName.rfind("Object_", 0) != 0)
+        {
+            return DisplayName;
+        }
+
+        std::string FilePath = InTexture->GetFilePath().ToString();
+        if (!FilePath.empty())
+        {
+            size_t LastSlash = FilePath.find_last_of("/\\");
+            std::string FileName = (LastSlash != std::string::npos) ? FilePath.substr(LastSlash + 1) : FilePath;
+
+            size_t LastDot = FileName.find_last_of('.');
+            if (LastDot != std::string::npos)
+            {
+                FileName = FileName.substr(0, LastDot);
+            }
+
+            if (!FileName.empty())
+            {
+                return FileName;
+            }
+        }
+
+        return "Texture_" + std::to_string(InTexture->GetUUID());
+    };
+
+    UTexture* CurrentSprite = Billboard->GetSprite();
+    std::string PreviewName = GetTextureDisplayName(CurrentSprite);
+
+    if (ImGui::BeginCombo("Sprite", PreviewName.c_str()))
+    {
+        bool bNoneSelected = (CurrentSprite == nullptr);
+        if (ImGui::Selectable("None", bNoneSelected))
+        {
+            Billboard->SetSprite(nullptr);
+            CurrentSprite = nullptr;
+        }
+
+        if (bNoneSelected)
+        {
+            ImGui::SetItemDefaultFocus();
+        }
+
+        for (TObjectIterator<UTexture> It; It; ++It)
+        {
+            UTexture* TextureCandidate = *It;
+            if (!TextureCandidate)
+            {
+                continue;
+            }
+
+            std::string ItemLabel = GetTextureDisplayName(TextureCandidate);
+            bool bIsSelected = (TextureCandidate == CurrentSprite);
+
+            if (ImGui::Selectable(ItemLabel.c_str(), bIsSelected))
+            {
+                Billboard->SetSprite(TextureCandidate);
+                CurrentSprite = TextureCandidate;
+            }
+
+            if (bIsSelected)
+            {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+
+        ImGui::EndCombo();
+    }
+}
 	else
 	{
 		ImGui::TextColored(ImVec4(0.6f,0.6f,0.6f,1.0f), "No detail view for this component type.");

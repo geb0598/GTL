@@ -1,34 +1,64 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Component/Public/BillboardComponent.h"
 
-UBillboardComponent::UBillboardComponent(AActor* InOwnerActor)
+#include "Actor/Public/Actor.h"
+
+IMPLEMENT_CLASS(UBillboardComponent, UPrimitiveComponent);
+
+UBillboardComponent::UBillboardComponent()
+    : Sprite(nullptr)
+    , POwnerActor(nullptr)
 {
-	SetName("BillboardComponent");
-	Type = EPrimitiveType::Billboard;
+    SetName("BillboardComponent");
+    Type = EPrimitiveType::Billboard;
+}
+
+UBillboardComponent::UBillboardComponent(AActor* InOwnerActor)
+    : Sprite(nullptr)
+    , POwnerActor(InOwnerActor)
+{
+    SetName("BillboardComponent");
+    Type = EPrimitiveType::Billboard;
 }
 
 UBillboardComponent::~UBillboardComponent()
 {
+    Sprite = nullptr;
+    POwnerActor = nullptr;
+}
 
+void UBillboardComponent::SetSprite(UTexture* InTexture)
+{
+    Sprite = InTexture;
 }
 
 void UBillboardComponent::UpdateRotationMatrix(const UCamera* InCamera)
 {
-	const FVector& OwnerActorLocation = POwnerActor->GetActorLocation();
+    if (!InCamera)
+    {
+        return;
+    }
 
-	FVector ToCamera = InCamera->GetForward();
-	ToCamera = FVector(-ToCamera.X, -ToCamera.Y, -ToCamera.Z);
+    AActor* OwnerActor = POwnerActor ? POwnerActor : GetOwner();
+    if (!OwnerActor)
+    {
+        return;
+    }
 
-	const FVector4 worldUp4 = FVector4(0, 0, 1, 1);
-	const FVector worldUp = { worldUp4.X, worldUp4.Y, worldUp4.Z };
-	FVector Right = worldUp.Cross(ToCamera);
-	Right.Normalize();
-	FVector Up = ToCamera.Cross(Right);
-	Up.Normalize();
+    const FVector& OwnerActorLocation = OwnerActor->GetActorLocation();
 
-	RTMatrix = FMatrix(FVector4(0, 1, 0, 1), worldUp4, FVector4(1,0,0,1));
-	RTMatrix = FMatrix(ToCamera, Right, Up);
+    FVector ToCamera = InCamera->GetForward();
+    ToCamera = FVector(-ToCamera.X, -ToCamera.Y, -ToCamera.Z);
 
-	const FVector Translation = OwnerActorLocation + FVector(0.0f, 0.0f, ZOffset);
-	RTMatrix *= FMatrix::TranslationMatrix(Translation);
+    const FVector4 WorldUp4 = FVector4(0, 0, 1, 1);
+    const FVector WorldUp = { WorldUp4.X, WorldUp4.Y, WorldUp4.Z };
+    FVector Right = WorldUp.Cross(ToCamera);
+    Right.Normalize();
+    FVector Up = ToCamera.Cross(Right);
+    Up.Normalize();
+
+    RTMatrix = FMatrix(ToCamera, Right, Up);
+
+    const FVector Translation = OwnerActorLocation + GetRelativeLocation();
+    RTMatrix *= FMatrix::TranslationMatrix(Translation);
 }
