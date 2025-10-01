@@ -14,14 +14,6 @@ UBillboardComponent::UBillboardComponent()
     Type = EPrimitiveType::Billboard;
 }
 
-UBillboardComponent::UBillboardComponent(AActor* InOwnerActor)
-    : Sprite(nullptr)
-    , POwnerActor(InOwnerActor)
-{
-    SetName("BillboardComponent");
-    Type = EPrimitiveType::Billboard;
-}
-
 UBillboardComponent::~UBillboardComponent()
 {
     Sprite = nullptr;
