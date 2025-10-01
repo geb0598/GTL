@@ -2,6 +2,8 @@
 #include "Actor/Public/Actor.h"
 #include "Component/Public/SceneComponent.h"
 #include "Component/Public/TextRenderComponent.h"
+#include "Level/Public/Level.h"
+#include "Manager/Level/Public/LevelManager.h"
 
 IMPLEMENT_CLASS(AActor, UObject)
 
@@ -109,6 +111,9 @@ void AActor::AddComponent(TObjectPtr<UActorComponent> InComponent)
 	USceneComponent* InSceneComponent = Cast<USceneComponent>(InComponent);
 	RootComponent->AddChild(InSceneComponent);
 	InSceneComponent->SetParentAttachment(RootComponent);
+
+	TObjectPtr<UPrimitiveComponent> PrimitiveComponent = Cast<UPrimitiveComponent>(InComponent);
+	ULevelManager::GetInstance().GetCurrentLevel()->AddLevelPrimitiveComponent(PrimitiveComponent);
 }
 
 void AActor::Tick()

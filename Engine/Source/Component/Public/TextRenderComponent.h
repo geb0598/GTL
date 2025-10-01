@@ -5,19 +5,25 @@
 
 class AActor;
 
+UCLASS()
+
 class UTextRenderComponent : public UPrimitiveComponent
 {
+	GENERATED_BODY()
+	DECLARE_CLASS(UTextRenderComponent, UPrimitiveComponent)
+
 public:
+	UTextRenderComponent();
 	UTextRenderComponent(AActor* InOwnerActor, float InYOffset);
 	~UTextRenderComponent();
 
-	void UpdateRotationMatrix(const FVector& InCameraLocation);
+	void UpdateRotationMatrix(const FVector& InCameraLocation, const UCamera* InCamera);
 	FMatrix GetRTMatrix() const { return RTMatrix; }
 
 	FString GetText() const;
 	void SetText(const FString& InText);
 
-	bool bIsUUIDText = true;
+	bool bIsUUIDText = false;
 
 private:
 	FString Text;

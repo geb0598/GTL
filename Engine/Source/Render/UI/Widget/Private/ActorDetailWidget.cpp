@@ -9,8 +9,6 @@
 #include "Component/Public/PrimitiveComponent.h"
 #include "Component/Public/SceneComponent.h"
 
-TObjectPtr<UActorComponent> UActorDetailWidget::SelectedComponent = nullptr;
-
 UActorDetailWidget::UActorDetailWidget()
 	: UWidget("Actor Detail Widget")
 {
@@ -161,6 +159,12 @@ void UActorDetailWidget::RenderComponentTree(TObjectPtr<AActor> InSelectedActor)
 			RenderComponentNode(Components[i]);
 		}
 	}
+
+	ImGui::Separator();
+	if (SelectedComponent)
+	{
+		RenderComponentDetails(SelectedComponent);
+	}
 }
 
 /**
@@ -218,12 +222,6 @@ void UActorDetailWidget::RenderComponentNode(TObjectPtr<UActorComponent> InCompo
 			PrimitiveComponent->IsVisible() ? "[Visible]" : "[Hidden]"
 		);
 	}
-
-	ImGui::Separator();
-	if (InComponent == SelectedComponent)
-	{
-		RenderComponentDetails(SelectedComponent);
-	}
 }
 
 void UActorDetailWidget::RenderComponentDetails(TObjectPtr<UActorComponent> InComponent)
@@ -239,16 +237,21 @@ void UActorDetailWidget::RenderComponentDetails(TObjectPtr<UActorComponent> InCo
 		static char TextBuffer[256];
 		strncpy_s(TextBuffer, TextComp->GetText().c_str(), sizeof(TextBuffer)-1);
 
-		if (ImGui::InputText("Text", TextBuffer, sizeof(TextBuffer)))
+		bool bShowUUID = TextComp->bIsUUIDText;
+		if (ImGui::Checkbox("Show UUID", &bShowUUID))
 		{
-			TextComp->SetText(TextBuffer);
+			TextComp->bIsUUIDText = bShowUUID;
 		}
 
-		// float Size = TextComp->GetSize();
-		// if (ImGui::DragFloat("Size", &Size, 0.1f, 0.1f, 100.0f))
-		// {
-		// 	TextComp->SetSize(Size);
-		// }
+		if (!bShowUUID)
+		{
+			if (ImGui::InputText("Text", TextBuffer, sizeof(TextBuffer)))
+			{
+				TextComp->SetText(TextBuffer);
+			}
+		}
+
+		// TODO: let player set offset and size of the text
 	}
 	else if (InComponent->IsA(UBillboardComponent::StaticClass()))
 	{

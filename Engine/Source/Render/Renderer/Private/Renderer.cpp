@@ -803,10 +803,9 @@ void URenderer::RenderStaticMesh(UPipeline& InPipeline, UStaticMeshComponent* In
 void URenderer::RenderText(UTextRenderComponent* InTextRenderComp, UCamera* InCurrentCamera)
 {
 	if (!InCurrentCamera)	return;
-	UE_LOG("rendering text");
 
 	// 이제 올바른 카메라 위치를 전달하여 빌보드 회전 업데이트
-	InTextRenderComp->UpdateRotationMatrix(InCurrentCamera->GetLocation());
+	InTextRenderComp->UpdateRotationMatrix(InCurrentCamera->GetLocation(), InCurrentCamera);
 	FMatrix RT = InTextRenderComp->GetRTMatrix();
 	// UEditor에서 가져오는 대신, 인자로 받은 카메라의 ViewProj 행렬을 사용
 	const FViewProjConstants& viewProjConstData = InCurrentCamera->GetFViewProjConstants();

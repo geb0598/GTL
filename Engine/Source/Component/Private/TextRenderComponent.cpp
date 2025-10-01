@@ -4,10 +4,20 @@
 #include "Editor/Public/Editor.h"
 #include "Actor/Public/Actor.h"
 
+IMPLEMENT_CLASS(UTextRenderComponent, UPrimitiveComponent);
+
 /**
  * @brief Level에서 각 Actor마다 가지고 있는 UUID를 출력해주기 위한 빌보드 클래스
  * Actor has a UBillBoardComponent
  */
+UTextRenderComponent::UTextRenderComponent()
+{
+	POwnerActor = nullptr;
+	ZOffset = 20.0f;
+	SetName("TextRenderComponent");
+	Type = EPrimitiveType::TextRender;
+}
+
 UTextRenderComponent::UTextRenderComponent(AActor* InOwnerActor, float InYOffset)
 	: POwnerActor(InOwnerActor)
 	, ZOffset(InYOffset)
@@ -21,12 +31,13 @@ UTextRenderComponent::~UTextRenderComponent()
 	POwnerActor = nullptr;
 }
 
-void UTextRenderComponent::UpdateRotationMatrix(const FVector& InCameraLocation)
+void UTextRenderComponent::UpdateRotationMatrix(const FVector& InCameraLocation, const UCamera* InCamera)
 {
 	const FVector& OwnerActorLocation = POwnerActor->GetActorLocation();
 
 	FVector ToCamera = InCameraLocation - OwnerActorLocation;
 	ToCamera.Normalize();
+	// FVector ToCamera = FVector(1, 0, 0);
 
 	const FVector4 worldUp4 = FVector4(0, 0, 1, 1);
 	const FVector worldUp = { worldUp4.X, worldUp4.Y, worldUp4.Z };

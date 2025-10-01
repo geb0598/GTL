@@ -169,7 +169,7 @@ void ULevel::InitializeActorsInLevel()
 	{
 		if (Actor)
 		{
-			AddLevelPrimitiveComponent(Actor);
+			AddLevelPrimitiveComponentsInActor(Actor);
 		}
 	}
 
@@ -199,7 +199,7 @@ AActor* ULevel::SpawnActorToLevel(UClass* InActorClass, const FName& InName)
 
 	if (this == ULevelManager::GetInstance().GetCurrentLevel())
 	{
-		AddLevelPrimitiveComponent(NewActor);
+		AddLevelPrimitiveComponentsInActor(NewActor);
 		TArray<FBVHPrimitive> BVHPrimitives;
 		UBVHManager::GetInstance().ConvertComponentsToBVHPrimitives(LevelPrimitiveComponents, BVHPrimitives);
 		UBVHManager::GetInstance().Build(BVHPrimitives);
@@ -243,7 +243,7 @@ TArray<TObjectPtr<UPrimitiveComponent>> ULevel::GetVisiblePrimitiveComponents(UC
 	return VisibleComponents;
 }
 
-void ULevel::AddLevelPrimitiveComponent(AActor* Actor)
+void ULevel::AddLevelPrimitiveComponentsInActor(AActor* Actor)
 {
 	if (!Actor) return;
 
@@ -253,10 +253,10 @@ void ULevel::AddLevelPrimitiveComponent(AActor* Actor)
 
 		TObjectPtr<UPrimitiveComponent> PrimitiveComponent = Cast<UPrimitiveComponent>(Component);
 
-			if (!PrimitiveComponent)
-			{
-				continue;
-			}
+		if (!PrimitiveComponent)
+		{
+			continue;
+		}
 
 		/* 3가지 경우 존재.
 		1: primitive show flag가 꺼져 있으면, 도형, 빌보드 모두 렌더링 안함.
@@ -279,6 +279,20 @@ void ULevel::AddLevelPrimitiveComponent(AActor* Actor)
 			LevelPrimitiveComponents.push_back(PrimitiveComponent);
 		}
 	}
+}
+
+void ULevel::AddLevelPrimitiveComponent(TObjectPtr<UPrimitiveComponent> InPrimitiveComponent)
+{
+	if (!InPrimitiveComponent)
+	{
+		return;
+	}
+
+	LevelPrimitiveComponents.push_back(InPrimitiveComponent);
+
+	TArray<FBVHPrimitive> BVHPrimitives;
+	UBVHManager::GetInstance().ConvertComponentsToBVHPrimitives(LevelPrimitiveComponents, BVHPrimitives);
+	UBVHManager::GetInstance().Build(BVHPrimitives);
 }
 
 void ULevel::SetSelectedActor(AActor* InActor)
