@@ -6,6 +6,6 @@ IMPLEMENT_CLASS(AStaticMeshActor, AActor)
 
 AStaticMeshActor::AStaticMeshActor()
 {
-	StaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>("StaticMeshComponent");
+	auto StaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>("StaticMeshComponent");
 	SetRootComponent(StaticMeshComponent);
 }

@@ -12,6 +12,7 @@ public:
 	void Update() override;
 	void RenderWidget() override;
 	void DeleteSelectedActor();
+	void DuplicateSelectedActor();
 
 	UActorTerminationWidget();
 	~UActorTerminationWidget() override;

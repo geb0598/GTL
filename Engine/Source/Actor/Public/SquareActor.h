@@ -12,8 +12,5 @@ class ASquareActor : public AActor
 	using Super = AActor;
 public:
 	ASquareActor();
-	virtual ~ASquareActor() override {}
-
-private:
-	USquareComponent* SquareComponent = nullptr;
+	virtual ~ASquareActor() = default;
 };

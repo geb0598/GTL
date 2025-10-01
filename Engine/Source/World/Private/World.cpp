@@ -1,9 +1,10 @@
-﻿#include "pch.h"
-#include "World/Public/World.h"
+#include "pch.h"
+#include "Editor/Public/FrustumCull.h"
 #include "Level/Public/Level.h"
-#include "Manager/Path/Public/PathManager.h"
 #include "Manager/Config/Public/ConfigManager.h"
+#include "Manager/Path/Public/PathManager.h"
 #include "Utility/Public/JsonSerializer.h"
+#include "World/Public/World.h"
 #include <json.hpp>
 
 using JSON = json::JSON;
@@ -16,13 +17,14 @@ UWorld::UWorld()
 
 UWorld::~UWorld()
 {
-	delete Level;
+	SafeDelete(Level);
 }
 
 void UWorld::Tick(float DeltaTime)
 {
 	if (Level)
 	{
+		UE_LOG("%s", to_string(WorldType).c_str());
 		Level->Tick(DeltaTime);
 	}
 }
@@ -154,4 +156,29 @@ path UWorld::GenerateLevelFilePath(const FString& InLevelName)
 void UWorld::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
 	Super::Serialize(bInIsLoading, InOutHandle);
+}
+
+UObject* UWorld::Duplicate(FObjectDuplicationParameters Parameters)
+{
+	auto DupObject = static_cast<UWorld*>(Super::Duplicate(Parameters));
+
+	DupObject->WorldType = WorldType;
+
+	if (Level)
+	{
+		if (auto It = Parameters.DuplicationSeed.find(Level); It != Parameters.DuplicationSeed.end())
+		{
+			DupObject->Level = static_cast<ULevel*>(It->second);
+		}
+		else
+		{
+			auto Params = InitStaticDuplicateObjectParams(Level, DupObject, FName::GetNone(), Parameters.DuplicationSeed, Parameters.CreatedObjects);
+			auto DupLevel = static_cast<ULevel*>(Level->Duplicate(Params));
+
+			DupLevel->SetName("Test");
+			DupObject->Level = DupLevel;
+		}
+	}
+
+	return DupObject;
 }

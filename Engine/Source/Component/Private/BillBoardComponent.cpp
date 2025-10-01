@@ -8,37 +8,71 @@
  * Actor has a UBillBoardComponent
  */
 UBillBoardComponent::UBillBoardComponent(AActor* InOwnerActor, float InYOffset)
-	: POwnerActor(InOwnerActor)
-	, ZOffset(InYOffset)
+	: ZOffset(InYOffset)
 {
+	SetOwner(InOwnerActor);
 	Type = EPrimitiveType::BillBoard;
 }
 
 UBillBoardComponent::~UBillBoardComponent()
 {
-	POwnerActor = nullptr;
+}
+
+UObject* UBillBoardComponent::Duplicate(FObjectDuplicationParameters Parameters)
+{
+	auto DupObject = static_cast<UBillBoardComponent*>(Super::Duplicate(Parameters));
+
+	DupObject->RTMatrix = RTMatrix;
+	DupObject->ZOffset = ZOffset;
+
+	return DupObject;
 }
 
 void UBillBoardComponent::UpdateRotationMatrix(const FVector& InCameraLocation)
 {
-	const FVector& OwnerActorLocation = POwnerActor->GetActorLocation();
+	const FVector& OwnerActorLocation = GetOwner()->GetActorLocation();
 
-	FVector ToCamera = InCameraLocation - OwnerActorLocation;
-	ToCamera.Normalize();
+	FVector ToCamera = FVector(
+		InCameraLocation.X - OwnerActorLocation.X,
+		InCameraLocation.Y - OwnerActorLocation.Y,
+		InCameraLocation.Z - OwnerActorLocation.Z
+	);
 
-	const FVector4 worldUp4 = FVector4(0, 0, 1, 1);
-	const FVector worldUp = { worldUp4.X, worldUp4.Y, worldUp4.Z };
+	const float len = ToCamera.Length();
+	if (len > 1e-6f)
+	{
+		ToCamera.X /= len;
+		ToCamera.Y /= len;
+		ToCamera.Z /= len;
+	}
+
+	const FVector worldUp = FVector(0.0f, 0.0f, 1.0f);
 	FVector Right = worldUp.Cross(ToCamera);
-	Right.Normalize();
+
+	const float rightLen = Right.Length();
+	if (rightLen > 1e-6f)
+	{
+		Right.X /= rightLen;
+		Right.Y /= rightLen;
+		Right.Z /= rightLen;
+	}
+
 	FVector Up = ToCamera.Cross(Right);
-	Up.Normalize();
+	const float upLen = Up.Length();
+	if (upLen > 1e-6f)
+	{
+		Up.X /= upLen;
+		Up.Y /= upLen;
+		Up.Z /= upLen;
+	}
 
-	RTMatrix = FMatrix(FVector4(0, 1, 0, 1), worldUp4, FVector4(1,0,0,1));
 	RTMatrix = FMatrix(ToCamera, Right, Up);
-	//RTMatrix = FMatrix::Identity();
-	//UE_LOG("%.2f, %.2f, %.2f", ToCamera.X, ToCamera.Y, ToCamera.Z);
 
-	const FVector Translation = OwnerActorLocation + FVector(0.0f, 0.0f, ZOffset);
-	//UE_LOG("%.2f, %.2f, %.2f", Translation.X, Translation.Y, Translation.Z);
+	const FVector Translation = FVector(
+		OwnerActorLocation.X,
+		OwnerActorLocation.Y,
+		OwnerActorLocation.Z + ZOffset
+	);
+
 	RTMatrix *= FMatrix::TranslationMatrix(Translation);
 }

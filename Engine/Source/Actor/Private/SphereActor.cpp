@@ -6,7 +6,7 @@ IMPLEMENT_CLASS(ASphereActor, AActor)
 
 ASphereActor::ASphereActor()
 {
-	SphereComponent = CreateDefaultSubobject<USphereComponent>("SphereComponent");
+	auto SphereComponent = CreateDefaultSubobject<USphereComponent>("SphereComponent");
 	SetRootComponent(SphereComponent);
 }
 

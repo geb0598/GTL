@@ -20,9 +20,11 @@ class AActor : public UObject
 public:
 	AActor();
 	AActor(UObject* InOuter);
-	~AActor() override;
+	virtual ~AActor();
 
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+
+	UObject* Duplicate(FObjectDuplicationParameters Parameters) override;
 
 	void SetActorLocation(const FVector& InLocation) const;
 	void SetActorRotation(const FVector& InRotation) const;
