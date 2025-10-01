@@ -2,7 +2,7 @@
 #include "Render/Renderer/Public/Renderer.h"
 #include "Render/Renderer/Public/Pipeline.h"
 #include "Render/FontRenderer/Public/FontRenderer.h"
-#include "Component/Public/BillBoardComponent.h"
+#include "Component/Public/TextRenderComponent.h"
 #include "Component/Public/PrimitiveComponent.h"
 #include "Component/Mesh/Public/StaticMeshComponent.h"
 #include "Editor/Public/Editor.h"
@@ -401,8 +401,6 @@ void URenderer::Update()
  */
 void URenderer::RenderBegin() const
 {
-
-
 	auto* RenderTargetView = DeviceResources->GetRenderTargetView();
 	GetDeviceContext()->ClearRenderTargetView(RenderTargetView, ClearColor);
 	auto* DepthStencilView = DeviceResources->GetDepthStencilView();
@@ -471,7 +469,7 @@ void URenderer::RenderPrimitiveComponent(UPipeline& InPipeline, UPrimitiveCompon
 {
 	switch (InPrimitiveComponent->GetPrimitiveType())
 	{
-	case EPrimitiveType::BillBoard:
+	case EPrimitiveType::TextRender:
 		// Billboards are rendered on the main thread after all other primitives
 		break;
 	case EPrimitiveType::StaticMesh:
@@ -486,7 +484,7 @@ void URenderer::RenderPrimitiveComponent(UPipeline& InPipeline, UPrimitiveCompon
 void URenderer::RenderLevel_SingleThreaded(UCamera* InCurrentCamera, FViewportClient& InViewportClient, const TArray<TObjectPtr<UPrimitiveComponent>>& InPrimitiveComponents)
 {
 	auto& OcclusionRenderer = UOcclusionRenderer::GetInstance();
-	TObjectPtr<UBillBoardComponent> BillBoard = nullptr;
+	TObjectPtr<UTextRenderComponent> TextRender = nullptr;
 
 	for (size_t i = 0; i < InPrimitiveComponents.size(); ++i)
 	{
@@ -506,9 +504,9 @@ void URenderer::RenderLevel_SingleThreaded(UCamera* InCurrentCamera, FViewportCl
 		}
 		ID3D11RasterizerState* LoadedRasterizerState = GetRasterizerState(RenderState);
 
-		if (PrimitiveComponent->GetPrimitiveType() == EPrimitiveType::BillBoard)
+		if (PrimitiveComponent->GetPrimitiveType() == EPrimitiveType::TextRender)
 		{
-			BillBoard = Cast<UBillBoardComponent>(PrimitiveComponent);
+			TextRender = Cast<UTextRenderComponent>(PrimitiveComponent);
 		}
 		else
 		{
@@ -516,9 +514,9 @@ void URenderer::RenderLevel_SingleThreaded(UCamera* InCurrentCamera, FViewportCl
 		}
 	}
 
-	if (BillBoard)
+	if (TextRender)
 	{
-		RenderBillboard(BillBoard, InCurrentCamera);
+		RenderText(TextRender, InCurrentCamera);
 	}
 }
 
@@ -598,18 +596,18 @@ void URenderer::RenderLevel_MultiThreaded(UCamera* InCurrentCamera, FViewportCli
 	}
 	CommandLists.clear();
 
-	TObjectPtr<UBillBoardComponent> BillBoard = nullptr;
+	TObjectPtr<UTextRenderComponent> TextRender = nullptr;
 	for (size_t i = 0; i < InPrimitiveComponents.size(); ++i)
 	{
-		if (InPrimitiveComponents[i]->GetPrimitiveType() == EPrimitiveType::BillBoard)
+		if (InPrimitiveComponents[i]->GetPrimitiveType() == EPrimitiveType::TextRender)
 		{
-			BillBoard = Cast<UBillBoardComponent>(InPrimitiveComponents[i]);
+			TextRender = Cast<UTextRenderComponent>(InPrimitiveComponents[i]);
 			break;
 		}
 	}
-	if (BillBoard)
+	if (TextRender)
 	{
-		RenderBillboard(BillBoard, InCurrentCamera);
+		RenderText(TextRender, InCurrentCamera);
 	}
 }
 
@@ -802,19 +800,29 @@ void URenderer::RenderStaticMesh(UPipeline& InPipeline, UStaticMeshComponent* In
     }
 }
 
-void URenderer::RenderBillboard(UBillBoardComponent* InBillBoardComp, UCamera* InCurrentCamera)
+void URenderer::RenderText(UTextRenderComponent* InTextRenderComp, UCamera* InCurrentCamera)
 {
 	if (!InCurrentCamera)	return;
+	UE_LOG("rendering text");
 
 	// 이제 올바른 카메라 위치를 전달하여 빌보드 회전 업데이트
-	InBillBoardComp->UpdateRotationMatrix(InCurrentCamera->GetLocation());
-
-	FString UUIDString = "UID: " + std::to_string(InBillBoardComp->GetUUID());
-	FMatrix RT = InBillBoardComp->GetRTMatrix();
-
+	InTextRenderComp->UpdateRotationMatrix(InCurrentCamera->GetLocation());
+	FMatrix RT = InTextRenderComp->GetRTMatrix();
 	// UEditor에서 가져오는 대신, 인자로 받은 카메라의 ViewProj 행렬을 사용
 	const FViewProjConstants& viewProjConstData = InCurrentCamera->GetFViewProjConstants();
-	FontRenderer->RenderText(UUIDString.c_str(), RT, viewProjConstData);
+
+	FString RenderedString;
+
+	if (InTextRenderComp->bIsUUIDText)
+	{
+		RenderedString = "UID: " + std::to_string(InTextRenderComp->GetUUID());
+	}
+	else
+	{
+		RenderedString = InTextRenderComp->GetText();
+	}
+
+	FontRenderer->RenderText(RenderedString.c_str(), RT, viewProjConstData);
 }
 
 void URenderer::RenderPrimitiveDefault(UPipeline& InPipeline, UPrimitiveComponent* InPrimitiveComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferColor)

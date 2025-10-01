@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "Component/Public/BillBoardComponent.h"
+#include "Component/Public/TextRenderComponent.h"
 #include "Manager/Level/Public/LevelManager.h"
 #include "Editor/Public/Editor.h"
 #include "Actor/Public/Actor.h"
@@ -8,19 +8,20 @@
  * @brief Level에서 각 Actor마다 가지고 있는 UUID를 출력해주기 위한 빌보드 클래스
  * Actor has a UBillBoardComponent
  */
-UBillBoardComponent::UBillBoardComponent(AActor* InOwnerActor, float InYOffset)
+UTextRenderComponent::UTextRenderComponent(AActor* InOwnerActor, float InYOffset)
 	: POwnerActor(InOwnerActor)
 	, ZOffset(InYOffset)
 {
-	Type = EPrimitiveType::BillBoard;
+	SetName("TextRenderComponent");
+	Type = EPrimitiveType::TextRender;
 }
 
-UBillBoardComponent::~UBillBoardComponent()
+UTextRenderComponent::~UTextRenderComponent()
 {
 	POwnerActor = nullptr;
 }
 
-void UBillBoardComponent::UpdateRotationMatrix(const FVector& InCameraLocation)
+void UTextRenderComponent::UpdateRotationMatrix(const FVector& InCameraLocation)
 {
 	const FVector& OwnerActorLocation = POwnerActor->GetActorLocation();
 
@@ -42,4 +43,14 @@ void UBillBoardComponent::UpdateRotationMatrix(const FVector& InCameraLocation)
 	const FVector Translation = OwnerActorLocation + FVector(0.0f, 0.0f, ZOffset);
 	//UE_LOG("%.2f, %.2f, %.2f", Translation.X, Translation.Y, Translation.Z);
 	RTMatrix *= FMatrix::TranslationMatrix(Translation);
+}
+
+FString UTextRenderComponent::GetText() const
+{
+	return Text;
+}
+
+void UTextRenderComponent::SetText(const FString& InText)
+{
+	Text = InText;
 }

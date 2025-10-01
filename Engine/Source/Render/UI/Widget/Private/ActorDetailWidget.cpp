@@ -5,8 +5,11 @@
 #include "Level/Public/Level.h"
 #include "Actor/Public/Actor.h"
 #include "Component/Public/ActorComponent.h"
+#include "Component/Public/BillboardComponent.h"
 #include "Component/Public/PrimitiveComponent.h"
 #include "Component/Public/SceneComponent.h"
+
+TObjectPtr<UActorComponent> UActorDetailWidget::SelectedComponent = nullptr;
 
 UActorDetailWidget::UActorDetailWidget()
 	: UWidget("Actor Detail Widget")
@@ -110,6 +113,39 @@ void UActorDetailWidget::RenderComponentTree(TObjectPtr<AActor> InSelectedActor)
 	const TArray<TObjectPtr<UActorComponent>>& Components = InSelectedActor->GetOwnedComponents();
 
 	ImGui::Text("Components (%d)", static_cast<int>(Components.size()));
+	ImGui::SameLine();
+
+	if (ImGui::Button(" + Add "))
+	{
+		ImGui::OpenPopup("AddComponentPopup");
+	}
+	if (ImGui::IsItemHovered())
+	{
+		ImGui::SetTooltip("Adds a new component to this actor");
+	}
+
+	if (ImGui::BeginPopup("AddComponentPopup"))
+	{
+		// Example menu items (replace with your actual component list)
+		if (ImGui::MenuItem("Text Render Component"))
+		{
+			UTextRenderComponent* TextRender = new UTextRenderComponent(InSelectedActor, 5.0f);
+			TObjectPtr TextRenderPtr(TextRender);
+			InSelectedActor->AddComponent(Cast<UActorComponent>(TextRenderPtr));
+		}
+		if (ImGui::MenuItem("Billboard Component"))
+		{
+			UBillboardComponent* Billboard = new UBillboardComponent(InSelectedActor);
+			TObjectPtr BillboardPtr(Billboard);
+			InSelectedActor->AddComponent(Cast<UActorComponent>(BillboardPtr));
+		}
+		// if (ImGui::MenuItem("Light Component"))
+		// {
+		// }
+
+		ImGui::EndPopup();
+	}
+
 	ImGui::Separator();
 
 	if (Components.empty())
@@ -156,7 +192,15 @@ void UActorDetailWidget::RenderComponentNode(TObjectPtr<UActorComponent> InCompo
 	ImGuiTreeNodeFlags NodeFlags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 
 	FString NodeLabel = ComponentIcon + " " + InComponent->GetName().ToString();
+	if (SelectedComponent == InComponent)
+		NodeFlags |= ImGuiTreeNodeFlags_Selected;
+
 	ImGui::TreeNodeEx(NodeLabel.data(), NodeFlags);
+
+	if (ImGui::IsItemClicked())
+	{
+		SelectedComponent = InComponent;
+	}
 
 	// 컴포넌트 세부 정보를 추가로 표시할 수 있음
 	if (ImGui::IsItemHovered())
@@ -173,6 +217,61 @@ void UActorDetailWidget::RenderComponentNode(TObjectPtr<UActorComponent> InCompo
 			PrimitiveComponent->IsVisible() ? ImVec4(0.0f, 1.0f, 0.0f, 1.0f) : ImVec4(1.0f, 0.0f, 0.0f, 1.0f),
 			PrimitiveComponent->IsVisible() ? "[Visible]" : "[Hidden]"
 		);
+	}
+
+	ImGui::Separator();
+	if (InComponent == SelectedComponent)
+	{
+		RenderComponentDetails(SelectedComponent);
+	}
+}
+
+void UActorDetailWidget::RenderComponentDetails(TObjectPtr<UActorComponent> InComponent)
+{
+	if (!InComponent) return;
+
+	FName TypeName = InComponent->GetClass()->GetClassTypeName();
+	ImGui::Text("Details for: %s", TypeName.ToString().data());
+
+	if (InComponent->IsA(UTextRenderComponent::StaticClass()))
+	{
+		UTextRenderComponent* TextComp = Cast<UTextRenderComponent>(InComponent);
+		static char TextBuffer[256];
+		strncpy_s(TextBuffer, TextComp->GetText().c_str(), sizeof(TextBuffer)-1);
+
+		if (ImGui::InputText("Text", TextBuffer, sizeof(TextBuffer)))
+		{
+			TextComp->SetText(TextBuffer);
+		}
+
+		// float Size = TextComp->GetSize();
+		// if (ImGui::DragFloat("Size", &Size, 0.1f, 0.1f, 100.0f))
+		// {
+		// 	TextComp->SetSize(Size);
+		// }
+	}
+	else if (InComponent->IsA(UBillboardComponent::StaticClass()))
+	{
+		UBillboardComponent* Billboard = Cast<UBillboardComponent>(InComponent);
+		// // Texture field (for now, string path or ID)
+		// static char TexturePath[256];
+		// strncpy_s(TexturePath, Billboard->GetTexturePath().c_str(), sizeof(TexturePath)-1);
+		//
+		// if (ImGui::InputText("Texture Path", TexturePath, sizeof(TexturePath)))
+		// {
+		// 	Billboard->SetTexturePath(TexturePath);
+		// }
+		//
+		// // Relative offset transform
+		// FVector Offset = Billboard->GetRelativeLocation();
+		// if (ImGui::DragFloat3("Offset", &Offset.X, 0.1f))
+		// {
+		// 	Billboard->SetRelativeLocation(Offset);
+		// }
+	}
+	else
+	{
+		ImGui::TextColored(ImVec4(0.6f,0.6f,0.6f,1.0f), "No detail view for this component type.");
 	}
 }
 

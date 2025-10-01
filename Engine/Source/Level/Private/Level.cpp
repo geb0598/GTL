@@ -268,11 +268,11 @@ void ULevel::AddLevelPrimitiveComponent(AActor* Actor)
 			return;
 		}
 
-		if (PrimitiveComponent->GetPrimitiveType() != EPrimitiveType::BillBoard)
+		if (PrimitiveComponent->GetPrimitiveType() != EPrimitiveType::TextRender)
 		{
 			LevelPrimitiveComponents.push_back(PrimitiveComponent);
 		}
-		else if (PrimitiveComponent->GetPrimitiveType() == EPrimitiveType::BillBoard && (ShowFlags & EEngineShowFlags::SF_BillboardText) && (ULevelManager::GetInstance().GetCurrentLevel()->GetSelectedActor() == Actor))
+		else if (PrimitiveComponent->GetPrimitiveType() == EPrimitiveType::TextRender && (ShowFlags & EEngineShowFlags::SF_BillboardText) && (ULevelManager::GetInstance().GetCurrentLevel()->GetSelectedActor() == Actor))
 		{
 			//TObjectPtr<UBillBoardComponent> BillBoard = Cast<UBillBoardComponent>(PrimitiveComponent);
 			//BillBoard->UpdateRotationMatrix();

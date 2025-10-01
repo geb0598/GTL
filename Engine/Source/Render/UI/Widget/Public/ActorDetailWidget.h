@@ -1,5 +1,8 @@
 #pragma once
 #include "Widget.h"
+// #include "Actor/Public/Actor.h"
+// #include "Component/Public/ActorComponent.h"
+#include "Component/Public/TextRenderComponent.h"
 
 class AActor;
 class UActorComponent;
@@ -21,6 +24,7 @@ public:
 	~UActorDetailWidget() override;
 
 private:
+	static TObjectPtr<UActorComponent> SelectedComponent;
 	bool bIsRenamingActor = false;
 	char ActorNameBuffer[256] = {};
 
@@ -28,6 +32,7 @@ private:
 	void RenderActorHeader(TObjectPtr<AActor> InSelectedActor);
 	static void RenderComponentTree(TObjectPtr<AActor> InSelectedActor);
 	static void RenderComponentNode(TObjectPtr<UActorComponent> InComponent);
+	static void RenderComponentDetails(TObjectPtr<UActorComponent> InComponent);
 
 	// 이름 변경 함수
 	void StartRenamingActor(TObjectPtr<AActor> InActor);

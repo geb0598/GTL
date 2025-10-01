@@ -1,15 +1,15 @@
 #include "pch.h"
 #include "Actor/Public/Actor.h"
 #include "Component/Public/SceneComponent.h"
-#include "Component/Public/BillBoardComponent.h"
+#include "Component/Public/TextRenderComponent.h"
 
 IMPLEMENT_CLASS(AActor, UObject)
 
 AActor::AActor()
 {
 	// to do: primitive factory로 빌보드 생성
-	BillBoardComponent = new UBillBoardComponent(this, 5.0f);
-	OwnedComponents.push_back(TObjectPtr<UBillBoardComponent>(BillBoardComponent));
+	// BillBoardComponent = new UBillboardComponent(this, 5.0f);
+	// OwnedComponents.push_back(TObjectPtr<UBillboardComponent>(BillBoardComponent));
 }
 
 AActor::AActor(UObject* InOuter)
@@ -94,6 +94,21 @@ const FVector& AActor::GetActorScale3D() const
 {
 	assert(RootComponent);
 	return RootComponent->GetRelativeScale3D();
+}
+
+void AActor::AddComponent(TObjectPtr<UActorComponent> InComponent)
+{
+	if (!InComponent || !RootComponent)
+	{
+		return;
+	}
+
+	InComponent->SetOwner(this);
+	OwnedComponents.push_back(InComponent);
+
+	USceneComponent* InSceneComponent = Cast<USceneComponent>(InComponent);
+	RootComponent->AddChild(InSceneComponent);
+	InSceneComponent->SetParentAttachment(RootComponent);
 }
 
 void AActor::Tick()
