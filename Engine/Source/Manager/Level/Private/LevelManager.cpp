@@ -9,7 +9,7 @@
 
 #include <json.hpp>
 
-#include "Manager/BVH/public/BVHManager.h"
+#include "Manager/BVH/public/BVHierarchy.h"
 
 using JSON = json::JSON;
 

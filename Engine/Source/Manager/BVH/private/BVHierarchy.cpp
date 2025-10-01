@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "Manager/BVH/public/BVHManager.h"
+#include "Manager/BVH/public/BVHierarchy.h"
 
 #include "Editor/Public/FrustumCull.h"
 
@@ -8,19 +8,18 @@
 #include "Component/Mesh/Public/StaticMeshComponent.h"
 #include "Component/Mesh/Public/StaticMesh.h"
 
-IMPLEMENT_SINGLETON_CLASS_BASE(UBVHManager)
+IMPLEMENT_SINGLETON_CLASS_BASE(UBVHierarchy)
 
-UBVHManager::UBVHManager() : Boxes()
+UBVHierarchy::UBVHierarchy() : Boxes()
 {
 }
-UBVHManager::~UBVHManager() = default;
+UBVHierarchy::~UBVHierarchy() = default;
 
-void UBVHManager::Initialize()
+void UBVHierarchy::Initialize()
 {
-
 }
 
-void UBVHManager::Build(const TArray<FBVHPrimitive>& InPrimitives, int MaxLeafSize)
+void UBVHierarchy::Build(const TArray<FBVHPrimitive>& InPrimitives, int MaxLeafSize)
 {
 	Nodes.clear();
 	Primitives = InPrimitives;
@@ -32,90 +31,137 @@ void UBVHManager::Build(const TArray<FBVHPrimitive>& InPrimitives, int MaxLeafSi
 		return;
 	}
 
-	RootIndex = BuildRecursive(0, static_cast<int>(Primitives.size()), MaxLeafSize);
+	FPrimitiveLength Length = {0, static_cast<int>(Primitives.size())};
+	RootIndex = BuildRecursive(Length, MaxLeafSize);
 }
 
-int UBVHManager::BuildRecursive(int Start, int Count, int MaxLeafSize)
+int UBVHierarchy::BuildRecursive(FPrimitiveLength Length, int MaxLeafSize)
 {
-	FBVHNode Node;
+	FBVHNode CurrentNode{};
 
-	// 1. Compute bounds for this node
-	FAABB Bounds = FAABB(
-		FVector(+FLT_MAX, +FLT_MAX, +FLT_MAX),
-		FVector(-FLT_MAX, -FLT_MAX, -FLT_MAX)
-		);
-	for (int i = 0; i < Count; i++)
+	CalculateCurrentNodeBounds(Length, CurrentNode);
+
+	if (Length.Count <= MaxLeafSize)
 	{
-		int Index = Start + i;
-		FAABB primitiveBounds = Primitives[Index].Bounds;
-		Bounds = Bounds.Union(Bounds, primitiveBounds);
+		return CreateLeafNode(Length, CurrentNode);
 	}
-	Node.Bounds = Bounds;
 
-	// 2. Leaf condition
-	if (Count <= MaxLeafSize)
+	FVector CentroidMax(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+	FVector CentroidMin(FLT_MAX, FLT_MAX, FLT_MAX);
+	FVector CentroidExtent = CalculateCentroid(CentroidMax, CentroidMin, Length);
+
+	FBuildContext Context = {Length, CentroidExtent, CentroidMin};
+
+	constexpr uint32 NumBins = 16;
+	TArray<FBin> Bins(NumBins);
+	FSplitInfo BestSplit = FindBestSplit(CurrentNode.Bounds, Bins, Context);
+
+	// 분할하지 않는 비용은 프리미티브 개수로 가정한다.
+	if (BestSplit.Cost > static_cast<float>(Length.Count) || BestSplit.Axis == 99)
 	{
-		Node.bIsLeaf = true;
-		Node.Start = Start;
-		Node.Count = Count;
-
-		int NodeIndex = Nodes.size();
-		Nodes.push_back(Node);
-		return NodeIndex;
+		// 분할이 비효율적이거나 유효하지 않는 경우 leaf노드 생성
+		return CreateLeafNode(Length, CurrentNode);
 	}
 
-	// 3. Choose split axis (largest variance of centers)
-	FVector Mean(0,0,0), Var(0,0,0);
-	for (int i = 0; i < Count; i++)
-		Mean += Primitives[Start + i].Center;
-	Mean /= (float)Count;
 
-	__m128 var = _mm_setzero_ps();
-	__m128 mean = _mm_setr_ps(Mean.X, Mean.Y, Mean.Z, 0.0f);
+	int MidIndex = PartitionPrimitives(BestSplit, NumBins, Context);
 
-	for (int i = 0; i < Count; i++) {
-		__m128 c = _mm_setr_ps(Primitives[Start + i].Center.X,
-							   Primitives[Start + i].Center.Y,
-							   Primitives[Start + i].Center.Z, 0.0f);
-		__m128 d = _mm_sub_ps(c, mean);
-		var = _mm_add_ps(var, _mm_mul_ps(d,d));
-	}
+	FPrimitiveLength LeftLength = {Length.Start, (MidIndex - Length.Start)};
+	uint32 LeftChild = BuildRecursive(LeftLength, MaxLeafSize);
 
-	alignas(16) float tmp[4];
-	_mm_store_ps(tmp, var);
-	Var = FVector(tmp[0], tmp[1], tmp[2]);
+	FPrimitiveLength RightLength = {MidIndex, (Length.Start + Length.Count - MidIndex)};
+	uint32 RightChild = BuildRecursive(RightLength, MaxLeafSize);
 
-	int Axis = 0;
-	if (Var.Y > Var.X) Axis = 1;
-	if (Var.Z > Var[Axis]) Axis = 2;
+	CurrentNode.bIsLeaf = false;
+	CurrentNode.LeftChild = LeftChild;
+	CurrentNode.RightChild = RightChild;
 
-	int Mid = Start + Count / 2;
-	// 4. Sort primitives along chosen axis
-	std::nth_element(
-	Primitives.begin() + Start,
-	Primitives.begin() + Mid,
-	Primitives.begin() + Start + Count,
-	[Axis](const FBVHPrimitive& A, const FBVHPrimitive& B) {
-		return A.Center[Axis] < B.Center[Axis];
-	});
+	Nodes.push_back(CurrentNode);
+	return (Nodes.size() - 1);
 
-	// 5. Recurse children
-	int LeftIndex = BuildRecursive(Start, Mid - Start, MaxLeafSize);
-	int RightIndex = BuildRecursive(Mid, Count - (Mid - Start), MaxLeafSize);
 
-	Node.LeftChild = LeftIndex;
-	Node.RightChild = RightIndex;
-
-	int NodeIndex = Nodes.size();
-	Nodes.push_back(Node);
-	return NodeIndex;
+#pragma region original
+	// FBVHNode Node;
+	//
+	// // 1. Compute bounds for this node
+	// FAABB Bounds = FAABB(
+	// 	FVector(+FLT_MAX, +FLT_MAX, +FLT_MAX),
+	// 	FVector(-FLT_MAX, -FLT_MAX, -FLT_MAX)
+	// 	);
+	// for (int i = 0; i < Count; i++)
+	// {
+	// 	int Index = Start + i;
+	// 	FAABB primitiveBounds = Primitives[Index].Bounds;
+	// 	Bounds = Bounds.Union(Bounds, primitiveBounds);
+	// }
+	// Node.Bounds = Bounds;
+	//
+	// // 2. Leaf condition
+	// if (Count <= MaxLeafSize)
+	// {
+	// 	Node.bIsLeaf = true;
+	// 	Node.Start = Start;
+	// 	Node.Count = Count;
+	//
+	// 	int NodeIndex = Nodes.size();
+	// 	Nodes.push_back(Node);
+	// 	return NodeIndex;
+	// }
+	//
+	// // 3. Choose split axis (largest variance of centers)
+	// FVector Mean(0,0,0), Var(0,0,0);
+	// for (int i = 0; i < Count; i++)
+	// 	Mean += Primitives[Start + i].Center;
+	// Mean /= (float)Count;
+	//
+	// __m128 var = _mm_setzero_ps();
+	// __m128 mean = _mm_setr_ps(Mean.X, Mean.Y, Mean.Z, 0.0f);
+	//
+	// for (int i = 0; i < Count; i++) {
+	// 	__m128 c = _mm_setr_ps(Primitives[Start + i].Center.X,
+	// 						   Primitives[Start + i].Center.Y,
+	// 						   Primitives[Start + i].Center.Z, 0.0f);
+	// 	__m128 d = _mm_sub_ps(c, mean);
+	// 	var = _mm_add_ps(var, _mm_mul_ps(d,d));
+	// }
+	//
+	// alignas(16) float tmp[4];
+	// _mm_store_ps(tmp, var);
+	// Var = FVector(tmp[0], tmp[1], tmp[2]);
+	//
+	// int Axis = 0;
+	// if (Var.Y > Var.X) Axis = 1;
+	// if (Var.Z > Var[Axis]) Axis = 2;
+	//
+	// int Mid = Start + Count / 2;
+	// // 4. Sort primitives along chosen axis
+	// std::nth_element(
+	// Primitives.begin() + Start,
+	// Primitives.begin() + Mid,
+	// Primitives.begin() + Start + Count,
+	// [Axis](const FBVHPrimitive& A, const FBVHPrimitive& B) {
+	// 	return A.Center[Axis] < B.Center[Axis];
+	// });
+	//
+	// // 5. Recurse children
+	// int LeftIndex = BuildRecursive(Start, Mid - Start, MaxLeafSize);
+	// int RightIndex = BuildRecursive(Mid, Count - (Mid - Start), MaxLeafSize);
+	//
+	// Node.LeftChild = LeftIndex;
+	// Node.RightChild = RightIndex;
+	//
+	// int NodeIndex = Nodes.size();
+	// Nodes.push_back(Node);
+	// return NodeIndex;
+#pragma endregion
 }
 
-void UBVHManager::Refit()
+void UBVHierarchy::Refit()
 {
 	if (Nodes.empty() || Primitives.empty())
 	{
 		RootIndex = -1;
+
 		return;
 	}
 
@@ -147,25 +193,18 @@ void UBVHManager::Refit()
 }
 
 
-FAABB UBVHManager::RefitRecursive(int NodeIndex)
+FAABB UBVHierarchy::RefitRecursive(int NodeIndex)
 {
 	FBVHNode& Node = Nodes[NodeIndex];
 
 	if (Node.bIsLeaf)
 	{
-		FAABB Bounds(
-			FVector(+FLT_MAX, +FLT_MAX, +FLT_MAX),
-			FVector(-FLT_MAX, -FLT_MAX, -FLT_MAX)
-		);
+		FPrimitiveLength Lenght = {Node.Start, Node.Count};
+		CalculateCurrentNodeBounds(Lenght, Node);
 
-		for (int i = 0; i < Node.Count; i++)
-		{
-			int primIndex = Node.Start + i;
-			Bounds = Bounds.Union(Bounds, Primitives[primIndex].Bounds);
-		}
+		FAABB Bounds = FAABB::GetEmptyAABB();
 
-		Node.Bounds = Bounds;
-		return Bounds;
+		return Node.Bounds;
 	}
 	else
 	{
@@ -177,7 +216,7 @@ FAABB UBVHManager::RefitRecursive(int NodeIndex)
 	}
 }
 
-bool UBVHManager::Raycast(const FRay& InRay, UPrimitiveComponent*& HitComponent, float& HitT) const
+bool UBVHierarchy::Raycast(const FRay& InRay, UPrimitiveComponent*& HitComponent, float& HitT) const
 {
     HitComponent = nullptr;
 
@@ -199,7 +238,7 @@ bool UBVHManager::Raycast(const FRay& InRay, UPrimitiveComponent*& HitComponent,
     return true;
 }
 
-void UBVHManager::RaycastRecursive(int NodeIndex, const FRay& InRay, float& OutClosestHit, int& OutHitObject) const
+void UBVHierarchy::RaycastRecursive(int NodeIndex, const FRay& InRay, float& OutClosestHit, int& OutHitObject) const
 {
     const FBVHNode& Node = Nodes[NodeIndex];
 
@@ -257,7 +296,7 @@ void UBVHManager::RaycastRecursive(int NodeIndex, const FRay& InRay, float& OutC
     }
 }
 
-void UBVHManager::RaycastIterative(const FRay& InRay, float& OutClosestHit, int& OutHitObject) const
+void UBVHierarchy::RaycastIterative(const FRay& InRay, float& OutClosestHit, int& OutHitObject) const
 {
     struct FStackEntry
     {
@@ -373,7 +412,7 @@ void UBVHManager::RaycastIterative(const FRay& InRay, float& OutClosestHit, int&
         }
     }
 }
-void UBVHManager::ConvertComponentsToBVHPrimitives(
+void UBVHierarchy::ConvertComponentsToBVHPrimitives(
 	const TArray<TObjectPtr<UPrimitiveComponent>>& InComponents, TArray<FBVHPrimitive>& OutPrimitives)
 {
 	OutPrimitives.clear();
@@ -408,7 +447,7 @@ void UBVHManager::ConvertComponentsToBVHPrimitives(
 	}
 }
 
-void UBVHManager::FrustumCull(FFrustumCull& InFrustum, TArray<TObjectPtr<UPrimitiveComponent>>& OutVisibleComponents)
+void UBVHierarchy::FrustumCull(FFrustumCull& InFrustum, TArray<TObjectPtr<UPrimitiveComponent>>& OutVisibleComponents)
 {
 	OutVisibleComponents.clear();
 
@@ -421,7 +460,7 @@ void UBVHManager::FrustumCull(FFrustumCull& InFrustum, TArray<TObjectPtr<UPrimit
 	TraverseForCulling(RootIndex, InFrustum, ToBaseType(EFrustumPlane::All), OutVisibleComponents);
 }
 
-void UBVHManager::CollectNodeBounds(TArray<FAABB>& OutBounds) const
+void UBVHierarchy::CollectNodeBounds(TArray<FAABB>& OutBounds) const
 {
 	OutBounds.clear();
 	OutBounds.reserve(Nodes.size());
@@ -432,39 +471,9 @@ void UBVHManager::CollectNodeBounds(TArray<FAABB>& OutBounds) const
 	}
 }
 
-void UBVHManager::TraverseForCulling(uint32 NodeIndex, FFrustumCull& InFrustum, uint32 InMask,
+void UBVHierarchy::TraverseForCulling(uint32 NodeIndex, FFrustumCull& InFrustum, uint32 InMask,
 	TArray<TObjectPtr<UPrimitiveComponent>>& OutVisibleComponents)
 {
-	// 목적: 현재 노드를 검사하고, 그 결과에 따라 자식 노드로 재귀 호출할지 결정한다.
-	// 1. 입력: CurrentNode, Frustum, VisibleList, ParentMask
-	//
-	// 2. [노드 검사]
-	//    CurrentNode의 경계 상자(Bounding Box)와 Frustum을 ParentMask를 이용해 검사한다.
-	//    -> 검사 결과는 'CompletelyOutside', 'CompletelyInside', 'Intersect' 중 하나가 된다.
-	//
-	// 3. [결과에 따른 분기 처리]
-	//
-	//     Case A: 완전히 바깥에 있을 경우
-	//    만약 검사 결과가 'CompletelyOutside' 라면:
-	// 	 -> 이 노드와 그 아래의 모든 자식은 보이지 않으므로, 아무것도 하지 않고 함수를 즉시 종료한다.
-	// (가지치기)
-	//
-	//     Case B: 완전히 안쪽에 있을 경우
-	//    만약 검사 결과가 'CompletelyInside' 라면:
-	// 	 -> 이 노드와 그 아래의 모든 자식은 무조건 보이므로, 더 이상 검사할 필요가 없다.
-	// 	 -> '모든 자손 추가' 헬퍼 함수를 호출하여 이 노드 아래의 모든 오브젝트를 VisibleList에 추가한다.
-	// 	 -> 함수를 종료한다.
-	//
-	//     Case C: 일부만 걸쳐 있을 경우 (Intersect)
-	//    만약 검사 결과가 'Intersect' 라면:
-	// 	 -> 더 깊이 들어가서 자세히 검사해야 한다.
-	// 	 -> 만약 CurrentNode가 '리프 노드' 라면:
-	// 		   재귀의 끝에 도달. 이 리프 노드가 담고 있는 오브젝트들을 VisibleList에 추가한다.
-	// 	 -> 만약 CurrentNode가 '중간 노드' 라면:
-	// 		   (선택적 최적화: 평면 마스크 기법을 여기서 적용하여 자식에게 넘겨줄 ChildMask를 계산한다)
-	// 		   왼쪽 자식에 대해 '노드 순회 함수'를 재귀 호출한다.
-	// 		   오른쪽 자식에 대해 '노드 순회 함수'를 재귀 호출한다.
-
 	/*
 	 *	BVH의 바운딩박스는 worldbox
 	 */
@@ -542,7 +551,7 @@ void UBVHManager::TraverseForCulling(uint32 NodeIndex, FFrustumCull& InFrustum, 
 
 }
 
-void UBVHManager::AddAllPrimitives(uint32 NodeIndex, TArray<TObjectPtr<UPrimitiveComponent>>& OutVisibleComponents)
+void UBVHierarchy::AddAllPrimitives(uint32 NodeIndex, TArray<TObjectPtr<UPrimitiveComponent>>& OutVisibleComponents)
 {
 	if (NodeIndex < 0 || NodeIndex >= Nodes.size())
 	{
@@ -568,3 +577,101 @@ void UBVHManager::AddAllPrimitives(uint32 NodeIndex, TArray<TObjectPtr<UPrimitiv
 	AddAllPrimitives(CurrentNode.RightChild, OutVisibleComponents);
 }
 
+int UBVHierarchy::CreateLeafNode(FPrimitiveLength Length, FBVHNode& LeafNode)
+{
+	// leaf노드에 저장된 primtives의 index 저장
+	LeafNode.Start = Length.Start;
+	LeafNode.Count = Length.Count;
+	LeafNode.bIsLeaf = true;
+
+	Nodes.push_back(LeafNode);
+
+	return Nodes.size() - 1;
+}
+
+uint32 UBVHierarchy::PartitionPrimitives(FSplitInfo& Split, const uint32 NumBins, const FBuildContext& Context)
+{
+	int Start = Context.Length.Start;
+	int Count = Context.Length.Count;
+	FVector CentroidExtent = Context.CentroidExtent;
+	FVector CentroidMin = Context.CentroidMin;
+
+	float SplitCoordinate = CentroidMin[Split.Axis] + static_cast<float>(Split.BinIndex) * CentroidExtent[Split.Axis] / NumBins;
+	auto MidPrimPointer = std::partition(Primitives.begin() + Start,
+		Primitives.begin() + (Start + Count),
+		[=](const FBVHPrimitive& Primitive){ return Primitive.Center[Split.Axis] < SplitCoordinate;});
+	uint32 MidIndex = std::distance(Primitives.begin(), MidPrimPointer);
+
+	if (MidIndex == Start || (MidIndex == Start + Count))
+	{
+		MidIndex = Start + (Count / 2);
+	}
+
+	return MidIndex;
+}
+
+FSplitInfo UBVHierarchy::FindBestSplit(const FAABB& CurrentBounds, TArray<FBin>& Bins, const FBuildContext& Context) const
+{
+	int Start = Context.Length.Start;
+	int Count = Context.Length.Count;
+	FVector CentroidExtent = Context.CentroidExtent;
+	FVector CentroidMin = Context.CentroidMin;
+
+	uint32 NumBins = Bins.size();
+
+	FSplitInfo BestSplit{};
+	for (uint32 Axis = 0; Axis < 3; Axis++)
+	{
+		if (CentroidExtent[Axis] < 1e-6f)
+		{
+			continue;
+		}
+
+		for (uint32 i = Start; i < Start + Count; i++)
+		{
+			float RelativePosition = (Primitives[i].Center[Axis] - CentroidMin[Axis]) / CentroidExtent[Axis];
+			uint32 BinIndex = static_cast<uint32>(RelativePosition * NumBins);
+			BinIndex = std::min(BinIndex, NumBins - 1);
+			Bins[BinIndex].PrimitiveCount++;
+			Bins[BinIndex].Bounds = Bins[BinIndex].Bounds.Union(Bins[BinIndex].Bounds, Primitives[i].Bounds);
+		}
+
+		for (uint32 SplitPoint = 1; SplitPoint < NumBins; SplitPoint++)
+		{
+			FAABB LeftBounds =  FAABB::GetEmptyAABB();
+			uint32 LeftCount = 0;
+			for (uint32 i = 0; i < SplitPoint; i++)
+			{
+				LeftBounds = LeftBounds.Union(LeftBounds, Bins[i].Bounds);
+				LeftCount += Bins[i].PrimitiveCount;
+			}
+
+			FAABB RightBounds =  FAABB::GetEmptyAABB();
+			uint32 RightCount = 0;
+			for (uint32 i = SplitPoint; i < NumBins; i++)
+			{
+				RightBounds = RightBounds.Union(RightBounds, Bins[i].Bounds);
+				RightCount += Bins[i].PrimitiveCount;
+			}
+
+			if (LeftCount > 0 && RightCount > 0)
+			{
+				float ParentSurfaceArea = CurrentBounds.SurfaceArea();
+				if (ParentSurfaceArea > 1.0e-6f)
+				{
+					float CurrentCost = 1.0f + (LeftBounds.SurfaceArea() * static_cast<float>(LeftCount) / ParentSurfaceArea)
+									+ (RightBounds.SurfaceArea() * static_cast<float>(RightCount) / ParentSurfaceArea);
+
+					if (CurrentCost < BestSplit.Cost)
+					{
+						BestSplit.Cost = CurrentCost;
+						BestSplit.Axis = Axis;
+						BestSplit.BinIndex = SplitPoint;
+					}
+				}
+			}
+		}
+	}
+
+	return BestSplit;
+}

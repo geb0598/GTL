@@ -8,7 +8,7 @@
 #include "Actor/Public/SquareActor.h"
 #include "Actor/Public/TriangleActor.h"
 #include "Actor/Public/StaticMeshActor.h"
-#include "Manager/BVH/public/BVHManager.h"
+#include "Manager/BVH/public/BVHierarchy.h"
 
 UPrimitiveSpawnWidget::UPrimitiveSpawnWidget()
 	: UWidget("Primitive Spawn Widget")
@@ -138,8 +138,8 @@ void UPrimitiveSpawnWidget::SpawnActors() const
 			TArray<FBVHPrimitive> BVHPrimitives;
 			TArray<TObjectPtr<UPrimitiveComponent>> LevelComp =
 				ULevelManager::GetInstance().GetCurrentLevel()->GetLevelPrimitiveComponents();
-			UBVHManager::GetInstance().ConvertComponentsToBVHPrimitives(LevelComp, BVHPrimitives);
-			UBVHManager::GetInstance().Build(BVHPrimitives);
+			UBVHierarchy::GetInstance().ConvertComponentsToBVHPrimitives(LevelComp, BVHPrimitives);
+			UBVHierarchy::GetInstance().Build(BVHPrimitives);
 
 			UE_LOG("ControlPanel: (%.2f, %.2f, %.2f) 지점에 Actor를 배치했습니다", RandomX, RandomY, RandomZ);
 		}

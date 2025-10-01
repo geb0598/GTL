@@ -19,7 +19,7 @@
 #include "Render/UI/Widget/Public/SceneHierarchyWidget.h"
 #include "Render/UI/Widget/Public/SplitterDebugWidget.h"
 #include "Render/UI/Widget/Public/ViewportMenuBarWidget.h"
-#include "Manager/BVH/public/BVHManager.h"
+#include "Manager/BVH/public/BVHierarchy.h"
 
 UEditor::UEditor()
 {
@@ -382,7 +382,7 @@ void UEditor::ProcessMouseInput(ULevel* InLevel)
 		Gizmo.EndDrag();
 		if (bWasDragging && Gizmo.GetSelectedActor())
 		{
-			UBVHManager::GetInstance().Refit();
+			UBVHierarchy::GetInstance().Refit();
 		}
 		// 드래그가 끝나면 선택된 뷰포트를 비활성화 합니다.
 		InteractionViewport = nullptr;

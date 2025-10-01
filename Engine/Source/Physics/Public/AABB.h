@@ -30,6 +30,9 @@ struct FAABB : public IBoundingVolume
 	bool RaycastHit(const FRay& Ray, float* OutDistance) const override;
 	EBoundingVolumeType GetType() const override { return EBoundingVolumeType::AABB; }
 	FAABB Union(const FAABB& A, const FAABB& B) const;
+	FVector GetExtent() const;
+	float SurfaceArea() const;
+	static FAABB GetEmptyAABB();
 };
 
 inline FAABB FAABB::Union(const FAABB& A, const FAABB& B) const
@@ -48,6 +51,25 @@ inline FAABB FAABB::Union(const FAABB& A, const FAABB& B) const
 
 	return FAABB(FVector(tmpMin[0], tmpMin[1], tmpMin[2]),
 				 FVector(tmpMax[0], tmpMax[1], tmpMax[2]));
+}
+
+inline FVector FAABB::GetExtent() const
+{
+	return (this->Max - this->Min);
+}
+
+inline float FAABB::SurfaceArea() const
+{
+	FVector Extent = this->GetExtent();
+	float SurfaceArea = (Extent.X * Extent.Y) + (Extent.X * Extent.Z) + (Extent.Z * Extent.Y);
+	SurfaceArea *= 2.0f;
+	return SurfaceArea;
+}
+
+inline FAABB FAABB::GetEmptyAABB()
+{
+	return FAABB(FVector(+FLT_MAX, +FLT_MAX, +FLT_MAX),
+		FVector(-FLT_MAX, -FLT_MAX, -FLT_MAX));
 }
 
 FORCEINLINE bool FAABB::RaycastHit(const FRay& Ray, float* OutDistance) const
