@@ -24,6 +24,8 @@ public:
 
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
+	UObject* Duplicate(FObjectDuplicationParameters Parameters) override;
+
 	void SetActorLocation(const FVector& InLocation) const;
 	void SetActorRotation(const FVector& InRotation) const;
 	void SetActorScale3D(const FVector& InScale) const;

@@ -10,11 +10,14 @@ public:
 	UBillBoardComponent(AActor* InOwnerActor, float InYOffset);
 	~UBillBoardComponent();
 
+	virtual UObject* Duplicate(FObjectDuplicationParameters Parameters) override;
+
 	void UpdateRotationMatrix(const FVector& InCameraLocation);
 
 	FMatrix GetRTMatrix() const { return RTMatrix; }
 private:
 	FMatrix RTMatrix;
-	AActor* POwnerActor;
+	/** @deprecated SetOwner, GetOwner 사용으로 대체 */
+	[[maybe_unused]] [[deprecated]] AActor* POwnerActor;
 	float ZOffset;
 };

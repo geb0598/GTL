@@ -49,6 +49,7 @@ public:
 	virtual void Cleanup();
 
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+	UObject* Duplicate(FObjectDuplicationParameters Parameters) override;
 
 	const TArray<TObjectPtr<AActor>>& GetLevelActors() const { return LevelActors; }
 

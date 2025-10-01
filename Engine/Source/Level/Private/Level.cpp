@@ -105,6 +105,46 @@ void ULevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 	}
 }
 
+UObject* ULevel::Duplicate(FObjectDuplicationParameters Parameters)
+{
+	auto DupObject = static_cast<ULevel*>(Super::Duplicate(Parameters));
+
+	DupObject->Frustum = Frustum;
+	DupObject->ShowFlags = ShowFlags;
+	DupObject->LODUpdateFrameCounter = LODUpdateFrameCounter;
+	//DupObject->SelectedActor = SelectedActor;
+
+	// @todo ActorsToDelete는 복제할 필요가 존재하는지 확인 
+
+	for (auto& Actor : LevelActors)
+	{
+		if (auto It = Parameters.DuplicationSeed.find(Actor); It != Parameters.DuplicationSeed.end())
+		{
+			DupObject->LevelActors.emplace_back(static_cast<AActor*>(It->second));
+		}
+		else
+		{
+			FObjectDuplicationParameters Params(Actor, DupObject, Parameters.DuplicationSeed, Parameters.CreatedObjects);
+			auto DupActor = static_cast<AActor*>(Actor->Duplicate(Params));
+			DupObject->LevelActors.emplace_back(DupActor);
+		}
+	}
+
+	for (auto& Component : LevelPrimitiveComponents)
+	{
+		if (auto It = Parameters.DuplicationSeed.find(Component); It != Parameters.DuplicationSeed.end())
+		{
+			DupObject->LevelPrimitiveComponents.emplace_back(static_cast<UPrimitiveComponent*>(It->second));
+		}
+		else
+		{
+			UE_LOG_ERROR("Actor에 포함되지 않는 Primitive가 발견되었습니다.");
+		}
+	}
+
+	return DupObject;
+}
+
 void ULevel::Init()
 {
 	// TEST CODE

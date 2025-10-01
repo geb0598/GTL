@@ -324,6 +324,7 @@
     <ClInclude Include="Source\Component\Mesh\Public\TriangleComponent.h" />
     <ClInclude Include="Source\Component\Mesh\Public\VertexDatas.h" />
     <ClInclude Include="Source\Core\Public\Archive.h" />
+    <ClInclude Include="Source\Core\Public\DuplicatedDataReader.h" />
     <ClInclude Include="Source\Core\Public\ObjectIterator.h" />
     <ClInclude Include="Source\Core\Public\PlatformTime.h" />
     <ClInclude Include="Source\Core\Public\ScopeCycleCounter.h" />

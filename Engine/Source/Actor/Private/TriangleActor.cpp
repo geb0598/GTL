@@ -6,7 +6,7 @@ IMPLEMENT_CLASS(ATriangleActor, AActor)
 
 ATriangleActor::ATriangleActor()
 {
-	TriangleComponent = CreateDefaultSubobject<UTriangleComponent>("TriangleComponent");
+	auto TriangleComponent = CreateDefaultSubobject<UTriangleComponent>("TriangleComponent");
 	TriangleComponent->SetRelativeRotation({ 90, 0, 0 });
 	SetRootComponent(TriangleComponent);
 }

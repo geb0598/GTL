@@ -37,6 +37,27 @@ void AActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 	}
 }
 
+UObject* AActor::Duplicate(FObjectDuplicationParameters Parameters)
+{
+	auto DupObject = static_cast<AActor*>(Super::Duplicate(Parameters));
+
+		for (auto& Component : OwnedComponents)
+		{
+			if (auto It = Parameters.DuplicationSeed.find(Component); It != Parameters.DuplicationSeed.end())
+			{
+				DupObject->OwnedComponents.emplace_back(static_cast<UActorComponent*>(It->second));
+			}
+			else
+			{
+				FObjectDuplicationParameters Params(Component, DupObject, Parameters.DuplicationSeed, Parameters.CreatedObjects);
+				auto DupComponent = static_cast<UActorComponent*>(Component->Duplicate(Params));
+	
+				DupObject->OwnedComponents.emplace_back(DupComponent);
+			}
+		}
+	return DupObject;
+}
+
 void AActor::SetActorLocation(const FVector& InLocation) const
 {
 	if (RootComponent)

@@ -12,6 +12,5 @@ class ASphereActor : public AActor
 
 public:
 	ASphereActor();
-private:
-	USphereComponent* SphereComponent = nullptr;
+	virtual ~ASphereActor() = default;
 };

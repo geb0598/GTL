@@ -18,6 +18,7 @@ public:
 	~UStaticMeshComponent();
 
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+	UObject* Duplicate(FObjectDuplicationParameters Parameters) override;
 
 public:
 	UStaticMesh* GetStaticMesh() { return StaticMesh; }

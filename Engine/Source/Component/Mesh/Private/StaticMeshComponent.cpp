@@ -96,6 +96,28 @@ void UStaticMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 	}
 }
 
+UObject* UStaticMeshComponent::Duplicate(FObjectDuplicationParameters Parameters)
+{
+	auto DupObject = static_cast<UStaticMeshComponent*>(Super::Duplicate(Parameters));
+
+	/** @note 프로퍼티 얕은 복사(Shallow Copy) */
+	DupObject->StaticMesh = StaticMesh;
+	DupObject->OverrideMaterials = OverrideMaterials;
+
+	/** @note 프로퍼티 깊은 복사(Deep Copy) */
+	DupObject->CurrentLODLevel = CurrentLODLevel;
+	DupObject->bLODEnabled = bLODEnabled;
+	DupObject->LODDistanceSquared1 = LODDistanceSquared1;
+	DupObject->LODDistanceSquared2 = LODDistanceSquared2;
+	DupObject->MinLODLevel = MinLODLevel;
+	DupObject->ForcedLODLevel = ForcedLODLevel;
+	DupObject->OriginalMeshPath = OriginalMeshPath;
+	DupObject->bIsScrollEnabled = bIsScrollEnabled;
+	DupObject->ElapsedTime = ElapsedTime;
+
+	return DupObject;
+}
+
 TObjectPtr<UClass> UStaticMeshComponent::GetSpecificWidgetClass() const
 {
 	return UStaticMeshComponentWidget::StaticClass();
