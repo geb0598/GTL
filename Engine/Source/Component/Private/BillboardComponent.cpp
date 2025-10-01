@@ -39,19 +39,26 @@ void UBillboardComponent::UpdateRotationMatrix(const UCamera* InCamera)
         return;
     }
 
+	FMatrix ViewMatrix = InCamera->GetFViewProjConstantsInverse().View;
+	ViewMatrix.Data[3][0] = 0.0f;
+	ViewMatrix.Data[3][1] = 0.0f;
+	ViewMatrix.Data[3][2] = 0.0f;
+	ViewMatrix.Data[3][3] = 1.0f;
+	FVector WorldLocation = OwnerActor->GetActorLocation() + this->GetRelativeLocation();
+	RTMatrix = ViewMatrix * FMatrix::TranslationMatrix(WorldLocation);
 
-    FVector ToCamera = InCamera->GetForward();
-    ToCamera = FVector(-ToCamera.X, -ToCamera.Y, -ToCamera.Z);
-
-    const FVector4 WorldUp4 = FVector4(0, 0, 1, 1);
-    const FVector WorldUp = { WorldUp4.X, WorldUp4.Y, WorldUp4.Z };
-    FVector Right = WorldUp.Cross(ToCamera);
-    Right.Normalize();
-    FVector Up = ToCamera.Cross(Right);
-    Up.Normalize();
-
-    RTMatrix = FMatrix(ToCamera, Right, Up);
-
-    const FVector Translation = OwnerActorLocation + GetRelativeLocation();
-    RTMatrix *= FMatrix::TranslationMatrix(Translation);
+    // FVector ToCamera = InCamera->GetForward();
+    // ToCamera = FVector(-ToCamera.X, -ToCamera.Y, -ToCamera.Z);
+    //
+    // const FVector4 WorldUp4 = FVector4(0, 0, 1, 1);
+    // const FVector WorldUp = { WorldUp4.X, WorldUp4.Y, WorldUp4.Z };
+    // FVector Right = WorldUp.Cross(ToCamera);
+    // Right.Normalize();
+    // FVector Up = ToCamera.Cross(Right);
+    // Up.Normalize();
+    //
+    // RTMatrix = FMatrix(ToCamera, Right, Up);
+    //
+    // const FVector Translation = OwnerActorLocation + GetRelativeLocation();
+    // RTMatrix *= FMatrix::TranslationMatrix(Translation);
 }

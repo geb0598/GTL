@@ -11,12 +11,4 @@ ABillboardActor::ABillboardActor()
 {
 	auto BillboardComponent = CreateDefaultSubobject<UBillboardComponent>("BillboardComponent");
 	SetRootComponent(BillboardComponent);
-	if (UBillboardComponent* BillboardComponentRef = Cast<UBillboardComponent>(BillboardComponent))
-	{
-		path SpritePath = UPathManager::GetInstance().GetAssetPath() / "Icon/S_Pawn.PNG";
-
-
-		UTexture* Sprite = UAssetManager::GetInstance().CreateTexture(SpritePath.generic_string());
-		BillboardComponentRef->SetSprite(Sprite);
-	}
 }
