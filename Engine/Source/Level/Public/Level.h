@@ -59,6 +59,7 @@ public:
 	virtual void Cleanup();
 
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+	UObject* Duplicate(FObjectDuplicationParameters Parameters) override;
 
 	const TArray<TObjectPtr<AActor>>& GetActors() const { return Actors; }
 
@@ -73,6 +74,7 @@ public:
 	void InitializeActorsInLevel();
 
 	AActor* SpawnActorToLevel(UClass* InActorClass, const FName& InName = FName::GetNone());
+	void RegisterDuplicatedActor(AActor* NewActor);
 
 	bool DestroyActor(AActor* InActor);
 	void MarkActorForDeletion(AActor* InActor);

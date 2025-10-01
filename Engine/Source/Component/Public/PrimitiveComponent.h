@@ -11,6 +11,8 @@ class UPrimitiveComponent : public USceneComponent
 public:
 	UPrimitiveComponent();
 
+	virtual UObject* Duplicate(FObjectDuplicationParameters Parameters) override;
+
 	const TArray<FNormalVertex>* GetVerticesData() const;
 	const TArray<uint32>* GetIndicesData() const;
 	ID3D11Buffer* GetVertexBuffer() const;

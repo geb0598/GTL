@@ -8,20 +8,29 @@
  * Actor has a UBillBoardComponent
  */
 UBillBoardComponent::UBillBoardComponent(AActor* InOwnerActor, float InYOffset)
-	: POwnerActor(InOwnerActor)
-	, ZOffset(InYOffset)
+	: ZOffset(InYOffset)
 {
+	SetOwner(InOwnerActor);
 	Type = EPrimitiveType::BillBoard;
 }
 
 UBillBoardComponent::~UBillBoardComponent()
 {
-	POwnerActor = nullptr;
+}
+
+UObject* UBillBoardComponent::Duplicate(FObjectDuplicationParameters Parameters)
+{
+	auto DupObject = static_cast<UBillBoardComponent*>(Super::Duplicate(Parameters));
+
+	DupObject->RTMatrix = RTMatrix;
+	DupObject->ZOffset = ZOffset;
+
+	return DupObject;
 }
 
 void UBillBoardComponent::UpdateRotationMatrix(const FVector& InCameraLocation)
 {
-	const FVector& OwnerActorLocation = POwnerActor->GetActorLocation();
+	const FVector& OwnerActorLocation = GetOwner()->GetActorLocation();
 
 	FVector ToCamera = InCameraLocation - OwnerActorLocation;
 	ToCamera.Normalize();

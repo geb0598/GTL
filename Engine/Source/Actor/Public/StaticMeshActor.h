@@ -12,7 +12,5 @@ class AStaticMeshActor : public AActor
 
 public:
 	AStaticMeshActor();
-
-private:
-	UStaticMeshComponent* StaticMeshComponent = nullptr;
+	virtual ~AStaticMeshActor() = default;
 };

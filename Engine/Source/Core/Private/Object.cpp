@@ -30,10 +30,6 @@ UObject::~UObject()
 	FObjectCacheManager::InvalidateCache();
 }
 
-void UObject::Serialize(const bool bInIsLoading, JSON& InOutHandle)
-{
-}
-
 UObject::UObject()
 	: Name(FName::GetNone()), Outer(nullptr)
 {
@@ -52,6 +48,30 @@ UObject::UObject(const FName& InName)
 
 	InternalIndex = static_cast<uint32>(GetUObjectArray().size());
 	GetUObjectArray().emplace_back(this);
+}
+
+UObject* UObject::Duplicate(FObjectDuplicationParameters Parameters)
+{
+	/** @note 이미 오브젝트가 존재할 경우 복제하지 않음 */
+	if (auto It = Parameters.DuplicationSeed.find(Parameters.SourceObject); It != Parameters.DuplicationSeed.end())
+	{
+		return It->second;
+	}
+
+	UObject* DupObject = Parameters.DestClass->CreateDefaultObject();
+
+	DupObject->SetOuter(Parameters.DestOuter);
+
+	/** @note 새로운 오브젝트가 생성되었을 경우 맵을 업데이트 해준다. */
+	Parameters.DuplicationSeed.emplace(Parameters.SourceObject, DupObject);
+	Parameters.CreatedObjects.emplace(Parameters.SourceObject, DupObject);
+
+	return DupObject;
+}
+
+void UObject::DuplicateSubObjects(FObjectDuplicationParameters Parameters)
+{
+	return;
 }
 
 void UObject::SetOuter(UObject* InObject)

@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Editor/Public/EditorEngine.h"
 #include "Editor/Public/Editor.h"
 #include "Level/Public/Level.h"
@@ -270,6 +270,7 @@ void UEditorEngine::EndPIE()
 
 UWorld* UEditorEngine::DuplicateWorldForPIE(UWorld* SourceWorld)
 {
+	return nullptr;
 }
 
 FWorldContext* UEditorEngine::GetEditorWorldContext()

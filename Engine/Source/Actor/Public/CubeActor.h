@@ -11,7 +11,5 @@ class ACubeActor : public AActor
 
 public:
 	ACubeActor();
-
-private:
-	UCubeComponent* CubeComponent = nullptr;
+	virtual ~ACubeActor() = default;
 };

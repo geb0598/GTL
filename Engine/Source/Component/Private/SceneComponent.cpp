@@ -33,6 +33,58 @@ void USceneComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 	}
 }
 
+UObject* USceneComponent::Duplicate(FObjectDuplicationParameters Parameters)
+{
+	auto DupObject = static_cast<USceneComponent*>(Super::Duplicate(Parameters));
+
+	DupObject->bIsTransformDirty = bIsTransformDirty;
+	DupObject->bIsTransformDirtyInverse = bIsTransformDirtyInverse;
+
+	DupObject->WorldTransformMatrix = WorldTransformMatrix;
+	DupObject->WorldTransformMatrixInverse = WorldTransformMatrixInverse;
+
+	DupObject->RelativeLocation = RelativeLocation;
+	DupObject->RelativeRotation = RelativeRotation;
+	DupObject->RelativeScale3D = RelativeScale3D;
+
+	// @note: 에디터 변수 비활성화
+	//DupObject->bIsUniformScale = bIsUniformScale;
+
+	if (ParentAttachment != nullptr)
+	{
+		if (auto It = Parameters.DuplicationSeed.find(ParentAttachment); It != Parameters.DuplicationSeed.end())
+		{
+			DupObject->ParentAttachment = static_cast<USceneComponent*>(It->second);
+		}
+		else
+		{
+			/** @note: ParentAttachment의 Outer가 자신의 Outer로 설정된다. */
+			/** @todo: Outer가 USceneComponent 계층 구조를 반영해야 하는가? */
+			auto Params = InitStaticDuplicateObjectParams(ParentAttachment, DupObject->GetOuter(), FName::GetNone(), Parameters.DuplicationSeed, Parameters.CreatedObjects);
+			auto DupComponent = static_cast<USceneComponent*>(ParentAttachment->Duplicate(Params));
+			DupObject->ParentAttachment = DupComponent;
+		}
+	}
+
+	for (auto& Child : Children)
+	{
+		if (auto It = Parameters.DuplicationSeed.find(Child); It != Parameters.DuplicationSeed.end())
+		{
+			DupObject->Children.emplace_back(static_cast<USceneComponent*>(It->second));
+		}
+		else
+		{
+			/** @note: Child의 Outer가 자신의 Outer로 설정된다. */
+			/** @todo: Outer가 USceneComponent 계층 구조를 반영해야 하는가? */
+			auto Params = InitStaticDuplicateObjectParams(Child, DupObject->GetOuter(), FName::GetNone(), Parameters.DuplicationSeed, Parameters.CreatedObjects);
+			auto DupComponent = static_cast<USceneComponent*>(Child->Duplicate(Params));
+			DupObject->Children.emplace_back(DupComponent);
+		}
+	}
+
+	return DupObject;
+}
+
 void USceneComponent::SetParentAttachment(USceneComponent* NewParent)
 {
 	if (NewParent == this)
