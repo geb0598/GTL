@@ -7,6 +7,7 @@
 #include "Component/Public/ActorComponent.h"
 #include "Component/Public/PrimitiveComponent.h"
 #include "Component/Public/SceneComponent.h"
+#include "Core/Public/Object.h"
 
 UActorDetailWidget::UActorDetailWidget()
 	: UWidget("Actor Detail Widget")
@@ -95,6 +96,13 @@ void UActorDetailWidget::RenderActorHeader(TObjectPtr<AActor> InSelectedActor)
 		if (ImGui::IsItemHovered())
 		{
 			ImGui::SetTooltip("Double-Click to Rename");
+		}
+
+		// Duplicate 버튼 추가
+		ImGui::SameLine();
+		if (ImGui::Button("Duplicate"))
+		{
+			DuplicateSelectedActor(InSelectedActor);
 		}
 	}
 }
@@ -215,4 +223,28 @@ void UActorDetailWidget::CancelRenamingActor()
 	bIsRenamingActor = false;
 	ActorNameBuffer[0] = '\0';
 	UE_LOG_WARNING("ActorDetailWidget: 이름 변경 취소");
+}
+
+void UActorDetailWidget::DuplicateSelectedActor(TObjectPtr<AActor> InActor)
+{
+	if (!InActor)
+	{
+		return;
+	}
+
+	ULevel* CurrentLevel = GEngine->GetCurrentLevel();
+	if (!CurrentLevel)
+	{
+		return;
+	}
+
+	AActor* NewActor = DuplicateObject(InActor, CurrentLevel, FName::GetNone());
+
+	if (NewActor)
+	{
+		//FVector Location = NewActor->GetActorLocation();
+		//NewActor->SetActorLocation(Location + FVector(1.0f, 0.0f, 0.0f)); // Offset by 100 on X
+
+		CurrentLevel->RegisterDuplicatedActor(NewActor);
+	}
 }

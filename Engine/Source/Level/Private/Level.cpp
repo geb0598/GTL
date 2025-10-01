@@ -108,6 +108,46 @@ void ULevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 	}
 }
 
+UObject* ULevel::Duplicate(FObjectDuplicationParameters Parameters)
+{
+	auto DupObject = static_cast<ULevel*>(Super::Duplicate(Parameters));
+
+	DupObject->Frustum = Frustum;
+	DupObject->ShowFlags = ShowFlags;
+	DupObject->LODUpdateFrameCounter = LODUpdateFrameCounter;
+	//DupObject->SelectedActor = SelectedActor;
+
+	// @todo ActorsToDelete는 복제할 필요가 존재하는지 확인 
+
+	for (auto& Actor : Actors)
+	{
+		if (auto It = Parameters.DuplicationSeed.find(Actor); It != Parameters.DuplicationSeed.end())
+		{
+			DupObject->Actors.emplace_back(static_cast<AActor*>(It->second));
+		}
+		else
+		{
+			auto Params = InitStaticDuplicateObjectParams(Actor, DupObject, FName::GetNone(), Parameters.DuplicationSeed, Parameters.CreatedObjects);
+			auto DupActor = static_cast<AActor*>(Actor->Duplicate(Params));
+			DupObject->Actors.emplace_back(DupActor);
+		}
+	}
+
+	for (auto& Component : LevelPrimitiveComponents)
+	{
+		if (auto It = Parameters.DuplicationSeed.find(Component); It != Parameters.DuplicationSeed.end())
+		{
+			DupObject->LevelPrimitiveComponents.emplace_back(static_cast<UPrimitiveComponent*>(It->second));
+		}
+		else
+		{
+			UE_LOG_ERROR("Actor에 포함되지 않는 Primitive가 발견되었습니다.");
+		}
+	}
+
+	return DupObject;
+}
+
 void ULevel::Init()
 {
 	// TEST CODE
@@ -160,7 +200,7 @@ void ULevel::Cleanup()
 	// 1. 지연 삭제 목록에 남아있는 액터들을 먼저 처리합니다.
 	ProcessPendingDeletions();
 
-	// 2. LevelActors 배열에 남아있는 모든 액터의 메모리를 해제합니다.
+	// 2. Actors 배열에 남아있는 모든 액터의 메모리를 해제합니다.
 	for (const auto& Actor : Actors)
 	{
 		delete Actor;
@@ -227,6 +267,21 @@ AActor* ULevel::SpawnActorToLevel(UClass* InActorClass, const FName& InName)
 	return NewActor;
 }
 
+void ULevel::RegisterDuplicatedActor(AActor* NewActor)
+{
+	if (!NewActor) return;
+
+	Actors.emplace_back(NewActor);
+
+	if (this == GEngine->GetCurrentLevel())
+	{
+		AddLevelPrimitiveComponent(NewActor);
+		TArray<FBVHPrimitive> BVHPrimitives;
+		UBVHManager::GetInstance().ConvertComponentsToBVHPrimitives(LevelPrimitiveComponents, BVHPrimitives);
+		UBVHManager::GetInstance().Build(BVHPrimitives);
+	}
+}
+
 TArray<TObjectPtr<UPrimitiveComponent>> ULevel::GetVisiblePrimitiveComponents(UCamera* InCamera)
 {
 	TArray<TObjectPtr<UPrimitiveComponent>> VisibleComponents{};
@@ -284,7 +339,7 @@ void ULevel::AddLevelPrimitiveComponent(AActor* Actor)
 		// 빌보드는 무조건 피킹이 된 actor의 빌보드여야 렌더링 가능
 		if (!PrimitiveComponent->IsVisible() && (ShowFlags & EEngineShowFlags::SF_Primitives))
 		{
-			return;
+			continue; // 현재 컴포넌트만 스킵하고 다음 컴포넌트로 계속
 		}
 
 		if (PrimitiveComponent->GetPrimitiveType() != EPrimitiveType::BillBoard)
@@ -330,6 +385,8 @@ void ULevel::SetSelectedActor(AActor* InActor)
 
 	if (!SelectedActor)
 	{
+		// 선택 해제 시에도 LevelPrimitiveComponents 재구성 (Billboard 제거)
+		InitializeActorsInLevel();
 		return;
 	}
 
@@ -343,6 +400,9 @@ void ULevel::SetSelectedActor(AActor* InActor)
 			PrimitiveComponent->SetColor({1.f, 0.8f, 0.2f, 0.4f});
 		}
 	}
+
+	// 선택된 Actor의 Billboard를 LevelPrimitiveComponents에 추가하기 위해 재구성
+	InitializeActorsInLevel();
 }
 
 // Level에서 Actor 제거하는 함수
@@ -353,7 +413,7 @@ bool ULevel::DestroyActor(AActor* InActor)
 		return false;
 	}
 
-	// LevelActors 리스트에서 제거
+	// Actors 리스트에서 제거
 	for (auto Iterator = Actors.begin(); Iterator != Actors.end(); ++Iterator)
 	{
 		if (*Iterator == InActor)

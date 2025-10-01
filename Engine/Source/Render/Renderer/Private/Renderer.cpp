@@ -444,7 +444,7 @@ void URenderer::PerformOcclusionCulling(UCamera* InCurrentCamera, const TArray<T
 
 	if (bIsFirstPass)
 	{
-		bIsFirstPass = false;
+		//bIsFirstPass = false;
 		return;
 	}
 
@@ -704,7 +704,7 @@ void URenderer::RenderEditorPrimitiveIndexed(UPipeline& InPipeline, const FEdito
  */
 void URenderer::RenderEnd() const
 {
-	DeviceResources->CopyDepthSRVToPreviousFrameSRV();
+	//DeviceResources->CopyDepthSRVToPreviousFrameSRV();
 
 	GetSwapChain()->Present(0, 0); // 1: VSync 활성화
 }

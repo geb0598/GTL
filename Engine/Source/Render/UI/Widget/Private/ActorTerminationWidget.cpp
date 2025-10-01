@@ -6,6 +6,7 @@
 #include "Editor/Public/EditorEngine.h"
 
 
+
 UActorTerminationWidget::UActorTerminationWidget()
 	: UWidget("Actor Termination Widget")
 	  , SelectedActor(nullptr)
@@ -57,6 +58,7 @@ void UActorTerminationWidget::RenderWidget()
 		{
 			DeleteSelectedActor();
 		}
+
 	}
 	else
 	{

@@ -4,7 +4,7 @@ struct FVector4;
 struct FArchive; // @note: 직렬화 지원용 헤더
 struct FMatrix;
 
-struct FVector
+struct alignas(16) FVector
 {
 	float X;
 	float Y;
@@ -274,7 +274,7 @@ struct FVector2
 
 FArchive& operator<<(FArchive& Ar, FVector2& Vector);
 
-struct FVector4
+struct alignas(16) FVector4
 {
 	float X;
 	float Y;
