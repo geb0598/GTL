@@ -56,7 +56,7 @@ UEditor::~UEditor()
 	SafeDelete(InteractionViewport);
 }
 
-void UEditor::Tick(float DeltaTime)
+void UEditor::Tick(float DeltaSeconds)
 {
 	URenderer& Renderer = URenderer::GetInstance();
 	FViewport* Viewport = Renderer.GetViewportClient();
@@ -111,15 +111,19 @@ void UEditor::Tick(float DeltaTime)
 
 void UEditor::RenderEditor(UPipeline& InPipeline, UCamera* InCamera)
 {
-	// Grid, Axis 등 에디터 요소를 렌더링합니다。
-	BatchLines.Render(InPipeline);
-	Axis.Render(InPipeline);
-
-	// Gizmo 렌더링 시, 현재 활성화된 카메라의 위치를 전달해야 합니다。
-	if (InCamera)
+	// PIE 중에는 에디터 요소 렌더링 비활성화
+	if (!GEngine->IsPIEActive())
 	{
-		AActor* SelectedActor = GEngine->GetCurrentLevel()->GetSelectedActor();
-		Gizmo.RenderGizmo(InPipeline, SelectedActor, InCamera);
+		// Grid, Axis 등 에디터 요소를 렌더링합니다。
+		BatchLines.Render(InPipeline);
+		Axis.Render(InPipeline);
+
+		// Gizmo 렌더링 시, 현재 활성화된 카메라의 위치를 전달해야 합니다。
+		if (InCamera)
+		{
+			AActor* SelectedActor = GEngine->GetCurrentLevel()->GetSelectedActor();
+			Gizmo.RenderGizmo(InPipeline, SelectedActor, InCamera);
+		}
 	}
 }
 

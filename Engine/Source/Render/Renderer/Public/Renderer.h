@@ -73,7 +73,7 @@ public:
 	void ReleaseRasterizerState();
 
 	// Render
-	void Tick(float DeltaTime);
+	void Tick(float DeltaSeconds);
 	void RenderBegin() const;
 	void RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewportClient);
 	void RenderEnd() const;

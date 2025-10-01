@@ -61,14 +61,14 @@ void UEditorEngine::BeginPlay()
 {
 }
 
-void UEditorEngine::Tick(float DeltaTime)
+void UEditorEngine::Tick(float DeltaSeconds)
 {
 	if (bPIEActive)
 	{
 		// PIE 중에는 PIEWorld만 Tick
 		if (UWorld* PIEWorld = GetPIEWorld())
 		{
-			PIEWorld->Tick(DeltaTime);
+			PIEWorld->Tick(DeltaSeconds);
 		}
 	}
 	else
@@ -76,14 +76,14 @@ void UEditorEngine::Tick(float DeltaTime)
 		// 일반 에디터 모드에서는 EditorWorld만 Tick
 		if (UWorld* EditorWorld = GetEditorWorld())
 		{
-			EditorWorld->Tick(DeltaTime);
+			EditorWorld->Tick(DeltaSeconds);
 		}
 	}
 
 	// Editor는 항상 Tick (Gizmo, Viewport 등)
 	if (Editor)
 	{
-		Editor->Tick(DeltaTime);
+		Editor->Tick(DeltaSeconds);
 	}
 }
 

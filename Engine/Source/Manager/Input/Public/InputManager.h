@@ -12,7 +12,7 @@ class UInputManager :
 
 public:
 	void Initialize(FAppWindow* InWindow);
-	void Tick(float DeltaTime);
+	void Tick(float DeltaSeconds);
 	void UpdateMousePosition();
 	void ProcessKeyMessage(uint32 InMessage, WPARAM WParam, LPARAM LParam);
 

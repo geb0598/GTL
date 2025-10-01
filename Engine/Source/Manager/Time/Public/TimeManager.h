@@ -11,11 +11,11 @@ class UTimeManager :
 	DECLARE_SINGLETON_CLASS(UTimeManager, UObject)
 
 public:
-	void UpdateDeltaTime();
+	void UpdateDeltaSeconds();
 
 	// Getter & Setter
 	float GetFPS() const { return FPS; }
-	float GetDeltaTime() const { return DeltaTime; }
+	float GetDeltaSeconds() const { return DeltaSeconds; }
 	float GetGameTime() const { return GameTime; }
 	bool IsPaused() const { return bIsPaused; }
 
@@ -26,7 +26,7 @@ private:
 	high_resolution_clock::time_point PrevTime;
 	high_resolution_clock::time_point CurrentTime;
 	float GameTime;
-	float DeltaTime;
+	float DeltaSeconds;
 
 	float FPS;
 	int FrameCount;

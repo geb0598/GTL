@@ -156,13 +156,13 @@ void AActor::AddComponent(TObjectPtr<UActorComponent> InComponent)
 	GEngine->GetCurrentLevel()->AddLevelPrimitiveComponent(PrimitiveComponent);
 }
 
-void AActor::Tick(float DeltaTime)
+void AActor::Tick(float DeltaSeconds)
 {
 	for (auto& Component : OwnedComponents)
 	{
 		if (Component)
 		{
-			Component->TickComponent(DeltaTime);
+			Component->TickComponent(DeltaSeconds);
 		}
 	}
 }
