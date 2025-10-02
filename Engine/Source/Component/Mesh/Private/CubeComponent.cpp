@@ -10,6 +10,7 @@ IMPLEMENT_CLASS(UCubeComponent, UPrimitiveComponent)
 UCubeComponent::UCubeComponent()
 {
 	UAssetManager& ResourceManager = UAssetManager::GetInstance();
+	SetName("CubeComponent");
 	Type = EPrimitiveType::Cube;
 
 	Vertices = ResourceManager.GetVertexData(Type);

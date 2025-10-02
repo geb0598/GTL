@@ -14,8 +14,10 @@ public:
 	USceneComponent();
 
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+	UObject* Duplicate(FObjectDuplicationParameters Parameters) override;
 
 	void SetParentAttachment(USceneComponent* SceneComponent);
+	void AddChild(USceneComponent* ChildAdded);
 	void RemoveChild(USceneComponent* ChildDeleted);
 
 	void MarkAsDirty();

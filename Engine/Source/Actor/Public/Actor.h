@@ -5,7 +5,7 @@
 #include "Component/Public/SceneComponent.h"
 #include "Factory/Public/NewObject.h"
 
-class UBillBoardComponent;
+class UTextRenderComponent;
 /**
  * @brief Level에서 렌더링되는 UObject 클래스
  * UWorld로부터 업데이트 함수가 호출되면 component들을 순회하며 위치, 애니메이션, 상태 처리
@@ -20,9 +20,11 @@ class AActor : public UObject
 public:
 	AActor();
 	AActor(UObject* InOuter);
-	~AActor() override;
+	virtual ~AActor();
 
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+
+	UObject* Duplicate(FObjectDuplicationParameters Parameters) override;
 
 	void SetActorLocation(const FVector& InLocation) const;
 	void SetActorRotation(const FVector& InRotation) const;
@@ -33,7 +35,7 @@ public:
 
 	virtual void BeginPlay();
 	virtual void EndPlay();
-	virtual void Tick();
+	virtual void Tick(float DeltaSeconds);
 
 	// Getter & Setter
 	USceneComponent* GetRootComponent() const { return RootComponent.Get(); }
@@ -45,7 +47,15 @@ public:
 	const FVector& GetActorRotation() const;
 	const FVector& GetActorScale3D() const;
 
-	template<class T>
+	void AddComponent(TObjectPtr<UActorComponent> InComponent);
+
+	bool IsActorTickEnabled() const { return bIsActorTickEnabled; }
+	void SetActorTickEnabled(bool bInActorTickEnabled) { bIsActorTickEnabled = bInActorTickEnabled; }
+
+	bool IsTickInEditor() const { return bTickInEditor; }
+	void SetTickInEditor(bool InTickInEditor) { bTickInEditor = InTickInEditor; }
+
+	template <class T>
 	T* CreateDefaultSubobject(const FName& InName)
 	{
 		static_assert(is_base_of_v<UObject, T>, "생성할 클래스는 UObject를 반드시 상속 받아야 합니다");
@@ -69,6 +79,8 @@ public:
 
 private:
 	TObjectPtr<USceneComponent> RootComponent = nullptr;
-	TObjectPtr<UBillBoardComponent> BillBoardComponent = nullptr;
 	TArray<TObjectPtr<UActorComponent>> OwnedComponents;
+
+	bool bIsActorTickEnabled = false;
+	bool bTickInEditor = false;
 };

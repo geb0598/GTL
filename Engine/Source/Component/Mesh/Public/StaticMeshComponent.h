@@ -18,6 +18,7 @@ public:
 	~UStaticMeshComponent();
 
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+	UObject* Duplicate(FObjectDuplicationParameters Parameters) override;
 
 public:
 	UStaticMesh* GetStaticMesh() { return StaticMesh; }
@@ -52,7 +53,7 @@ public:
 	int32 GetForcedLODLevel() const { return ForcedLODLevel; }
 	bool IsForcedLODEnabled() const { return ForcedLODLevel >= 0; }
 
-	void TickComponent() override;
+	void TickComponent(float DeltaSeconds) override;
 
 	void EnableScroll() { bIsScrollEnabled = true; }
 	void DisableScroll() { bIsScrollEnabled = false; }

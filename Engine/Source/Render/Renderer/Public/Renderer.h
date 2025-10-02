@@ -1,4 +1,5 @@
 #pragma once
+#include "Component/Public/BillboardComponent.h"
 
 #ifdef MULTI_THREADING
 #include <mutex>
@@ -13,7 +14,7 @@ class UPipeline;
 class UDeviceResources;
 class UPrimitiveComponent;
 class UStaticMeshComponent;
-class UBillBoardComponent;
+class UTextRenderComponent;
 class AActor;
 class AGizmo;
 class UEditor;
@@ -64,20 +65,23 @@ public:
 	void CreateDefaultShader();
 	void CreateTextureShader();
 	void CreateConstantBuffer();
+	void CreateBillboardResources();
 
 	// Release
 	void ReleaseConstantBuffer();
 	void ReleaseDefaultShader();
 	void ReleaseDepthStencilState();
 	void ReleaseRasterizerState();
+	void ReleaseBillboardResources();
 
 	// Render
-	void Update();
+	void Tick(float DeltaSeconds);
 	void RenderBegin() const;
 	void RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewportClient);
 	void RenderEnd() const;
 	void RenderStaticMesh(UPipeline& InPipeline, UStaticMeshComponent* InMeshComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferMaterial);
-	void RenderBillboard(UBillBoardComponent* InBillBoardComp, UCamera* InCurrentCamera);
+	void RenderBillboard(UBillboardComponent* InBillboardComp, UCamera* InCurrentCamera);
+	void RenderText(UTextRenderComponent* InBillBoardComp, UCamera* InCurrentCamera);
 	void RenderPrimitiveDefault(UPipeline& InPipeline, UPrimitiveComponent* InPrimitiveComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferColor);
 	void RenderEditorPrimitive(UPipeline& InPipeline, const FEditorPrimitive& InEditorPrimitive, const FRenderState& InRenderState);
 	void RenderEditorPrimitiveIndexed(UPipeline& InPipeline, const FEditorPrimitive& InEditorPrimitive, const FRenderState& InRenderState,
@@ -121,6 +125,7 @@ public:
 
 	void SetIsResizing(bool isResizing) { bIsResizing = isResizing; }
 	void SetOcclusionCullingEnabled(bool bEnabled) { bOcclusionCulling = bEnabled; }
+	void ResetOcclusionCullingState() { bIsFirstPass = true; }
 
 private:
 	void PerformOcclusionCulling(UCamera* InCurrentCamera, const TArray<TObjectPtr<UPrimitiveComponent>>& InPrimitiveComponents);
@@ -149,6 +154,9 @@ private:
 	ID3D11VertexShader* TextureVertexShader = nullptr;
 	ID3D11PixelShader* TexturePixelShader = nullptr;
 	ID3D11InputLayout* TextureInputLayout = nullptr;
+	ID3D11Buffer* BillboardVertexBuffer = nullptr;
+	ID3D11Buffer* BillboardIndexBuffer = nullptr;
+	ID3D11BlendState* BillboardBlendState = nullptr;
 
 	uint32 Stride = 0;
 

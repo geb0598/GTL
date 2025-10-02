@@ -18,9 +18,6 @@ public:
 	inline static void InvalidateCache()
 	{
 		bCacheValid = false;
-#ifdef _DEBUG
-		UE_LOG_DEBUG("ObjectCache invalidated");
-#endif
 	}
 
 	/** 전체 캐시 정리 */
@@ -29,9 +26,6 @@ public:
 		ObjectCache.clear();
 		bCacheValid = false;
 		LastProcessedIndex = 0;
-#ifdef _DEBUG
-		UE_LOG_DEBUG("ObjectCache cleared");
-#endif
 	}
 
 	/** 타입별 객체 배열 반환 */

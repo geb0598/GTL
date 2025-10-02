@@ -22,12 +22,11 @@ public:
 
 private:
     int InitializeSystem() const;
-    void UpdateSystem() const;
+    void TickSystem(float DeltaSeconds) const;
     void MainLoop();
 	void ShutdownSystem() const;
 
     HACCEL AcceleratorTable;
     MSG MainMessage;
     FAppWindow* Window;
-	//UEditor* Editor = nullptr;
 };

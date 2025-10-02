@@ -2,15 +2,15 @@
 #include "Render/Renderer/Public/Renderer.h"
 #include "Render/Renderer/Public/Pipeline.h"
 #include "Render/FontRenderer/Public/FontRenderer.h"
-#include "Component/Public/BillBoardComponent.h"
+#include "Component/Public/TextRenderComponent.h"
 #include "Component/Public/PrimitiveComponent.h"
 #include "Component/Mesh/Public/StaticMeshComponent.h"
 #include "Editor/Public/Editor.h"
+#include "Editor/Public/EditorEngine.h"
 #include "Editor/Public/Viewport.h"
 #include "Editor/Public/ViewportClient.h"
 #include "Editor/Public/Camera.h"
 #include "Level/Public/Level.h"
-#include "Manager/Level/Public/LevelManager.h"
 #include "Manager/UI/Public/UIManager.h"
 #include "Render/UI/Overlay/Public/StatOverlay.h"
 #include "Texture/Public/Material.h"
@@ -56,6 +56,7 @@ void URenderer::Init(HWND InWindowHandle)
 	CreateDefaultShader();
 	CreateTextureShader();
 	CreateConstantBuffer();
+	CreateBillboardResources();
 
 	// FontRenderer 초기화
 	FontRenderer = new UFontRenderer();
@@ -133,6 +134,7 @@ void URenderer::Release()
 	ReleaseDefaultShader();
 	ReleaseDepthStencilState();
 	ReleaseRasterizerState();
+	ReleaseBillboardResources();
 
 	SafeDelete(ViewportClient);
 
@@ -311,6 +313,27 @@ void URenderer::ReleaseRasterizerState()
 	RasterCache.clear();
 }
 
+void URenderer::ReleaseBillboardResources()
+{
+	if (BillboardVertexBuffer)
+	{
+		BillboardVertexBuffer->Release();
+		BillboardVertexBuffer = nullptr;
+	}
+
+	if (BillboardIndexBuffer)
+	{
+		BillboardIndexBuffer->Release();
+		BillboardIndexBuffer = nullptr;
+	}
+
+	if (BillboardBlendState)
+	{
+		BillboardBlendState->Release();
+		BillboardBlendState = nullptr;
+	}
+}
+
 /**
  * @brief Shader Release
  */
@@ -360,9 +383,8 @@ void URenderer::ReleaseDepthStencilState()
 }
 
 // Renderer.cpp
-void URenderer::Update()
+void URenderer::Tick(float DeltaSeconds)
 {
-
 	RenderBegin();
 	// FViewportClient로부터 모든 뷰포트를 가져옵니다.
 	for (FViewportClient& ViewportClient : ViewportClient->GetViewports())
@@ -385,7 +407,7 @@ void URenderer::Update()
 		RenderLevel(CurrentCamera, ViewportClient);
 
 		// 5. 에디터를 렌더링합니다.
-		ULevelManager::GetInstance().GetEditor()->RenderEditor(*Pipeline, CurrentCamera);
+		GEngine->GetEditor()->RenderEditor(*Pipeline, CurrentCamera);
 	}
 
 	// 최상위 에디터/GUI는 프레임에 1회만
@@ -401,8 +423,6 @@ void URenderer::Update()
  */
 void URenderer::RenderBegin() const
 {
-
-
 	auto* RenderTargetView = DeviceResources->GetRenderTargetView();
 	GetDeviceContext()->ClearRenderTargetView(RenderTargetView, ClearColor);
 	auto* DepthStencilView = DeviceResources->GetDepthStencilView();
@@ -419,12 +439,12 @@ void URenderer::RenderBegin() const
  */
 void URenderer::RenderLevel(UCamera* InCurrentCamera, FViewportClient& InViewportClient)
 {
-	if (!ULevelManager::GetInstance().GetCurrentLevel())
+	if (!GEngine->GetCurrentLevel())
 	{
 		return;
 	}
 
-	const auto PrimitiveComponents = ULevelManager::GetInstance().GetCurrentLevel()->GetVisiblePrimitiveComponents(InCurrentCamera);
+	const auto PrimitiveComponents = GEngine->GetCurrentLevel()->GetVisiblePrimitiveComponents(InCurrentCamera);
 
 	// ImGui 창 옆 키고 끌 수 있는 메뉴 넣기
 	if (bOcclusionCulling)
@@ -445,7 +465,7 @@ void URenderer::PerformOcclusionCulling(UCamera* InCurrentCamera, const TArray<T
 
 	if (bIsFirstPass)
 	{
-		bIsFirstPass = false;
+		//bIsFirstPass = false;
 		return;
 	}
 
@@ -471,8 +491,9 @@ void URenderer::RenderPrimitiveComponent(UPipeline& InPipeline, UPrimitiveCompon
 {
 	switch (InPrimitiveComponent->GetPrimitiveType())
 	{
-	case EPrimitiveType::BillBoard:
-		// Billboards are rendered on the main thread after all other primitives
+	case EPrimitiveType::TextRender:
+	case EPrimitiveType::Billboard:
+		// Billboards and text are rendered on the main thread after all other primitives
 		break;
 	case EPrimitiveType::StaticMesh:
 		RenderStaticMesh(InPipeline, Cast<UStaticMeshComponent>(InPrimitiveComponent), InRasterizerState, InConstantBufferModels, InConstantBufferMaterial);
@@ -486,7 +507,8 @@ void URenderer::RenderPrimitiveComponent(UPipeline& InPipeline, UPrimitiveCompon
 void URenderer::RenderLevel_SingleThreaded(UCamera* InCurrentCamera, FViewportClient& InViewportClient, const TArray<TObjectPtr<UPrimitiveComponent>>& InPrimitiveComponents)
 {
 	auto& OcclusionRenderer = UOcclusionRenderer::GetInstance();
-	TObjectPtr<UBillBoardComponent> BillBoard = nullptr;
+	TObjectPtr<UTextRenderComponent> TextRender = nullptr;
+	TArray<TObjectPtr<UBillboardComponent>> Billboards;
 
 	for (size_t i = 0; i < InPrimitiveComponents.size(); ++i)
 	{
@@ -498,7 +520,7 @@ void URenderer::RenderLevel_SingleThreaded(UCamera* InCurrentCamera, FViewportCl
 		}
 
 		FRenderState RenderState = PrimitiveComponent->GetRenderState();
-		const EViewModeIndex ViewMode = ULevelManager::GetInstance().GetEditor()->GetViewMode();
+		const EViewModeIndex ViewMode = GEngine->GetEditor()->GetViewMode();
 		if (ViewMode == EViewModeIndex::VMI_Wireframe)
 		{
 			RenderState.CullMode = ECullMode::None;
@@ -506,9 +528,13 @@ void URenderer::RenderLevel_SingleThreaded(UCamera* InCurrentCamera, FViewportCl
 		}
 		ID3D11RasterizerState* LoadedRasterizerState = GetRasterizerState(RenderState);
 
-		if (PrimitiveComponent->GetPrimitiveType() == EPrimitiveType::BillBoard)
+		if (PrimitiveComponent->GetPrimitiveType() == EPrimitiveType::TextRender)
 		{
-			BillBoard = Cast<UBillBoardComponent>(PrimitiveComponent);
+			TextRender = Cast<UTextRenderComponent>(PrimitiveComponent);
+		}
+		else if (PrimitiveComponent->GetPrimitiveType() == EPrimitiveType::Billboard)
+		{
+			Billboards.push_back(Cast<UBillboardComponent>(PrimitiveComponent));
 		}
 		else
 		{
@@ -516,9 +542,17 @@ void URenderer::RenderLevel_SingleThreaded(UCamera* InCurrentCamera, FViewportCl
 		}
 	}
 
-	if (BillBoard)
+	for (TObjectPtr<UBillboardComponent> BillboardComponent : Billboards)
 	{
-		RenderBillboard(BillBoard, InCurrentCamera);
+		if (BillboardComponent)
+		{
+			RenderBillboard(BillboardComponent.Get(), InCurrentCamera);
+		}
+	}
+
+	if (TextRender)
+	{
+		RenderText(TextRender, InCurrentCamera);
 	}
 }
 
@@ -569,7 +603,7 @@ void URenderer::RenderLevel_MultiThreaded(UCamera* InCurrentCamera, FViewportCli
 				}
 
 				FRenderState RenderState = PrimitiveComponent->GetRenderState();
-				const EViewModeIndex ViewMode = ULevelManager::GetInstance().GetEditor()->GetViewMode();
+				const EViewModeIndex ViewMode = GEngine->GetEditor()->GetViewMode();
 				if (ViewMode == EViewModeIndex::VMI_Wireframe)
 				{
 					RenderState.CullMode = ECullMode::None;
@@ -598,18 +632,40 @@ void URenderer::RenderLevel_MultiThreaded(UCamera* InCurrentCamera, FViewportCli
 	}
 	CommandLists.clear();
 
-	TObjectPtr<UBillBoardComponent> BillBoard = nullptr;
+	TObjectPtr<UTextRenderComponent> TextRender = nullptr;
+	TArray<TObjectPtr<UBillboardComponent>> Billboards;
+	auto& OcclusionRenderer = UOcclusionRenderer::GetInstance();
+
 	for (size_t i = 0; i < InPrimitiveComponents.size(); ++i)
 	{
-		if (InPrimitiveComponents[i]->GetPrimitiveType() == EPrimitiveType::BillBoard)
+		UPrimitiveComponent* PrimitiveComponent = InPrimitiveComponents[i];
+		if (!PrimitiveComponent || !PrimitiveComponent->IsVisible() || !OcclusionRenderer.IsPrimitiveVisible(PrimitiveComponent))
 		{
-			BillBoard = Cast<UBillBoardComponent>(InPrimitiveComponents[i]);
-			break;
+			continue;
+		}
+
+		if (PrimitiveComponent->GetPrimitiveType() == EPrimitiveType::TextRender)
+		{
+			// Render the last text component found (they typically represent selection info)
+			TextRender = Cast<UTextRenderComponent>(PrimitiveComponent);
+		}
+		else if (PrimitiveComponent->GetPrimitiveType() == EPrimitiveType::Billboard)
+		{
+			Billboards.push_back(TObjectPtr(Cast<UBillboardComponent>(PrimitiveComponent)));
 		}
 	}
-	if (BillBoard)
+
+	for (TObjectPtr<UBillboardComponent> BillboardComponent : Billboards)
 	{
-		RenderBillboard(BillBoard, InCurrentCamera);
+		if (BillboardComponent)
+		{
+			RenderBillboard(BillboardComponent.Get(), InCurrentCamera);
+		}
+	}
+
+	if (TextRender)
+	{
+		RenderText(TextRender, InCurrentCamera);
 	}
 }
 
@@ -705,7 +761,7 @@ void URenderer::RenderEditorPrimitiveIndexed(UPipeline& InPipeline, const FEdito
  */
 void URenderer::RenderEnd() const
 {
-	DeviceResources->CopyDepthSRVToPreviousFrameSRV();
+	//DeviceResources->CopyDepthSRVToPreviousFrameSRV();
 
 	GetSwapChain()->Present(0, 0); // 1: VSync 활성화
 }
@@ -752,7 +808,7 @@ void URenderer::RenderStaticMesh(UPipeline& InPipeline, UStaticMeshComponent* In
     if (InMeshComp->IsScrollEnabled())
     {
         UTimeManager& TimeManager = UTimeManager::GetInstance();
-        InMeshComp->SetElapsedTime(InMeshComp->GetElapsedTime() + TimeManager.GetDeltaTime());
+        InMeshComp->SetElapsedTime(InMeshComp->GetElapsedTime() + TimeManager.GetDeltaSeconds());
     }
 
     for (const FMeshSection& Section : MeshAsset->Sections)
@@ -802,19 +858,102 @@ void URenderer::RenderStaticMesh(UPipeline& InPipeline, UStaticMeshComponent* In
     }
 }
 
-void URenderer::RenderBillboard(UBillBoardComponent* InBillBoardComp, UCamera* InCurrentCamera)
+void URenderer::RenderBillboard(UBillboardComponent* InBillboardComp, UCamera* InCurrentCamera)
+{
+	if (!InBillboardComp || !InCurrentCamera || !Pipeline)
+	{
+		return;
+	}
+
+	UTexture* Sprite = InBillboardComp->GetSprite();
+	if (!Sprite)
+	{
+		return;
+	}
+
+	const FTextureRenderProxy* RenderProxy = Sprite->GetRenderProxy();
+	if (!RenderProxy || !RenderProxy->GetSRV() || !RenderProxy->GetSampler())
+	{
+		UE_LOG_WARNING("Renderer: Billboard sprite '%s' does not have a valid render proxy", Sprite->GetName().ToString().c_str());
+		return;
+	}
+
+	if (!BillboardVertexBuffer || !BillboardIndexBuffer || !BillboardBlendState)
+	{
+		CreateBillboardResources();
+		if (!BillboardVertexBuffer || !BillboardIndexBuffer || !BillboardBlendState)
+		{
+			return;
+		}
+	}
+
+	InBillboardComp->UpdateRotationMatrix(InCurrentCamera);
+	FMatrix ModelMatrix = FMatrix::ScaleMatrix(InBillboardComp->GetRelativeScale3D());
+	ModelMatrix *= InBillboardComp->GetRTMatrix();
+
+	FRenderState BillboardRenderState = InBillboardComp->GetRenderState();
+	ID3D11RasterizerState* RasterizerState = GetRasterizerState(BillboardRenderState);
+	if (!RasterizerState)
+	{
+		FRenderState DefaultState;
+		RasterizerState = GetRasterizerState(DefaultState);
+	}
+
+	FPipelineInfo PipelineInfo = {
+		TextureInputLayout,
+		TextureVertexShader,
+		RasterizerState,
+		DefaultDepthStencilState,
+		TexturePixelShader,
+		BillboardBlendState,
+		D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST
+	};
+	Pipeline->UpdatePipeline(PipelineInfo);
+
+	Pipeline->SetConstantBuffer(0, true, ConstantBufferModels);
+	UpdateConstant(GetDeviceContext(), ConstantBufferModels, ModelMatrix);
+	Pipeline->SetConstantBuffer(1, true, ConstantBufferViewProj);
+
+	constexpr uint32 MATERIAL_FLAG_DIFFUSE_MAP = 1 << 0;
+	FMaterialConstants MaterialConstants = {};
+	MaterialConstants.MaterialFlags = MATERIAL_FLAG_DIFFUSE_MAP;
+	MaterialConstants.Kd = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
+	MaterialConstants.D = 1.0f;
+	Pipeline->SetConstantBuffer(2, false, ConstantBufferMaterial);
+	UpdateConstant(GetDeviceContext(), ConstantBufferMaterial, MaterialConstants);
+
+	Pipeline->SetTexture(0, false, RenderProxy->GetSRV());
+	Pipeline->SetSamplerState(0, false, RenderProxy->GetSampler());
+
+	Pipeline->SetVertexBuffer(BillboardVertexBuffer, sizeof(FNormalVertex));
+	Pipeline->SetIndexBuffer(BillboardIndexBuffer, 0);
+	Pipeline->DrawIndexed(6, 0, 0);
+}
+
+void URenderer::RenderText(UTextRenderComponent* InTextRenderComp, UCamera* InCurrentCamera)
 {
 	if (!InCurrentCamera)	return;
 
-	// 이제 올바른 카메라 위치를 전달하여 빌보드 회전 업데이트
-	InBillBoardComp->UpdateRotationMatrix(InCurrentCamera->GetLocation());
+	FString RenderedString;
 
-	FString UUIDString = "UID: " + std::to_string(InBillBoardComp->GetUUID());
-	FMatrix RT = InBillBoardComp->GetRTMatrix();
+	if (InTextRenderComp->bIsUUIDText)
+	{
+		RenderedString = "UID: " + std::to_string(InTextRenderComp->GetUUID());
+	}
+	else
+	{
+		RenderedString = InTextRenderComp->GetText();
+		if (strlen(RenderedString.c_str()) == 0)
+		{
+			RenderedString = "Insert Text";
+		}
+	}
 
-	// UEditor에서 가져오는 대신, 인자로 받은 카메라의 ViewProj 행렬을 사용
-	const FViewProjConstants& viewProjConstData = InCurrentCamera->GetFViewProjConstants();
-	FontRenderer->RenderText(UUIDString.c_str(), RT, viewProjConstData);
+	const FViewProjConstants& ViewProjConstData = InCurrentCamera->GetFViewProjConstants();
+	FMatrix Translation = FMatrix::TranslationMatrix(InTextRenderComp->GetOwner()->GetActorLocation() + InTextRenderComp->GetRelativeLocation());
+	FMatrix Rotation = FMatrix::RotationMatrix(InTextRenderComp->GetRelativeRotation());
+	FMatrix Scale = FMatrix::ScaleMatrix(InTextRenderComp->GetRelativeScale3D());
+	FontRenderer->RenderText(RenderedString.c_str(), Scale * Rotation * Translation, ViewProjConstData);
 }
 
 void URenderer::RenderPrimitiveDefault(UPipeline& InPipeline, UPrimitiveComponent* InPrimitiveComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferColor)
@@ -1110,6 +1249,73 @@ void URenderer::CreateConstantBuffer()
 		MaterialConstantBufferDescription.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 
 		GetDevice()->CreateBuffer(&MaterialConstantBufferDescription, nullptr, &ConstantBufferMaterial);
+	}
+}
+
+void URenderer::CreateBillboardResources()
+{
+	if (BillboardVertexBuffer && BillboardIndexBuffer && BillboardBlendState)
+	{
+		return;
+	}
+
+	FNormalVertex BillboardVertices[4] = {};
+	BillboardVertices[0].Position = FVector(-0.5f, -0.5f, 0.0f);
+	BillboardVertices[0].Normal = FVector(0.0f, 0.0f, 1.0f);
+	BillboardVertices[0].Color = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
+	BillboardVertices[0].TexCoord = FVector2(0.0f, 1.0f);
+
+	BillboardVertices[1].Position = FVector(0.5f, -0.5f, 0.0f);
+	BillboardVertices[1].Normal = FVector(0.0f, 0.0f, 1.0f);
+	BillboardVertices[1].Color = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
+	BillboardVertices[1].TexCoord = FVector2(1.0f, 1.0f);
+
+	BillboardVertices[2].Position = FVector(0.5f, 0.5f, 0.0f);
+	BillboardVertices[2].Normal = FVector(0.0f, 0.0f, 1.0f);
+	BillboardVertices[2].Color = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
+	BillboardVertices[2].TexCoord = FVector2(1.0f, 0.0f);
+
+	BillboardVertices[3].Position = FVector(-0.5f, 0.5f, 0.0f);
+	BillboardVertices[3].Normal = FVector(0.0f, 0.0f, 1.0f);
+	BillboardVertices[3].Color = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
+	BillboardVertices[3].TexCoord = FVector2(0.0f, 0.0f);
+
+	if (!BillboardVertexBuffer)
+	{
+		BillboardVertexBuffer = CreateVertexBuffer(BillboardVertices, static_cast<uint32>(sizeof(BillboardVertices)));
+		if (!BillboardVertexBuffer)
+		{
+			UE_LOG_ERROR("Renderer: Failed to create billboard vertex buffer");
+		}
+	}
+
+	uint32 BillboardIndices[6] = { 0, 1, 2, 0, 2, 3 };
+	if (!BillboardIndexBuffer)
+	{
+		BillboardIndexBuffer = CreateIndexBuffer(BillboardIndices, static_cast<uint32>(sizeof(BillboardIndices)));
+		if (!BillboardIndexBuffer)
+		{
+			UE_LOG_ERROR("Renderer: Failed to create billboard index buffer");
+		}
+	}
+
+	if (!BillboardBlendState)
+	{
+		D3D11_BLEND_DESC BlendDesc = {};
+		BlendDesc.RenderTarget[0].BlendEnable = TRUE;
+		BlendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+		BlendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+		BlendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+		BlendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+		BlendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
+		BlendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+		BlendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+		HRESULT ResultHandle = GetDevice()->CreateBlendState(&BlendDesc, &BillboardBlendState);
+		if (FAILED(ResultHandle))
+		{
+			UE_LOG_ERROR("Renderer: Failed to create billboard blend state (HRESULT: 0x%08lX)", ResultHandle);
+		}
 	}
 }
 

@@ -2,50 +2,28 @@
 #include "Render/UI/Widget/Public/StaticMeshComponentWidget.h"
 #include "Component/Mesh/Public/StaticMeshComponent.h"
 #include "Component/Mesh/Public/StaticMesh.h"
-#include "Manager/Level/Public/LevelManager.h"
-#include "Level/Public/Level.h"
 #include "Core/Public/ObjectIterator.h"
 #include "Texture/Public/Material.h"
 #include "Texture/Public/Texture.h"
 
 IMPLEMENT_CLASS(UStaticMeshComponentWidget, UWidget)
 
+void UStaticMeshComponentWidget::SetTargetComponent(UStaticMeshComponent* InComponent)
+{
+	StaticMeshComponent = InComponent;
+}
+
 void UStaticMeshComponentWidget::RenderWidget()
 {
-	TObjectPtr<ULevel> CurrentLevel = ULevelManager::GetInstance().GetCurrentLevel();
-
-	if (!CurrentLevel)
-	{
-		ImGui::TextUnformatted("No Level Loaded");
-		return;
-	}
-
-	TObjectPtr<AActor> SelectedActor = CurrentLevel->GetSelectedActor();
-	if (!SelectedActor)
-	{
-		ImGui::TextUnformatted("No Object Selected");
-		return;
-	}
-
-	for (const TObjectPtr<UActorComponent>& Component : SelectedActor->GetOwnedComponents())
-	{
-		StaticMeshComponent = Cast<UStaticMeshComponent>(Component);
-
-		// 위젯이 편집해야 할 대상 컴포넌트가 유효한지 확인합니다.
-		if (StaticMeshComponent)
-		{
-			break;
-		}
-	}
-
 	if (!StaticMeshComponent)
 	{
-		ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Target Component is not valid.");
+		ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "No static mesh component selected.");
 		return;
 	}
 
 	if (!StaticMeshComponent->GetStaticMesh())
 	{
+		ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "Static mesh asset is missing.");
 		return;
 	}
 
@@ -98,7 +76,18 @@ void UStaticMeshComponentWidget::RenderStaticMeshSelector()
 void UStaticMeshComponentWidget::RenderMaterialSections()
 {
 	UStaticMesh* CurrentMesh = StaticMeshComponent->GetStaticMesh();
+	if (!CurrentMesh)
+	{
+		ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "Static mesh asset is missing.");
+		return;
+	}
+
 	FStaticMesh* MeshAsset = CurrentMesh->GetStaticMeshAsset();
+	if (!MeshAsset)
+	{
+		ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "Static mesh data is not available.");
+		return;
+	}
 
 	ImGui::Text("Material Slots (%d)", static_cast<int>(MeshAsset->MaterialInfo.size()));
 

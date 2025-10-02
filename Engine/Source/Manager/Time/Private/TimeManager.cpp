@@ -16,7 +16,7 @@ void UTimeManager::Initialize()
 	PrevTime = CurrentTime;
 	GameTime = 0.0f;
 
-	DeltaTime = 0.0f;
+	DeltaSeconds = 0.0f;
 	FPS = 0.0f;
 	FrameSpeedSampleIndex = 0;
 
@@ -28,19 +28,19 @@ void UTimeManager::Initialize()
 	}
 }
 
-void UTimeManager::Update()
+void UTimeManager::UpdateDeltaSeconds()
 {
 	// 현재 시간 업데이트
 	PrevTime = CurrentTime;
 	CurrentTime = high_resolution_clock::now();
 
-	// DeltaTime 계산 (초 단위)
+	// DeltaSeconds 계산 (초 단위)
 	auto Duration = std::chrono::duration_cast<std::chrono::microseconds>(CurrentTime - PrevTime);
-	DeltaTime = Duration.count() / 1000000.0f;
+	DeltaSeconds = Duration.count() / 1000000.0f;
 
 	if (!bIsPaused)
 	{
-		GameTime += DeltaTime;
+		GameTime += DeltaSeconds;
 	}
 
 	CalculateFPS();
@@ -49,9 +49,9 @@ void UTimeManager::Update()
 
 void UTimeManager::CalculateFPS()
 {
-	if (DeltaTime > 0.0f)
+	if (DeltaSeconds > 0.0f)
 	{
-		FrameSpeedSamples[FrameSpeedSampleIndex] = 1.0f / DeltaTime;
+		FrameSpeedSamples[FrameSpeedSampleIndex] = 1.0f / DeltaSeconds;
 		FrameSpeedSampleIndex = (FrameSpeedSampleIndex + 1) % Time::FPS_SAMPLE_COUNT;
 	}
 

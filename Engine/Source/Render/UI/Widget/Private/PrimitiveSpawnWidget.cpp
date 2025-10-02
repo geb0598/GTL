@@ -1,14 +1,16 @@
 #include "pch.h"
 #include "Render/UI/Widget/Public/PrimitiveSpawnWidget.h"
 
+#include "Actor/Public/BillboardActor.h"
 #include "Level/Public/Level.h"
-#include "Manager/Level/Public/LevelManager.h"
+#include "Editor/Public/EditorEngine.h"
 #include "Actor/Public/CubeActor.h"
 #include "Actor/Public/SphereActor.h"
 #include "Actor/Public/SquareActor.h"
 #include "Actor/Public/TriangleActor.h"
 #include "Actor/Public/StaticMeshActor.h"
 #include "Manager/BVH/public/BVHierarchy.h"
+#include "Component/Public/BillboardComponent.h"
 
 UPrimitiveSpawnWidget::UPrimitiveSpawnWidget()
 	: UWidget("Primitive Spawn Widget")
@@ -38,7 +40,8 @@ void UPrimitiveSpawnWidget::RenderWidget()
 		"Cube",
 		"Triangle",
 		"Square",
-		"StaticMesh"
+		"StaticMesh",
+		"Billboard"
 	};
 
 	// None을 고려한 Enum 변환 처리
@@ -47,7 +50,7 @@ void UPrimitiveSpawnWidget::RenderWidget()
 	ImGui::Text("Primitive Type:");
 	ImGui::SameLine();
 	ImGui::SetNextItemWidth(120);
-	ImGui::Combo("##PrimitiveType", &TypeNumber, PrimitiveTypes, 5);
+	ImGui::Combo("##PrimitiveType", &TypeNumber, PrimitiveTypes, 6);
 
 	// ImGui가 받은 값을 반영
 	SelectedPrimitiveType = static_cast<EPrimitiveType>(TypeNumber + 1);
@@ -83,8 +86,8 @@ void UPrimitiveSpawnWidget::RenderWidget()
  */
 void UPrimitiveSpawnWidget::SpawnActors() const
 {
-	ULevelManager& LevelManager = ULevelManager::GetInstance();
-	ULevel* CurrentLevel = LevelManager.GetCurrentLevel();
+	// GEngine is now a global pointer
+	ULevel* CurrentLevel = GEngine->GetCurrentLevel();
 
 	if (!CurrentLevel)
 	{
@@ -118,6 +121,9 @@ void UPrimitiveSpawnWidget::SpawnActors() const
 		case (EPrimitiveType::StaticMesh):
 			NewActor = CurrentLevel->SpawnActorToLevel(AStaticMeshActor::StaticClass());
 			break;
+		case (EPrimitiveType::Billboard):
+			NewActor = CurrentLevel->SpawnActorToLevel(ABillboardActor::StaticClass());
+			break;
 		default:
 			break;
 		}
@@ -137,7 +143,7 @@ void UPrimitiveSpawnWidget::SpawnActors() const
 
 			TArray<FBVHPrimitive> BVHPrimitives;
 			TArray<TObjectPtr<UPrimitiveComponent>> LevelComp =
-				ULevelManager::GetInstance().GetCurrentLevel()->GetLevelPrimitiveComponents();
+				GEngine->GetCurrentLevel()->GetLevelPrimitiveComponents();
 			UBVHierarchy::GetInstance().ConvertComponentsToBVHPrimitives(LevelComp, BVHPrimitives);
 			UBVHierarchy::GetInstance().Build(BVHPrimitives);
 

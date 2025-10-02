@@ -50,6 +50,7 @@ enum class EKeyInput : uint8
 	F2,
 	F3,
 	F4,
+	F5,
 	Backspace,
 	Delete,
 
@@ -132,12 +133,13 @@ enum class EPrimitiveType : uint8
 	Triangle,
 	Square,
 	StaticMesh,
+	Billboard,
 	Torus,
 	Arrow,
 	CubeArrow,
 	Ring,
 	Line,
-	BillBoard,
+	TextRender,
 
 	End = 0xFF
 };

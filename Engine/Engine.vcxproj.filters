@@ -1,21 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <FxCompile Include="Asset\Shader\DepthPS.hlsl">
-      <Filter>Asset\Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Asset\Shader\DepthVS.hlsl">
-      <Filter>Asset\Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Asset\Shader\HiZCopyDepthCS.hlsl">
-      <Filter>Asset\Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Asset\Shader\HiZDownSampleCS.hlsl">
-      <Filter>Asset\Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Asset\Shader\HiZOcclusionCS.hlsl">
-      <Filter>Asset\Shader</Filter>
-    </FxCompile>
     <FxCompile Include="Asset\Shader\SampleShader.hlsl">
       <Filter>Asset\Shader</Filter>
     </FxCompile>
@@ -29,6 +14,21 @@
       <Filter>Asset\Shader</Filter>
     </FxCompile>
     <FxCompile Include="Asset\Shader\TextureShader.hlsl">
+      <Filter>Asset\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\HiZOcclusionCS.hlsl">
+      <Filter>Asset\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\HiZCopyDepthCS.hlsl">
+      <Filter>Asset\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\HiZDownSampleCS.hlsl">
+      <Filter>Asset\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\DepthPS.hlsl">
+      <Filter>Asset\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\DepthVS.hlsl">
       <Filter>Asset\Shader</Filter>
     </FxCompile>
   </ItemGroup>
@@ -236,9 +236,6 @@
     <ClCompile Include="Source\Manager\Input\Private\InputManager.cpp">
       <Filter>Source\Manager\Input\Private</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Manager\Level\Private\LevelManager.cpp">
-      <Filter>Source\Manager\Level\Private</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Manager\Path\Private\PathManager.cpp">
       <Filter>Source\Manager\Path\Private</Filter>
     </ClCompile>
@@ -376,6 +373,27 @@
     </ClCompile>
     <ClCompile Include="Source\Texture\Private\Texture.cpp">
       <Filter>Source\Texture\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Utility\Private\UELogParser.cpp">
+      <Filter>Source\Utility\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Utility\Private\ActorTypeMapper.cpp">
+      <Filter>Source\Utility\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\Private\PlatformTime.cpp" />
+    <ClCompile Include="Source\Core\Private\ScopeCycleCounter.cpp" />
+    <ClCompile Include="Source\Render\Renderer\Private\OcclusionRenderer.cpp" />
+    <ClCompile Include="Source\Editor\Private\FrustumCull.cpp" />
+    <ClCompile Include="Source\Manager\Asset\Private\LODMaker.cpp" />
+    <ClCompile Include="Source\Manager\BVH\private\BVHManager.cpp" />
+    <ClCompile Include="Source\Core\Private\WindowsBinReader.cpp">
+      <Filter>Source\Core\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Component\Private\TextRenderComponent.cpp" />
+    <ClCompile Include="Source\Editor\Private\EditorEngine.cpp" />
+    <ClCompile Include="Source\World\Private\World.cpp" />
+    <ClCompile Include="Source\Actor\Private\BillboardActor.cpp">
+      <Filter>Source\Actor\Private</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -620,9 +638,6 @@
     <ClInclude Include="Source\Manager\Input\Public\InputManager.h">
       <Filter>Source\Manager\Input\Public</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Manager\Level\Public\LevelManager.h">
-      <Filter>Source\Manager\Level\Public</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Manager\Path\Public\PathManager.h">
       <Filter>Source\Manager\Path\Public</Filter>
     </ClInclude>
@@ -769,6 +784,29 @@
     </ClInclude>
     <ClInclude Include="Source\Texture\Public\TextureRenderProxy.h">
       <Filter>Source\Texture\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Utility\Public\JsonSerializer.h">
+      <Filter>Source\Utility\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Utility\Public\UELogParser.h">
+      <Filter>Source\Utility\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Utility\Public\ActorTypeMapper.h">
+      <Filter>Source\Utility\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\Public\PlatformTime.h" />
+    <ClInclude Include="Source\Core\Public\ScopeCycleCounter.h" />
+    <ClInclude Include="Source\Render\Renderer\Public\OcclusionRenderer.h" />
+    <ClInclude Include="Source\Editor\Public\FrustumCull.h" />
+    <ClInclude Include="Source\Manager\Asset\Public\LODMaker.h" />
+    <ClInclude Include="Source\Manager\BVH\public\BVHManager.h" />
+    <ClInclude Include="Source\Physics\Public\RayIntersection.h" />
+    <ClInclude Include="Source\Component\Public\TextRenderComponent.h" />
+    <ClInclude Include="Source\Core\Public\DuplicatedDataReader.h" />
+    <ClInclude Include="Source\Editor\Public\EditorEngine.h" />
+    <ClInclude Include="Source\World\Public\World.h" />
+    <ClInclude Include="Source\Actor\Public\BillboardActor.h">
+      <Filter>Source\Actor\Public</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

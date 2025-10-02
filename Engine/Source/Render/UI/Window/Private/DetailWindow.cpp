@@ -4,7 +4,7 @@
 #include "Render/UI/Widget/Public/ActorDetailWidget.h"
 #include "Render/UI/Widget/Public/ActorTerminationWidget.h"
 #include "Render/UI/Widget/Public/TargetActorTransformWidget.h"
-#include "Manager/Level/Public/LevelManager.h"
+#include "Editor/Public/EditorEngine.h"
 #include "Manager/UI/Public/UIManager.h"
 #include "Level/Public/Level.h"
 
@@ -50,19 +50,20 @@ void UDetailWindow::OnSelectedActorChanged(AActor* InActor)
 	AddWidget(new UTargetActorTransformWidget);
 	AddWidget(new UActorTerminationWidget);
 
-	if (InActor)
-	{
-		for (const auto& Component : InActor->GetOwnedComponents())
-		{
-			TObjectPtr<UClass> WidgetClass = Component->GetSpecificWidgetClass();
-			if (WidgetClass)
-			{
-				UWidget* NewWidget = NewObject<UWidget>(nullptr, WidgetClass);
-				if (NewWidget)
-				{
-					AddWidget(NewWidget);
-				}
-			}
-		}
-	}
+	// if (InActor)
+	// {
+	// 	for (const auto& Component : InActor->GetOwnedComponents())
+	// 	{
+	// 		TObjectPtr<UClass> WidgetClass = Component->GetSpecificWidgetClass();
+	// 		if (WidgetClass)
+	// 		{
+	// 			UWidget* NewWidget = NewObject<UWidget>(nullptr, WidgetClass);
+	// 			if (NewWidget)
+	// 			{
+	// 				AddWidget(NewWidget);
+	// 				UE_LOG("NEW WIDGET ADDED");
+	// 			}
+	// 		}
+	// 	}
+	// }
 }

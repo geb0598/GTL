@@ -35,7 +35,7 @@ public:
 	UEditor();
 	~UEditor();
 
-	void Update();
+	void Tick(float DeltaSeconds);
 	void RenderEditor(UPipeline& InPipeline, UCamera* InCamera);
 
 	void SetViewMode(EViewModeIndex InNewViewMode) { CurrentViewMode = InNewViewMode; }
