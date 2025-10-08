@@ -533,6 +533,7 @@ editor.ini
 
 !Engine/Data**
 
-# Gemini
+# AI
+CLAUDE.md
 GEMINI.md
 Document/*
