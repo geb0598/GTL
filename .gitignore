@@ -534,6 +534,7 @@ editor.ini
 !Engine/Data**
 
 # AI
+.kiro/*
 CLAUDE.md
 GEMINI.md
 Document/*
