@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Core/Public/PlatformTime.h"
 
 struct TStatId
@@ -12,11 +12,11 @@ struct FTimeProfile
 	double Milliseconds;
 	uint32 CallCount;
 
-	const FString GetConstChar() const
+	const char* GetConstChar() const
 	{
-		char buffer[64]; // static으로 해야 반환 가능
+		static char buffer[64];
 		snprintf(buffer, sizeof(buffer), " : %.3fms, Call : %d", Milliseconds, CallCount);
-		return FString(buffer);
+		return buffer;
 	}
 };
 
@@ -34,6 +34,17 @@ public:
 	FScopeCycleCounter(TStatId StatId)
 		: StartCycles(FPlatformTime::Cycles64())
 		, UsedStatId(StatId)
+	{
+	}
+
+	FScopeCycleCounter(const FString& Key)
+		: StartCycles(FPlatformTime::Cycles64())
+		, UsedStatId(TStatId(Key))
+	{
+	}
+
+	FScopeCycleCounter(const char* Key)
+		: FScopeCycleCounter(FString(Key))
 	{
 	}
 
@@ -55,7 +66,7 @@ public:
 		double Milliseconds = FWindowsPlatformTime::ToMilliseconds(CycleDiff);
 		if (UsedStatId.Key.empty() == false)
 		{
-			AddTimeProfile(UsedStatId, Milliseconds); //키 값이 있을경우 Map에 저장
+			AddTimeProfile(UsedStatId, Milliseconds); 
 		}
 		return Milliseconds;
 	}
