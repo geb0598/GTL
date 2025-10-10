@@ -35,7 +35,7 @@ UDecalComponent::UDecalComponent() : DecalMaterial(nullptr)
 
 UDecalComponent::~UDecalComponent()
 {
-
+	SafeDelete(DecalMaterial);
 }
 
 void UDecalComponent::SetDecalMaterial(UMaterial* InMaterial)
