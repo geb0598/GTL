@@ -414,6 +414,11 @@ void URenderer::ReleaseDepthStencilState()
 	SafeRelease(DefaultDepthStencilState);
 	SafeRelease(DisabledDepthStencilState);
 
+	if (DisableDepthWriteDepthStencilState)
+	{
+		DisableDepthWriteDepthStencilState->Release();
+		DisableDepthWriteDepthStencilState = nullptr;
+	}
 	// 렌더 타겟을 초기화
 	if (GetDeviceContext())
 	{
@@ -1021,6 +1026,8 @@ void URenderer::RenderBillboard(UBillboardComponent* InBillboardComp, UCamera* I
 
 	FRenderState BillboardRenderState = InBillboardComp->GetRenderState();
 	ID3D11RasterizerState* RasterizerState = GetRasterizerState(BillboardRenderState);
+	ID3D11DepthStencilState* DepthStencilState = DisableDepthWriteDepthStencilState;
+
 	if (!RasterizerState)
 	{
 		FRenderState DefaultState;
@@ -1031,7 +1038,7 @@ void URenderer::RenderBillboard(UBillboardComponent* InBillboardComp, UCamera* I
 		TextureInputLayout,
 		TextureVertexShader,
 		RasterizerState,
-		DefaultDepthStencilState,
+		DepthStencilState,
 		TexturePixelShader,
 		BillboardBlendState,
 		D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST
