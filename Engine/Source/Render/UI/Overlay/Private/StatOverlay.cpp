@@ -58,7 +58,6 @@ void UStatOverlay::Release()
 
 void UStatOverlay::Render()
 {
-	TIME_PROFILE(Run)
 	if (!D2DRenderTarget) return;
 
 	D2DRenderTarget->BeginDraw();
@@ -67,7 +66,6 @@ void UStatOverlay::Render()
 	if (IsStatEnabled(EStatType::Memory))	{ RenderMemory(); }
 
 	D2DRenderTarget->EndDraw();
-	TIME_PROFILE_END(Run)
 }
 
 void UStatOverlay::CreateRenderTarget()

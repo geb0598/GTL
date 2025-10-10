@@ -112,7 +112,7 @@ void UFPSWidget::RenderWidget()
 			FString Text = TimeProfileKeys[i] + TimeProfileValues[i].GetConstChar();
 			ImGui::Text(Text.c_str());
 		}
-
+		
 		FScopeCycleCounter::TimeProfileInit();
 #endif
 		if (ImGui::Button("Reset Statistics"))

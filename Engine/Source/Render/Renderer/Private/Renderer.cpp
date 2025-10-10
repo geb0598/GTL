@@ -21,6 +21,8 @@
 
 #include "Render/Renderer/Public/OcclusionRenderer.h"
 
+#include "Core/Public/ScopeCycleCounter.h"
+
 #include "cpp-thread-pool/thread_pool.h"
 
 #ifdef _
@@ -584,7 +586,7 @@ void URenderer::RenderLevel_SingleThreaded(UCamera* InCurrentCamera, FViewportCl
 		}
 		else if (PrimitiveComponent->IsA(UDecalComponent::StaticClass()))
 		{
-			Decals.push_back(Cast<UDecalComponent>(PrimitiveComponent)); 
+			Decals.push_back(Cast<UDecalComponent>(PrimitiveComponent));
 		}
 		else
 		{
@@ -827,6 +829,8 @@ void URenderer::RenderEditorPrimitiveIndexed(UPipeline& InPipeline, const FEdito
 void URenderer::RenderDecals(UCamera* InCurrentCamera, const TArray<TObjectPtr<UDecalComponent>>& InDecals,
 	const TArray<TObjectPtr<UPrimitiveComponent>>& InVisiblePrimitives)
 {
+	TIME_PROFILE(Decal)
+
 	// 0. 데칼이 없으면 함수를 종료합니다.
 	if (InDecals.empty()) { return; }
 
@@ -839,9 +843,9 @@ void URenderer::RenderDecals(UCamera* InCurrentCamera, const TArray<TObjectPtr<U
 		ProjectionDecalInputLayout,
 		ProjectionDecalVertexShader,
 		GetRasterizerState(DecalRenderState),
-		ProjectionDecalDepthState, 
+		ProjectionDecalDepthState,
 		ProjectionDecalPixelShader,
-		ProjectionDecalBlendState, 
+		ProjectionDecalBlendState,
 	};
 
 	// 2. 모든 데칼 컴포넌트에 대해 반복합니다.
