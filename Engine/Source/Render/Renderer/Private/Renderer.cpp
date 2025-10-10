@@ -541,6 +541,9 @@ void URenderer::RenderPrimitiveComponent(UPipeline& InPipeline, UPrimitiveCompon
 	case EPrimitiveType::Billboard:
 		// Billboards and text are rendered on the main thread after all other primitives
 		break;
+	case EPrimitiveType::Decal:
+		RenderPrimitiveLine(InPipeline, InPrimitiveComponent, InRasterizerState, InConstantBufferModels, InConstantBufferColor);
+		break;
 	case EPrimitiveType::StaticMesh:
 		RenderStaticMesh(InPipeline, Cast<UStaticMeshComponent>(InPrimitiveComponent), InRasterizerState, InConstantBufferModels, InConstantBufferMaterial);
 		break;
@@ -576,7 +579,11 @@ void URenderer::RenderLevel_SingleThreaded(UCamera* InCurrentCamera, FViewportCl
 		}
 		ID3D11RasterizerState* LoadedRasterizerState = GetRasterizerState(RenderState);
 
-		if (PrimitiveComponent->GetPrimitiveType() == EPrimitiveType::TextRender)
+		if (PrimitiveComponent->GetPrimitiveType() == EPrimitiveType::Decal)
+		{
+			Decals.push_back(Cast<UDecalComponent>(PrimitiveComponent));
+		}
+		else if (PrimitiveComponent->GetPrimitiveType() == EPrimitiveType::TextRender)
 		{
 			TextRender = Cast<UTextRenderComponent>(PrimitiveComponent);
 		}
@@ -609,9 +616,17 @@ void URenderer::RenderLevel_SingleThreaded(UCamera* InCurrentCamera, FViewportCl
 		RenderPrimitiveComponent(*Pipeline, PrimitiveComponent, LoadedRasterizerState, ConstantBufferModels, ConstantBufferColor, ConstantBufferMaterial);
 	}
 
-	// 2. 그 다음, 렌더링된 프리미티브 위에 데칼을 렌더링합니다.
-	RenderDecals(InCurrentCamera, Decals, PrimitivesToRenderByDecals);
+	// 2. 데칼의 시각용 큐브 라인을 렌더링합니다.
+	for (UPrimitiveComponent* PrimitiveComponent : Decals)
+	{
+		FRenderState RenderState = PrimitiveComponent->GetRenderState();
+		ID3D11RasterizerState* LoadedRasterizerState = GetRasterizerState(RenderState);
 
+		RenderPrimitiveComponent(*Pipeline, PrimitiveComponent, LoadedRasterizerState, ConstantBufferModels, ConstantBufferColor, ConstantBufferMaterial);
+	}
+
+	// 3. 그 다음, 렌더링된 프리미티브 위에 데칼을 렌더링합니다.
+	RenderDecals(InCurrentCamera, Decals, PrimitivesToRenderByDecals);
 
 	for (TObjectPtr<UBillboardComponent> BillboardComponent : Billboards)
 	{
@@ -877,7 +892,7 @@ void URenderer::RenderDecals(UCamera* InCurrentCamera, const TArray<TObjectPtr<U
 			if (!Primitive || !Primitive->GetBoundingBox()) { continue; }
 
 			// 데칼 액터의 시각화 컴포넌트에는 데칼을 적용하지 않도록 예외 처리합니다.
-			//if (Primitive == Decal) { continue; }
+			if (Primitive == Decal) { continue; }
 
 			// AABB(Axis-Aligned Bounding Box) 교차 검사
 			if (DecalBounds->Intersects(*Primitive->GetBoundingBox()))
@@ -1109,9 +1124,7 @@ void URenderer::RenderPrimitiveDefault(UPipeline& InPipeline, UPrimitiveComponen
 
     // Update pipeline buffers
 	UpdateConstant(InConstantBufferModels, InPrimitiveComp->GetWorldTransformMatrix(), 0, true, false);
-	// [수정] 새로운 UpdateConstantBuffer 함수 사용 (색상은 슬롯 2번)
 	UpdateConstant(InConstantBufferColor, InPrimitiveComp->GetColor(), 2, false, true);
-
 
     // Bind vertex buffer
     InPipeline.SetVertexBuffer(InPrimitiveComp->GetVertexBuffer(), Stride);
@@ -1128,6 +1141,44 @@ void URenderer::RenderPrimitiveDefault(UPipeline& InPipeline, UPrimitiveComponen
         InPipeline.Draw(static_cast<uint32>(InPrimitiveComp->GetNumVertices()), 0);
     }
 }
+
+void URenderer::RenderPrimitiveLine(UPipeline& InPipeline, UPrimitiveComponent* InPrimitiveComp, ID3D11RasterizerState* InRasterizerState, ID3D11Buffer* InConstantBufferModels, ID3D11Buffer* InConstantBufferColor)
+{
+	// Update pipeline info
+	FPipelineInfo PipelineInfo = {
+		DefaultInputLayout,
+		DefaultVertexShader,
+		InRasterizerState,
+		DefaultDepthStencilState,
+		DefaultPixelShader,
+		nullptr,
+		D3D11_PRIMITIVE_TOPOLOGY_LINELIST
+	};
+	InPipeline.UpdatePipeline(PipelineInfo);
+
+	// Update pipeline buffers
+	UpdateConstant(InConstantBufferModels, InPrimitiveComp->GetWorldTransformMatrix(), 0, true, false);
+
+	// TODO: 현재 하드 코딩으로 강제로 색을 지정함, 추후 변경을 반드시 해야 함 (PYB, 25.10.10)
+	const FVector4 SolidWhiteColor = FVector4(0.0f, 1.0f, 0.0f, 1.0f); 
+	UpdateConstant(InConstantBufferColor, SolidWhiteColor, 2, false, true);
+
+	// Bind vertex buffer
+	InPipeline.SetVertexBuffer(InPrimitiveComp->GetVertexBuffer(), Stride);
+
+	// Draw vertex + index
+	if (InPrimitiveComp->GetIndexBuffer() && InPrimitiveComp->GetIndicesData())
+	{
+		InPipeline.SetIndexBuffer(InPrimitiveComp->GetIndexBuffer(), 0);
+		InPipeline.DrawIndexed(InPrimitiveComp->GetNumIndices(), 0, 0);
+	}
+	// Draw vertex
+	else
+	{
+		InPipeline.Draw(static_cast<uint32>(InPrimitiveComp->GetNumVertices()), 0);
+	}
+}
+
 /**
  * @brief FVertex 타입용 정점 Buffer 생성 함수
  * @param InVertices 정점 데이터 포인터
