@@ -14,9 +14,6 @@
 #include "Render/UI/Window/Public/ConsoleWindow.h"
 #include "Render/UI/Overlay/Public/StatOverlay.h"
 
-#include "Core/Public/ScopeCycleCounter.h"
-#include "Core/Public/PlatformTime.h"
-
 #ifdef IS_OBJ_VIEWER
 #include "Utility/Public/FileDialog.h"
 #endif
@@ -36,7 +33,6 @@ FClientApp::~FClientApp() = default;
  */
 int FClientApp::Run(HINSTANCE InInstanceHandle, int InCmdShow)
 {
-	TIME_PROFILE(Run)
 	// Memory Leak Detection & Report
 #ifdef _DEBUG
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
