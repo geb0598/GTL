@@ -1160,7 +1160,7 @@ void URenderer::RenderPrimitiveLine(UPipeline& InPipeline, UPrimitiveComponent* 
 	UpdateConstant(InConstantBufferModels, InPrimitiveComp->GetWorldTransformMatrix(), 0, true, false);
 
 	// TODO: 현재 하드 코딩으로 강제로 색을 지정함, 추후 변경을 반드시 해야 함 (PYB, 25.10.10)
-	const FVector4 SolidWhiteColor = FVector4(0.0f, 1.0f, 0.0f, 1.0f); 
+	const FVector4 SolidWhiteColor = FVector4(0.0f, 1.0f, 0.0f, 1.0f);
 	UpdateConstant(InConstantBufferColor, SolidWhiteColor, 2, false, true);
 
 	// Bind vertex buffer
