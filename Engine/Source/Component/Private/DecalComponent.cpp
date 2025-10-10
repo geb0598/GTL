@@ -16,7 +16,7 @@ UDecalComponent::UDecalComponent() : DecalMaterial(nullptr)
 
 	UAssetManager& ResourceManager = UAssetManager::GetInstance();
 
-	Type = EPrimitiveType::CubeLine;
+	Type = EPrimitiveType::Decal;
 	Topology = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
 
 	Vertices = ResourceManager.GetVertexData(Type);
@@ -29,9 +29,8 @@ UDecalComponent::UDecalComponent() : DecalMaterial(nullptr)
 
 	BoundingBox = &ResourceManager.GetAABB(Type);
 
-	// 렌더링 상태를 와이어프레임으로 설정 (DecalActor 생성자에서 가져옴)
-	RenderState.FillMode = EFillMode::Solid;
 	RenderState.CullMode = ECullMode::None;
+	RenderState.FillMode = EFillMode::Solid;
 }
 
 UDecalComponent::~UDecalComponent()
