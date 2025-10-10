@@ -1,4 +1,19 @@
 ﻿#pragma once
+#include "Global/Types.h"
+
+#ifdef _DEBUG
+#define TIME_PROFILE(Key)\
+FScopeCycleCounter Key##Counter(#Key);
+#else
+#define TIME_PROFILE(Key)
+#endif
+
+#ifdef _DEVELOP
+#define TIME_PROFILE_END(Key)\
+Key##Counter.Finish();
+#else
+#define TIME_PROFILE_END(Key)
+#endif
 
 class FWindowsPlatformTime
 {
