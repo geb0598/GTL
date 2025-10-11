@@ -1,22 +1,21 @@
 #include "pch.h"
 #include "Actor/Public/DecalActor.h"
-#include "Component/Public/SceneComponent.h"
 #include "Component/Public/DecalComponent.h"
-#include "Component/Mesh/Public/CubeComponent.h"
-#include "Texture/Public/Material.h"
 
 IMPLEMENT_CLASS(ADecalActor, AActor)
 
 ADecalActor::ADecalActor()
 {
-	if (DecalComponent = CreateDefaultSubobject<UDecalComponent>(FName("DecalComponent")))
-	{
-		DecalComponent->SetParentAttachment(GetRootComponent());
-		SetRootComponent(DecalComponent);
-	}
+	UDecalComponent* DecalComponent = CreateDefaultSubobject<UDecalComponent>(FName("DecalComponent"));
+	SetRootComponent(DecalComponent);
 }
 
 ADecalActor::~ADecalActor()
 {
 	
+}
+
+UDecalComponent* ADecalActor::GetDecalComponent() const
+{
+	return Cast<UDecalComponent>(GetRootComponent());
 }

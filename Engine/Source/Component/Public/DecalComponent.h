@@ -1,6 +1,9 @@
 #pragma once
 #include "PrimitiveComponent.h"
 
+namespace json { class JSON; }
+using JSON = json::JSON;
+
 class UMaterial;
 
 UCLASS()
@@ -17,6 +20,7 @@ public:
 	UMaterial* GetDecalMaterial() const;
 
 	UObject* Duplicate(FObjectDuplicationParameters Parameters) override;
+	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
 private:
 	UMaterial* DecalMaterial;
